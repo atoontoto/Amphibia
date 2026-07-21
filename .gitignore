@@ -2,14 +2,30 @@
 xcuserdata
 *.RPP-bak
 build-*
+.build-stage/
+.no-system-install/
 .idea/
+.vscode/
 
 *.ipch
 *.db
 *.suo
 */.vs
 *.pem
+*.p12
+*.pfx
+*.key
 mkcert*
+.env
+.env.*
+!.env.example
+*.user
+*.userosscache
+*.sln.docstates
+TestResults/
+artifacts/
 
 NeuralAmpModeler/*.wav
 NeuralAmpModeler/peaks/
+NeuralAmpModeler/**/*.nam
+!NeuralAmpModeler/NeuralAmpModelerCore/**

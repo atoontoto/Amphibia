@@ -20,13 +20,18 @@ Exit evidence: this documentation set, clean submodules, validation report, and 
 
 ## Milestone 1 — independent identity and renamed baseline
 
-- [ ] Confirm repository owner and reverse-DNS namespace.
-- [ ] Generate/freeze new VST3 processor/controller IDs, AU codes, IDE project GUIDs, installer `AppId`, bundle IDs, mutex, credentials, and data namespaces.
-- [ ] Rename product/class/targets/resources/scripts/installers to Amphibia.
-- [ ] Replace/quarantine inherited brand assets and establish asset licenses.
-- [ ] Build Windows app + VST3 and macOS app + VST3 from a clean checkout.
-- [ ] Validate plugin discovery plus app launch and side-by-side NAM coexistence.
-- [ ] Run source and binary residual-identity audits.
+- [ ] Confirm repository owner and verified reverse-DNS namespace.
+- [x] Generate/freeze new product, VST3 processor/controller, AU/AAX, IDE project, installer, development bundle, mutex, and data identifiers.
+- [x] Keep future credentials/OAuth/network identifiers explicitly unallocated until their owning milestone.
+- [x] Rename installed product/class/targets/output metadata/scripts/installer placeholder to Amphibia while documenting retained technical filenames.
+- [x] Quarantine inherited application icons and classify unresolved artwork/fonts as public-release blockers.
+- [ ] Establish license/provenance or original replacements for every packaged visual/font asset.
+- [x] Build the Windows standalone application and VST3 with the available newer local toolset override.
+- [ ] Build macOS app + VST3 from a clean supported environment.
+- [x] Smoke-test Windows standalone process launch.
+- [ ] Validate plug-in discovery and side-by-side NAM coexistence in a host.
+- [x] Run and automate the source/configuration residual-identity audit.
+- [ ] Complete built-binary metadata and installed-path audits on all supported formats.
 
 ## Milestone 2 — DSP safety and A1/A2 validation
 

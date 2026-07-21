@@ -1,8 +1,20 @@
 # Upstream modification map
 
-Status: Milestone 0 investigation record
+Status: Milestone 1 implementation record built on the Milestone 0 investigation
 
 Baseline: upstream `v0.7.15`, commit `96337e9ab6e3beb619459779bbb5c47e1b04d8c4`
+
+## Milestone 1 changes now present
+
+- `config.h` is the central product/version/plug-in-ID registry; the C++ class is `Amphibia` while source filenames remain inherited.
+- State writing uses `###Amphibia###` with layout version `1.0.0`; reading accepts both Amphibia and the inherited NAM header without changing the payload layout.
+- Windows output names, project GUIDs, solution, version resources, and installer placeholder carry Amphibia identity.
+- Apple bundle IDs, product outputs, AU symbols/codes, plists, interface metadata, and schemes carry Amphibia identity under a temporary technical namespace.
+- The inherited Windows/macOS application icons are deselected. Remaining inherited UI art/fonts are development-only release blockers pending provenance or replacement.
+- Root repository policy, attribution, privacy/security, contribution/build guidance, issue forms, identity checks, and build-only CI replace upstream-facing repository metadata.
+- No DSP order, model/IR loading design, online provider behavior, OAuth, ZIP, signing, notarization, or release publication was implemented.
+
+Retained names include the `NeuralAmpModeler/` source directory, C++ filenames, `.vcxproj`/Xcode project filenames, platform metadata filenames, `NeuralAmpModelerCore`, historical `.RPP` fixtures, and upstream links used for attribution. These are deliberate merge/provenance seams rather than emitted product identity.
 
 This map identifies the inherited behavior and exact areas expected to change. It is deliberately anchored to symbols as well as line numbers because upstream rebases move lines.
 
@@ -57,8 +69,8 @@ Only `upstream` is configured. Milestone 1 will add `origin` only when an actual
 
 | File / symbol | Current behavior | Planned change |
 |---|---|---|
-| `NeuralAmpModeler/NeuralAmpModeler.cpp:450`, `SerializeState()` | Writes `###NeuralAmpModeler###`, version, exact NAM path, exact IR path, then parameters. | Write a versioned Amphibia envelope with exact local or managed references; never include secrets. |
-| `NeuralAmpModeler/NeuralAmpModeler.cpp:465`, `UnserializeState()` | Selects known-version or unknown-version NAM readers. | Detect Amphibia first, then retain tested legacy NAM import. |
+| `NeuralAmpModeler/NeuralAmpModeler.cpp`, `SerializeState()` | Milestone 1 writes `###Amphibia###`, state-layout `1.0.0`, then the inherited path/parameter payload. | A richer managed-reference schema remains Milestone 3; never include secrets. |
+| `NeuralAmpModeler/NeuralAmpModeler.cpp`, `UnserializeState()` | Detects Amphibia or legacy NAM headers, then uses the inherited known-version reader. | Add binary/fixture compatibility tests before changing the schema in Milestone 3. |
 | `NeuralAmpModeler/Unserialization.cpp:268` | Implements historical parameter layouts and invokes staging after reading paths. | Isolate as `LegacyNamStateReader`; make file restore asynchronous. |
 | `iPlug2/IPlug/APP/IPlugAPP_host.cpp:104-163` | Loads/saves `settings.ini` under a `BUNDLE_NAME` directory. | Keep device preferences; change namespace and add a separate atomically written session state file. |
 | `iPlug2/IPlug/APP/IPlugAPP_main.cpp:39-45` | Windows singleton mutex and window lookup use `BUNDLE_NAME`. | New Amphibia-specific interprocess names; verify side-by-side NAM operation. |
@@ -67,15 +79,15 @@ Only `upstream` is configured. Milestone 1 will add `origin` only when an actual
 
 | Area | Current inherited values / issue | Milestone 1+ action |
 |---|---|---|
-| `NeuralAmpModeler/config.h:1-48` | NAM name, manufacturer, version, four-character IDs, URLs, C++ class, bundle names, AU/AAX symbols. | Allocate and replace every entry listed in `IDENTIFIERS.md`. |
+| `NeuralAmpModeler/config.h` | Amphibia name/manufacturer/version, four-character IDs, explicit VST3 IDs, C++ class, bundle names, AU/AAX symbols, build provenance constants. | Frozen for Milestone 1; unresolved owner URLs remain empty. |
 | `iPlug2/IPlug/IPlug_include_in_plug_src.h:106-107` | Default VST3 FUIDs combine fixed words with `PLUG_MFR_ID` and `PLUG_UNIQUE_ID`. | Define explicit new processor/controller FUIDs in product config and test host isolation. |
 | `NeuralAmpModeler/projects/*.vcxproj` | NAM filenames, targets, output paths; Windows project GUIDs include VST3 `{079FC65A-F0E5-4E97-B318-A16D1D0B89DF}` and app `{41785AE4-5B70-4A75-880B-4B418B4E13C6}`. | Rename projects/targets and generate new IDE GUIDs. These are not installer identity. |
 | `NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj/project.pbxproj` | NAM targets/products and `com.StevenAtkinson.*` bundle identifiers. | Rename targets/schemes/products and assign new reverse-DNS IDs. |
 | `NeuralAmpModeler/resources/*.plist`, `*.xib`, `*.storyboard`, `*.entitlements` | NAM executable, bundle, factory, class, and resource names. | Rename or remove unused target resources; verify no inherited identity remains. |
-| `NeuralAmpModeler/installer/NeuralAmpModeler.iss` | No explicit `AppId`; NAM paths/names; installs app and VST3. | Add stable Amphibia `AppId`, safe paths, notices, uninstall behavior, and side-by-side checks. |
+| `NeuralAmpModeler/installer/Amphibia.iss` | Stable Amphibia `AppId`, product/output paths, and placeholder metadata. | Installer implementation, signing, VM install/uninstall, and side-by-side checks remain Milestone 8. |
 | `NeuralAmpModeler/scripts/*` | Scripts infer `BUNDLE_NAME` but also contain NAM filenames and package prefixes. | Rename and make release inputs reproducible; remove unavailable formats from distributions. |
-| `.github/workflows/build-native.yml` | Windows/macOS build; pluginval job commented out. | Pin actions, restore validation, add tests, artifact inventory, checksums, and secret scanning. |
-| `.github/workflows/release-native.yml` | Legacy release actions and unsigned/incompletely signed packaging. | Replace with least-privilege maintained actions; release draft only after validation/signing gates. |
+| `.github/workflows/build-windows.yml`, `build-macos.yml`, `test.yml` | Least-privilege development build and static identity checks; no release job. | Validate hosted runs, then add plugin validation/security/artifact gates in Milestone 9. |
+| Removed upstream release workflow | Public/draft release mutation is intentionally absent. | Add a protected release workflow only after signing and validation policy exists. |
 
 ## NAM architecture map
 

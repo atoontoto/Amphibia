@@ -1,6 +1,6 @@
 # Dependency and license inventory
 
-Status: Milestone 0 preliminary inventory; not legal advice
+Status: Milestone 1 preliminary inventory and release gate; not legal advice
 
 Release rule: no dependency or inherited asset ships without a recorded version, source, license text, notice treatment, and redistribution decision.
 
@@ -38,13 +38,13 @@ The existing `NeuralAmpModeler/installer/ThirdPartyNotices.txt` is a useful star
 | `Roboto-Regular.ttf` | Present under `NeuralAmpModeler/resources/fonts`; no adjacent license file found. | Do not ship until the exact font version and Apache-2.0/OFL provenance (as applicable to that file) is proven and license text added; replacing it is acceptable. |
 | `Michroma-Regular.ttf` | Present under the same folder; no adjacent license file found. | Do not infer a license from the font name. Prove source/version and include its license, or replace. |
 | NAM icons/backgrounds/knob/meter images | Added in upstream history, but no asset license/provenance manifest was found. | Replace with original Amphibia assets or obtain explicit provenance/permission before release. Source-code MIT alone is not treated as sufficient evidence for third-party visual assets. |
-| NAM application icons (`.ico`, `.icns`, xcassets) | NAM-branded and collision-prone. | Replace in Milestone 1 regardless of license. |
+| NAM application icons (`.ico`, `.icns`, xcassets) | NAM-branded and collision-prone. | Quarantined from Amphibia's selected Windows/macOS icon metadata in Milestone 1; replace before release. |
 | TONE3000 brand/logo | Not vendored. Provider guidelines require brand presentation. | Obtain/use only the official asset under documented brand permission; preserve aspect/color/clearspace; otherwise use provider-approved text treatment while seeking clarification. |
 | Model/IR fixtures | NAM Core contains example `.nam` files. | Record each fixture's source and redistribution permission. Real provider downloads never enter source control or release archives. |
 
 ## Proposed new dependencies
 
-No new library is approved in Milestone 0.
+No new library is approved in Milestone 1.
 
 | Capability | Current decision | Evaluation criteria |
 |---|---|---|

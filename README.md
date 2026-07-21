@@ -1,38 +1,38 @@
-# Neural Amp Modeler Plug-in
+# Amphibia
 
-[![Build](https://github.com/sdatkinson/NeuralAmpModelerPlugin/actions/workflows/build-native.yml/badge.svg)](https://github.com/sdatkinson/NeuralAmpModelerPlugin/actions/workflows/build-native.yml)
+Amphibia is an independent, free, open-source desktop application and audio plug-in derived from the official open-source [Neural Amp Modeler plug-in](https://github.com/sdatkinson/NeuralAmpModelerPlugin). It is not the official NAM application and is not affiliated with TONE3000.
 
-A VST3/AudioUnit plug-in\* for [Neural Amp Modeler](https://github.com/sdatkinson/neural-amp-modeler), built with [iPlug2](https://iplug2.github.io).
+The repository is currently at the Milestone 1 development baseline. Product identity and side-by-side identifiers are established, but no supported end-user installer exists yet. Online browsing, authentication, downloading, and TONE3000 integration are not implemented.
 
-- https://www.youtube.com/user/RunawayThumbtack
-- https://github.com/sdatkinson/neural-amp-modeler
+## Current scope
 
-## Building and Installation
+- Standalone application and VST3 product targets named Amphibia.
+- Existing local `.nam` model and WAV impulse-response workflow inherited from upstream.
+- New VST3, AU, Windows project, installer, bundle, and data identifiers.
+- Legacy NeuralAmpModeler state header accepted for future compatibility testing.
 
-To build the app or plugin, there are build scripts in [NeuralAmpModeler/scripts/](https://github.com/sdatkinson/NeuralAmpModelerPlugin/tree/main/NeuralAmpModeler/scripts).
-The [workflows](https://github.com/sdatkinson/NeuralAmpModelerPlugin/tree/main/.github/workflows) can show you how to do this.
+This is not release-ready: inherited visual/font assets need provenance or replacement, macOS has not been built in this environment, and host discovery, launch, side-by-side installation, signing, notarization, and installer behavior remain unverified.
 
-### Pre-built installers
+## Build from source
 
-If you want a pre-built installer from this repo without having to , I've made "Gateway", a fork of this repo, availble at https://neuralampmodeler.com/users!
+Clone recursively, then follow [BUILDING.md](BUILDING.md). The short form is:
 
-## Supported Platforms
+```text
+git clone --recursive <your-amphibia-repository-url>
+cd amphibia
+```
 
-The Neural Amp Modeler plugin currently supports Windows 10 (64bit) or later, and macOS 10.15 (Catalina) or later.
+Windows builds use `NeuralAmpModeler/Amphibia.sln`; the retained source directory and many internal filenames deliberately match upstream to reduce future merge conflicts. See [CONTRIBUTING.md](CONTRIBUTING.md) for validation commands.
 
-For Linux support, there is an LV2 plugin available: https://github.com/mikeoliphant/neural-amp-modeler-lv2.
+## Project records
 
-## About
+- [Architecture plan](docs/ARCHITECTURE_PLAN.md)
+- [Milestone checklist](docs/MILESTONES.md)
+- [Identifier registry](docs/IDENTIFIERS.md)
+- [Milestone 1 report](docs/MILESTONE_1_REPORT.md)
+- [Attribution](ATTRIBUTION.md) and [third-party notices](THIRD_PARTY_NOTICES.md)
+- [Privacy](PRIVACY.md) and [security](SECURITY.md)
 
-This is a cleaned up version of [the original iPlug2-based NAM plugin](https://github.com/sdatkinson/iPlug2) with some refactoring to adopt better practices recommended by the developers of iPlug2.
-(Thanks [Oli](https://github.com/olilarkin) for your generous suggestions!)
+## License
 
-\*could also support AAX, CLAP, Linux, iOS soon.
-
-## Rough edges
-
-### Standalone I/O
-The I/O for the standalone doesn't inherit the stability of most plugin hosts (DAWs), so it's a bit sparser on features. For complex routing, the plugin (VST3/AU) inside a plugin host is still the most reliable option.
-
-### Graphics backend
-If you're having trouble with NAM crashing before the GUI comes up, then you might have an unsupported graphics configuration. Usually, this is when you have a dedicated graphics card (like an nVIDIA GPU) and you're using the integrated (CPU) graphics on a Windows system. To fix this, Go to the control panel, pick NAM (or your DAW), and make sure that it uses your graphics card. (If you know more and can help fix this, please make an Issue and let me know more!)
+The inherited code and Amphibia modifications are provided under the repository [MIT license](LICENSE), subject to the separate licenses and notices of included dependencies. Do not assume that every inherited font or visual asset is cleared for redistribution; see [ATTRIBUTION.md](ATTRIBUTION.md).
