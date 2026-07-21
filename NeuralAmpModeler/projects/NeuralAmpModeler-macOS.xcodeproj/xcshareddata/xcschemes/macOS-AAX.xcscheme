@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4FB600121567CB0A0020189A"
-               BuildableName = "NeuralAmpModeler.aaxplugin"
+               BuildableName = "Amphibia.aaxplugin"
                BlueprintName = "AAX"
                ReferencedContainer = "container:NeuralAmpModeler-macOS.xcodeproj">
             </BuildableReference>
@@ -51,7 +51,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4FB600121567CB0A0020189A"
-            BuildableName = "NeuralAmpModeler.aaxplugin"
+            BuildableName = "Amphibia.aaxplugin"
             BlueprintName = "AAX"
             ReferencedContainer = "container:NeuralAmpModeler-macOS.xcodeproj">
          </BuildableReference>

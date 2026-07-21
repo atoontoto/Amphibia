@@ -1,6 +1,6 @@
-# Installer Identity
+# Amphibia installer identity
 
-The checked-in Windows installer uses the Neural Amp Modeler product metadata. Before publishing a pre-built installer from a private release fork, replace `license.rtf` with the product's real license and override the installer identity if needed.
+The checked-in Windows installer is an Amphibia identity placeholder. It is not a release-ready installer. Before publishing any package, resolve the asset and signing blockers in `docs/MILESTONE_1_REPORT.md`, validate every installed path, and replace `license.rtf` with the final distributable license text.
 
 The Windows distribution script calls `scripts/update_installer-win.py`, which accepts these environment variable overrides:
 
@@ -14,9 +14,9 @@ The Windows distribution script calls `scripts/update_installer-win.py`, which a
 - `INSTALLER_WELCOME_LABEL`
 - `INSTALLER_SETUP_WINDOW_TITLE`
 
-The macOS installer package identifiers default to `com.StevenAtkinson.*`. Set `INSTALLER_PKG_ID_PREFIX` to use your own reverse-DNS prefix, for example `com.example.myproduct`.
+The macOS installer package identifiers currently use the temporary technical namespace `org.amphibiaaudio.*`. This does not assert ownership of a matching domain. Replace `INSTALLER_PKG_ID_PREFIX` before release if the project adopts a verified namespace.
 
-`ThirdPartyNotices.txt` is installed with the standalone application and inside the VST3/AU bundle resources. Keep it current when adding, removing, or replacing dependencies. Private/product forks should update any source-availability language that points at this public repository.
+`ThirdPartyNotices.txt` is installed with the standalone application and inside the VST3/AU bundle resources. Keep it current when adding, removing, or replacing dependencies. Update source-availability language when a canonical Amphibia repository URL is established.
 
 For notarized macOS release builds, `scripts/makedist-mac.sh` also accepts:
 

@@ -307,7 +307,7 @@
 		4FBDC97F29FFF143004FF203 /* container.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = container.cpp; sourceTree = "<group>"; };
 		4FBDC94C29FFF143004FF203 /* get_dsp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = get_dsp.cpp; sourceTree = "<group>"; };
 		4FC46E58231440C8000045E7 /* web */ = {isa = PBXFileReference; lastKnownFileType = folder; name = web; path = ../resources/web; sourceTree = "<group>"; };
-		4FC6982F293BA47F0076EC33 /* NeuralAmpModelerAU.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = NeuralAmpModelerAU.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4FC6982F293BA47F0076EC33 /* AmphibiaAU.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AmphibiaAU.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4FC82B4720BD524700722133 /* img */ = {isa = PBXFileReference; lastKnownFileType = folder; name = img; path = ../resources/img; sourceTree = "<group>"; };
 		4FC82B4820BD524700722133 /* fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = fonts; path = ../resources/fonts; sourceTree = "<group>"; };
 		4FDA600520B5868D00C49ABA /* NeuralAmpModeler-ios.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = "NeuralAmpModeler-ios.xcconfig"; path = "../config/NeuralAmpModeler-ios.xcconfig"; sourceTree = "<group>"; };
@@ -362,8 +362,8 @@
 		4FFF108420A1036200D3092F /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../config.h; sourceTree = "<group>"; };
 		4FFF108720A1036200D3092F /* NeuralAmpModeler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NeuralAmpModeler.cpp; path = ../NeuralAmpModeler.cpp; sourceTree = "<group>"; };
 		4FFF108820A1036200D3092F /* NeuralAmpModeler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NeuralAmpModeler.h; path = ../NeuralAmpModeler.h; sourceTree = "<group>"; };
-		91236D0D1B08F42B00734C5E /* NeuralAmpModeler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NeuralAmpModeler.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		91236D771B08F59300734C5E /* NeuralAmpModelerAppExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NeuralAmpModelerAppExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		91236D0D1B08F42B00734C5E /* Amphibia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Amphibia.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		91236D771B08F59300734C5E /* AmphibiaAppExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmphibiaAppExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA341E292B9E5A650069C260 /* ToneStack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ToneStack.h; path = ../ToneStack.h; sourceTree = "<group>"; };
 		AA341E2A2B9E5A650069C260 /* ToneStack.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ToneStack.cpp; path = ../ToneStack.cpp; sourceTree = "<group>"; };
 		AA7C86042B43A42E00B5FB3A /* ResamplingContainer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResamplingContainer.h; sourceTree = "<group>"; };
@@ -900,8 +900,8 @@
 			);
 			dependencies = (
 			);
-			name = NeuralAmpModelerAU;
-			productName = AUv3Framework;
+			name = AmphibiaAU;
+			productName = AmphibiaAU;
 			productReference = 4FC6982F293BA47F0076EC33 /* NeuralAmpModelerAU.framework */;
 			productType = "com.apple.product-type.framework";
 		};
@@ -924,7 +924,7 @@
 				4FC69834293BA47F0076EC33 /* PBXTargetDependency */,
 			);
 			name = App;
-			productName = "FilterDemoApp-iOS";
+			productName = "Amphibia-iOS";
 			productReference = 91236D0D1B08F42B00734C5E /* NeuralAmpModeler.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -941,7 +941,7 @@
 			dependencies = (
 			);
 			name = AUv3;
-			productName = "FilterDemoAppExtension-iOS";
+			productName = "AmphibiaAppExtension-iOS";
 			productReference = 91236D771B08F59300734C5E /* NeuralAmpModelerAppExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
@@ -1206,7 +1206,7 @@
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.StevenAtkinson.NeuralAmpModeler.AUv3Framework;
+				PRODUCT_BUNDLE_IDENTIFIER = org.amphibiaaudio.app.Amphibia.AUv3Framework;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1265,7 +1265,7 @@
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.StevenAtkinson.NeuralAmpModeler.AUv3Framework;
+				PRODUCT_BUNDLE_IDENTIFIER = org.amphibiaaudio.app.Amphibia.AUv3Framework;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1321,8 +1321,8 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.StevenAtkinson.NeuralAmpModeler;
-				PRODUCT_NAME = NeuralAmpModeler;
+				PRODUCT_BUNDLE_IDENTIFIER = org.amphibiaaudio.app.Amphibia;
+				PRODUCT_NAME = Amphibia;
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.2;
@@ -1371,8 +1371,8 @@
 					"@executable_path/Frameworks",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = com.StevenAtkinson.NeuralAmpModeler;
-				PRODUCT_NAME = NeuralAmpModeler;
+				PRODUCT_BUNDLE_IDENTIFIER = org.amphibiaaudio.app.Amphibia;
+				PRODUCT_NAME = Amphibia;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
@@ -1425,8 +1425,8 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.StevenAtkinson.NeuralAmpModeler.AUv3;
-				PRODUCT_NAME = NeuralAmpModelerAppExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = org.amphibiaaudio.app.Amphibia.AUv3;
+				PRODUCT_NAME = AmphibiaAppExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -1474,8 +1474,8 @@
 					"@executable_path/../../Frameworks",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = com.StevenAtkinson.NeuralAmpModeler.AUv3;
-				PRODUCT_NAME = NeuralAmpModelerAppExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = org.amphibiaaudio.app.Amphibia.AUv3;
+				PRODUCT_NAME = AmphibiaAppExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;

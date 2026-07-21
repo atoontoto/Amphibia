@@ -28,8 +28,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{DC4B5920-933D-4C82-B842-F34431D55A93}</ProjectGuid>
-    <RootNamespace>NeuralAmpModeler-aax</RootNamespace>
+    <ProjectGuid>{D3F5A13E-3A81-4BBE-A4E9-AE9B8257C8E6}</ProjectGuid>
+    <RootNamespace>Amphibia-aax</RootNamespace>
     <Keyword>ManagedCProj</Keyword>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>

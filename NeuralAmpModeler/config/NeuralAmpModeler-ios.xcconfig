@@ -11,7 +11,7 @@ IPLUG2_ROOT = ../../iPlug2
 // Global build settings
 
 // the basename of the vst, vst3, app, component, aaxplugin
-BINARY_NAME = NeuralAmpModeler
+BINARY_NAME = Amphibia
 
 // ------------------------------
 // HEADER AND LIBRARY SEARCH PATHS
@@ -22,7 +22,7 @@ EXTRA_LNK_FLAGS = -framework Metal -framework MetalKit -framework Accelerate//$(
 //------------------------------
 // PREPROCESSOR MACROS
 
-EXTRA_ALL_DEFS = OBJC_PREFIX=vNeuralAmpModeler IGRAPHICS_NANOVG IGRAPHICS_METAL GRAYED_ALPHA=0.5f
+EXTRA_ALL_DEFS = OBJC_PREFIX=vAmphibia IGRAPHICS_NANOVG IGRAPHICS_METAL GRAYED_ALPHA=0.5f
 //EXTRA_DEBUG_DEFS =
 //EXTRA_RELEASE_DEFS =
 //EXTRA_TRACER_DEFS =

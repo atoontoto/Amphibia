@@ -10,7 +10,7 @@
         <!--IPlug View Controller-->
         <scene sceneID="tne-QT-ifu">
             <objects>
-                <viewController storyboardIdentifier="main" id="BYZ-38-t0r" userLabel="IPlug View Controller" customClass="IPlugAUViewController_vNeuralAmpModeler" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="main" id="BYZ-38-t0r" userLabel="IPlug View Controller" customClass="IPlugAUViewController_vAmphibia" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="ds1-jh-Nbb"/>
                         <viewControllerLayoutGuide type="bottom" id="wNA-4o-oam"/>

@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "91236D0C1B08F42B00734C5E"
-               BuildableName = "NeuralAmpModeler.app"
+               BuildableName = "Amphibia.app"
                BlueprintName = "App"
                ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
             </BuildableReference>
@@ -31,7 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "91236D0C1B08F42B00734C5E"
-            BuildableName = "NeuralAmpModeler.app"
+            BuildableName = "Amphibia.app"
             BlueprintName = "App"
             ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
          </BuildableReference>
@@ -56,7 +56,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "91236D0C1B08F42B00734C5E"
-            BuildableName = "NeuralAmpModeler.app"
+            BuildableName = "Amphibia.app"
             BlueprintName = "App"
             ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
          </BuildableReference>
@@ -73,7 +73,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "91236D0C1B08F42B00734C5E"
-            BuildableName = "NeuralAmpModeler.app"
+            BuildableName = "Amphibia.app"
             BlueprintName = "App"
             ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
          </BuildableReference>
@@ -84,7 +84,7 @@
    </AnalyzeAction>
    <ArchiveAction
       buildConfiguration = "Release"
-      customArchiveName = "NeuralAmpModeler"
+      customArchiveName = "Amphibia"
       revealArchiveInOrganizer = "YES">
    </ArchiveAction>
 </Scheme>

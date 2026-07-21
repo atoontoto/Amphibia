@@ -75,7 +75,7 @@ const std::string kInputCalibrationLevelParamName = "InputCalibrationLevel";
 const double kDefaultInputCalibrationLevel = 12.0;
 
 
-NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
+Amphibia::Amphibia(const InstanceInfo& info)
 : Plugin(info, MakeConfig(kNumParams, kNumPresets))
 {
   _InitToneStack();
@@ -217,7 +217,7 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
 
     pGraphics->AttachBackground(BACKGROUND_FN);
     pGraphics->AttachControl(new IBitmapControl(b, linesBitmap));
-    pGraphics->AttachControl(new IVLabelControl(titleArea, "NEURAL AMP MODELER", titleStyle));
+    pGraphics->AttachControl(new IVLabelControl(titleArea, "AMPHIBIA", titleStyle));
     pGraphics->AttachControl(new ISVGControl(modelIconArea, modelIconSVG));
 
 #ifdef NAM_PICK_DIRECTORY
@@ -314,12 +314,12 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
   };
 }
 
-NeuralAmpModeler::~NeuralAmpModeler()
+Amphibia::~Amphibia()
 {
   _DeallocateIOPointers();
 }
 
-void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outputs, int nFrames)
+void Amphibia::ProcessBlock(iplug::sample** inputs, iplug::sample** outputs, int nFrames)
 {
   const size_t numChannelsExternalIn = (size_t)NInChansConnected();
   const size_t numChannelsExternalOut = (size_t)NOutChansConnected();
@@ -397,7 +397,7 @@ void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outp
   _UpdateMeters(mInputPointers, outputs, numFrames, numChannelsInternal, numChannelsExternalOut);
 }
 
-void NeuralAmpModeler::OnReset()
+void Amphibia::OnReset()
 {
   const auto sampleRate = GetSampleRate();
   const int maxBlockSize = GetBlockSize();
@@ -415,7 +415,7 @@ void NeuralAmpModeler::OnReset()
   _UpdateLatency();
 }
 
-void NeuralAmpModeler::OnIdle()
+void Amphibia::OnIdle()
 {
   mInputSender.TransmitData(*this);
   mOutputSender.TransmitData(*this);
@@ -447,13 +447,14 @@ void NeuralAmpModeler::OnIdle()
   }
 }
 
-bool NeuralAmpModeler::SerializeState(IByteChunk& chunk) const
+bool Amphibia::SerializeState(IByteChunk& chunk) const
 {
-  // If this isn't here when unserializing, then we know we're dealing with something before v0.8.0.
-  WDL_String header("###NeuralAmpModeler###"); // Don't change this!
+  // Amphibia has an independent state identity while retaining the inherited
+  // payload layout and a legacy NeuralAmpModeler reader below.
+  WDL_String header("###Amphibia###");
   chunk.PutStr(header.Get());
-  // Plugin version, so we can load legacy serialized states in the future!
-  WDL_String version(PLUG_VERSION_STR);
+  // State-layout version is independent from Amphibia's product SemVer.
+  WDL_String version(AMPHIBIA_STATE_VERSION);
   chunk.PutStr(version.Get());
   // Model directory (don't serialize the model itself; we'll just load it again
   // when we unserialize)
@@ -462,15 +463,16 @@ bool NeuralAmpModeler::SerializeState(IByteChunk& chunk) const
   return SerializeParams(chunk);
 }
 
-int NeuralAmpModeler::UnserializeState(const IByteChunk& chunk, int startPos)
+int Amphibia::UnserializeState(const IByteChunk& chunk, int startPos)
 {
   // Look for the expected header. If it's there, then we'll know what to do.
   WDL_String header;
   int pos = startPos;
   pos = chunk.GetStr(header, pos);
 
-  const char* kExpectedHeader = "###NeuralAmpModeler###";
-  if (strcmp(header.Get(), kExpectedHeader) == 0)
+  const char* kAmphibiaHeader = "###Amphibia###";
+  const char* kLegacyNamHeader = "###NeuralAmpModeler###";
+  if (strcmp(header.Get(), kAmphibiaHeader) == 0 || strcmp(header.Get(), kLegacyNamHeader) == 0)
   {
     return _UnserializeStateWithKnownVersion(chunk, pos);
   }
@@ -480,7 +482,7 @@ int NeuralAmpModeler::UnserializeState(const IByteChunk& chunk, int startPos)
   }
 }
 
-void NeuralAmpModeler::OnUIOpen()
+void Amphibia::OnUIOpen()
 {
   Plugin::OnUIOpen();
 
@@ -506,7 +508,7 @@ void NeuralAmpModeler::OnUIOpen()
   }
 }
 
-void NeuralAmpModeler::OnParamChange(int paramIdx)
+void Amphibia::OnParamChange(int paramIdx)
 {
   switch (paramIdx)
   {
@@ -526,7 +528,7 @@ void NeuralAmpModeler::OnParamChange(int paramIdx)
   }
 }
 
-void NeuralAmpModeler::OnParamChangeUI(int paramIdx, EParamSource source)
+void Amphibia::OnParamChangeUI(int paramIdx, EParamSource source)
 {
   if (auto pGraphics = GetUI())
   {
@@ -544,7 +546,7 @@ void NeuralAmpModeler::OnParamChangeUI(int paramIdx, EParamSource source)
   }
 }
 
-bool NeuralAmpModeler::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pData)
+bool Amphibia::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pData)
 {
   switch (msgTag)
   {
@@ -578,7 +580,7 @@ bool NeuralAmpModeler::OnMessage(int msgTag, int ctrlTag, int dataSize, const vo
 
 // Private methods ============================================================
 
-void NeuralAmpModeler::_AllocateIOPointers(const size_t nChans)
+void Amphibia::_AllocateIOPointers(const size_t nChans)
 {
   if (mInputPointers != nullptr)
     throw std::runtime_error("Tried to re-allocate mInputPointers without freeing");
@@ -592,7 +594,7 @@ void NeuralAmpModeler::_AllocateIOPointers(const size_t nChans)
     throw std::runtime_error("Failed to allocate pointer to output buffer!\n");
 }
 
-void NeuralAmpModeler::_ApplyDSPStaging()
+void Amphibia::_ApplyDSPStaging()
 {
   // Remove marked modules
   if (mShouldRemoveModel)
@@ -628,7 +630,7 @@ void NeuralAmpModeler::_ApplyDSPStaging()
   }
 }
 
-void NeuralAmpModeler::_DeallocateIOPointers()
+void Amphibia::_DeallocateIOPointers()
 {
   if (mInputPointers != nullptr)
   {
@@ -646,7 +648,7 @@ void NeuralAmpModeler::_DeallocateIOPointers()
     throw std::runtime_error("Failed to deallocate pointer to output buffer!\n");
 }
 
-void NeuralAmpModeler::_FallbackDSP(iplug::sample** inputs, iplug::sample** outputs, const size_t numChannels,
+void Amphibia::_FallbackDSP(iplug::sample** inputs, iplug::sample** outputs, const size_t numChannels,
                                     const size_t numFrames)
 {
   for (auto c = 0; c < numChannels; c++)
@@ -654,7 +656,7 @@ void NeuralAmpModeler::_FallbackDSP(iplug::sample** inputs, iplug::sample** outp
       mOutputArray[c][s] = mInputArray[c][s];
 }
 
-void NeuralAmpModeler::_ResetModelAndIR(const double sampleRate, const int maxBlockSize)
+void Amphibia::_ResetModelAndIR(const double sampleRate, const int maxBlockSize)
 {
   // Model
   if (mStagedModel != nullptr)
@@ -687,7 +689,7 @@ void NeuralAmpModeler::_ResetModelAndIR(const double sampleRate, const int maxBl
   }
 }
 
-void NeuralAmpModeler::_SetInputGain()
+void Amphibia::_SetInputGain()
 {
   iplug::sample inputGainDB = GetParam(kInputLevel)->Value();
   // Input calibration
@@ -698,7 +700,7 @@ void NeuralAmpModeler::_SetInputGain()
   mInputGain = DBToAmp(inputGainDB);
 }
 
-void NeuralAmpModeler::_SetOutputGain()
+void Amphibia::_SetOutputGain()
 {
   double gainDB = GetParam(kOutputLevel)->Value();
   if (mModel != nullptr)
@@ -729,7 +731,7 @@ void NeuralAmpModeler::_SetOutputGain()
   mOutputGain = DBToAmp(gainDB);
 }
 
-void NeuralAmpModeler::_ApplySlimParamToLoadedNAMs()
+void Amphibia::_ApplySlimParamToLoadedNAMs()
 {
   const double v = GetParam(kSlim)->Value();
   auto apply = [v](ResamplingNAM* p) {
@@ -742,7 +744,7 @@ void NeuralAmpModeler::_ApplySlimParamToLoadedNAMs()
   apply(mStagedModel.get());
 }
 
-std::string NeuralAmpModeler::_StageModel(const WDL_String& modelPath)
+std::string Amphibia::_StageModel(const WDL_String& modelPath)
 {
   WDL_String previousNAMPath = mNAMPath;
   try
@@ -787,7 +789,7 @@ std::string NeuralAmpModeler::_StageModel(const WDL_String& modelPath)
   return "";
 }
 
-dsp::wav::LoadReturnCode NeuralAmpModeler::_StageIR(const WDL_String& irPath)
+dsp::wav::LoadReturnCode Amphibia::_StageIR(const WDL_String& irPath)
 {
   // FIXME it'd be better for the path to be "staged" as well. Just in case the
   // path and the model got caught on opposite sides of the fence...
@@ -825,25 +827,25 @@ dsp::wav::LoadReturnCode NeuralAmpModeler::_StageIR(const WDL_String& irPath)
   return wavState;
 }
 
-size_t NeuralAmpModeler::_GetBufferNumChannels() const
+size_t Amphibia::_GetBufferNumChannels() const
 {
   // Assumes input=output (no mono->stereo effects)
   return mInputArray.size();
 }
 
-size_t NeuralAmpModeler::_GetBufferNumFrames() const
+size_t Amphibia::_GetBufferNumFrames() const
 {
   if (_GetBufferNumChannels() == 0)
     return 0;
   return mInputArray[0].size();
 }
 
-void NeuralAmpModeler::_InitToneStack()
+void Amphibia::_InitToneStack()
 {
   // If you want to customize the tone stack, then put it here!
   mToneStack = std::make_unique<dsp::tone_stack::BasicNamToneStack>();
 }
-void NeuralAmpModeler::_PrepareBuffers(const size_t numChannels, const size_t numFrames)
+void Amphibia::_PrepareBuffers(const size_t numChannels, const size_t numFrames)
 {
   const bool updateChannels = numChannels != _GetBufferNumChannels();
   const bool updateFrames = updateChannels || (_GetBufferNumFrames() != numFrames);
@@ -876,13 +878,13 @@ void NeuralAmpModeler::_PrepareBuffers(const size_t numChannels, const size_t nu
     mOutputPointers[c] = mOutputArray[c].data();
 }
 
-void NeuralAmpModeler::_PrepareIOPointers(const size_t numChannels)
+void Amphibia::_PrepareIOPointers(const size_t numChannels)
 {
   _DeallocateIOPointers();
   _AllocateIOPointers(numChannels);
 }
 
-void NeuralAmpModeler::_ProcessInput(iplug::sample** inputs, const size_t nFrames, const size_t nChansIn,
+void Amphibia::_ProcessInput(iplug::sample** inputs, const size_t nFrames, const size_t nChansIn,
                                      const size_t nChansOut)
 {
   // We'll assume that the main processing is mono for now. We'll handle dual amps later.
@@ -910,7 +912,7 @@ void NeuralAmpModeler::_ProcessInput(iplug::sample** inputs, const size_t nFrame
         mInputArray[0][s] += gain * inputs[c][s];
 }
 
-void NeuralAmpModeler::_ProcessOutput(iplug::sample** inputs, iplug::sample** outputs, const size_t nFrames,
+void Amphibia::_ProcessOutput(iplug::sample** inputs, iplug::sample** outputs, const size_t nFrames,
                                       const size_t nChansIn, const size_t nChansOut)
 {
   const double gain = mOutputGain;
@@ -929,7 +931,7 @@ void NeuralAmpModeler::_ProcessOutput(iplug::sample** inputs, iplug::sample** ou
 #endif
 }
 
-void NeuralAmpModeler::_UpdateControlsFromModel()
+void Amphibia::_UpdateControlsFromModel()
 {
   if (mModel == nullptr)
   {
@@ -964,7 +966,7 @@ void NeuralAmpModeler::_UpdateControlsFromModel()
   }
 }
 
-void NeuralAmpModeler::_UpdateLatency()
+void Amphibia::_UpdateLatency()
 {
   int latency = 0;
   if (mModel)
@@ -980,7 +982,7 @@ void NeuralAmpModeler::_UpdateLatency()
   }
 }
 
-void NeuralAmpModeler::_UpdateMeters(sample** inputPointer, sample** outputPointer, const size_t nFrames,
+void Amphibia::_UpdateMeters(sample** inputPointer, sample** outputPointer, const size_t nFrames,
                                      const size_t nChansIn, const size_t nChansOut)
 {
   // Right now, we didn't specify MAXNC when we initialized these, so it's 1.

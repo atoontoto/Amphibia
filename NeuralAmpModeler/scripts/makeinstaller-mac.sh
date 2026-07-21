@@ -26,8 +26,8 @@ if [ "$VERSION" == "" ]; then
   exit 1
 fi
 
-PRODUCT_NAME=NeuralAmpModeler
-PKG_ID_PREFIX="${INSTALLER_PKG_ID_PREFIX:-com.StevenAtkinson}"
+PRODUCT_NAME=Amphibia
+PKG_ID_PREFIX="${INSTALLER_PKG_ID_PREFIX:-org.amphibiaaudio}"
 
 # locations
 PRODUCTS="build-mac"
@@ -45,7 +45,7 @@ RES_PKG_ID="${PKG_ID_PREFIX}.resources.pkg.${PRODUCT_NAME}"
 
 RSRCS="~/Music/${PRODUCT_NAME}/Resources"
 
-OUTPUT_BASE_FILENAME="${PRODUCT_NAME} Installer.pkg"
+OUTPUT_BASE_FILENAME="${PRODUCT_NAME} Setup.pkg"
 THIRD_PARTY_NOTICES="./installer/ThirdPartyNotices.txt"
 
 TARGET_DIR="./build-mac/installer"

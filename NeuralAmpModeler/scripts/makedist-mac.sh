@@ -21,7 +21,7 @@ SCRIPTS=$IPLUG2_ROOT/Scripts
 CODESIGN=0
 
 # macOS codesigning/notarization
-INSTALLER_PKG_ID_PREFIX=${INSTALLER_PKG_ID_PREFIX:-com.StevenAtkinson}
+INSTALLER_PKG_ID_PREFIX=${INSTALLER_PKG_ID_PREFIX:-org.amphibiaaudio}
 APP_SPECIFIC_ID=${APP_SPECIFIC_ID:-TODO}
 APP_SPECIFIC_PWD=${APP_SPECIFIC_PWD:-TODO}
 
@@ -353,8 +353,8 @@ mv ./build-mac/*.zip ./build-mac/out
 
 #if [ $DEMO == 1 ]
 #then
-#  git checkout installer/NeuralAmpModeler.iss
-#  git checkout installer/NeuralAmpModeler.pkgproj
+#  git checkout installer/Amphibia.iss
+#  git checkout installer/Amphibia.pkgproj
 #  git checkout resources/img/AboutBox.png
 #fi
 

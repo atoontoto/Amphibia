@@ -1,0 +1,21 @@
+* text=auto
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xcscheme text eol=lf
+*.pbxproj text eol=lf
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.filters -text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.icns binary
+*.ttf binary
+*.nam binary
+*.wav binary

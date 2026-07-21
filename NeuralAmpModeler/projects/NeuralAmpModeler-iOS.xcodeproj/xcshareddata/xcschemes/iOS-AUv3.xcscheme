@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "91236D761B08F59300734C5E"
-               BuildableName = "NeuralAmpModelerAppExtension.appex"
+               BuildableName = "AmphibiaAppExtension.appex"
                BlueprintName = "AUv3"
                ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
             </BuildableReference>
@@ -30,7 +30,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "91236D0C1B08F42B00734C5E"
-               BuildableName = "NeuralAmpModeler.app"
+               BuildableName = "Amphibia.app"
                BlueprintName = "App"
                ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
             </BuildableReference>
@@ -46,7 +46,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "91236D761B08F59300734C5E"
-            BuildableName = "NeuralAmpModelerAppExtension.appex"
+            BuildableName = "AmphibiaAppExtension.appex"
             BlueprintName = "AUv3"
             ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
          </BuildableReference>
@@ -75,7 +75,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "91236D0C1B08F42B00734C5E"
-            BuildableName = "NeuralAmpModeler.app"
+            BuildableName = "Amphibia.app"
             BlueprintName = "App"
             ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
          </BuildableReference>
@@ -93,7 +93,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "91236D0C1B08F42B00734C5E"
-            BuildableName = "NeuralAmpModeler.app"
+            BuildableName = "Amphibia.app"
             BlueprintName = "App"
             ReferencedContainer = "container:NeuralAmpModeler-iOS.xcodeproj">
          </BuildableReference>

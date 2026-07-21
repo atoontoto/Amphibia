@@ -20,10 +20,10 @@ echo ZIP_ARG %ZIP_ARG%
 echo END SCRIPT VARIABLES -----------------------------------------------------
 
 if %DEMO_ARG% == "demo" (
-  echo Making NeuralAmpModeler Windows DEMO VERSION distribution ...
+  echo Making Amphibia Windows DEMO VERSION distribution ...
   set DEMO=1
 ) else (
-  echo Making NeuralAmpModeler Windows FULL VERSION distribution ...
+  echo Making Amphibia Windows FULL VERSION distribution ...
   set DEMO=0
 )
 
@@ -80,19 +80,19 @@ REM - Could build individual targets like this:
 REM - msbuild NeuralAmpModeler-app.vcxproj /p:configuration=release /p:platform=win32
 
 REM echo Building 32 bit binaries...
-REM msbuild NeuralAmpModeler.sln /p:configuration=release /p:platform=win32 /nologo /verbosity:minimal /fileLogger /m /flp:logfile=build-win.log;errorsonly 
+REM msbuild Amphibia.sln /p:configuration=release /p:platform=win32 /nologo /verbosity:minimal /fileLogger /m /flp:logfile=build-win.log;errorsonly
 
 REM echo Building 64 bit binaries...
 REM add projects with /t to build VST3 and AAX
-msbuild NeuralAmpModeler.sln /t:NeuralAmpModeler-app;NeuralAmpModeler-vst3 /p:configuration=release /p:platform=x64 /nologo /verbosity:minimal /fileLogger /m /flp:logfile=build-win.log;errorsonly;append
+msbuild Amphibia.sln /t:Amphibia-app;Amphibia-vst3 /p:configuration=release /p:platform=x64 /nologo /verbosity:minimal /fileLogger /m /flp:logfile=build-win.log;errorsonly;append
 
 REM --echo Copying AAX Presets
 
 REM --echo ------------------------------------------------------------------
 REM --echo Code sign AAX binary...
 REM --info at pace central, login via iLok license manager https://www.paceap.com/pace-central.html
-REM --wraptool sign --verbose --account XXXXX --wcguid XXXXX --keyfile XXXXX.p12 --keypassword XXXXX --in .\build-win\aax\bin\NeuralAmpModeler.aaxplugin\Contents\Win32\NeuralAmpModeler.aaxplugin --out .\build-win\aax\bin\NeuralAmpModeler.aaxplugin\Contents\Win32\NeuralAmpModeler.aaxplugin
-REM --wraptool sign --verbose --account XXXXX --wcguid XXXXX --keyfile XXXXX.p12 --keypassword XXXXX --in .\build-win\aax\bin\NeuralAmpModeler.aaxplugin\Contents\x64\NeuralAmpModeler.aaxplugin --out .\build-win\aax\bin\NeuralAmpModeler.aaxplugin\Contents\x64\NeuralAmpModeler.aaxplugin
+REM --wraptool sign --verbose --account XXXXX --wcguid XXXXX --keyfile XXXXX.p12 --keypassword XXXXX --in .\build-win\aax\bin\Amphibia.aaxplugin\Contents\Win32\Amphibia.aaxplugin --out .\build-win\aax\bin\Amphibia.aaxplugin\Contents\Win32\Amphibia.aaxplugin
+REM --wraptool sign --verbose --account XXXXX --wcguid XXXXX --keyfile XXXXX.p12 --keypassword XXXXX --in .\build-win\aax\bin\Amphibia.aaxplugin\Contents\x64\Amphibia.aaxplugin --out .\build-win\aax\bin\Amphibia.aaxplugin\Contents\x64\Amphibia.aaxplugin
 
 if %ZIP% == 0 (
 REM - Make Installer (InnoSetup)
@@ -103,21 +103,21 @@ echo Making Installer ...
   REM if exist "%ProgramFiles(x86)%" (goto 64-Bit-is) else (goto 32-Bit-is)
 
   REM :32-Bit-is
-  REM REM "%ProgramFiles%\Inno Setup 6\iscc" /Q ".\installer\NeuralAmpModeler.iss"
+  REM REM "%ProgramFiles%\Inno Setup 6\iscc" /Q ".\installer\Amphibia.iss"
   REM goto END-is
 
   REM :64-Bit-is
-  "%ProgramFiles(x86)%\Inno Setup 6\iscc" /Q ".\installer\NeuralAmpModeler.iss"
+  "%ProgramFiles(x86)%\Inno Setup 6\iscc" /Q ".\installer\Amphibia.iss"
   REM goto END-is
 
   REM :END-is
 
   REM - Codesign Installer for Windows 8+
-  REM -"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Bin\signtool.exe" sign /f "XXXXX.p12" /p XXXXX /d "NeuralAmpModeler Installer" ".\installer\NeuralAmpModeler Installer.exe"
+  REM -"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Bin\signtool.exe" sign /f "XXXXX.p12" /p XXXXX /d "Amphibia Installer" ".\installer\Amphibia Setup.exe"
 
   REM -if %1 == 1 (
-  REM -copy ".\installer\NeuralAmpModeler Installer.exe" ".\installer\NeuralAmpModeler Demo Installer.exe"
-  REM -del ".\installer\NeuralAmpModeler Installer.exe"
+  REM -copy ".\installer\Amphibia Setup.exe" ".\installer\Amphibia Demo Setup.exe"
+  REM -del ".\installer\Amphibia Setup.exe"
   REM -)
 
   echo Making Zip File of Installer ...

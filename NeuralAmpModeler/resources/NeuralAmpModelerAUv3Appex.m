@@ -1,4 +1,4 @@
-#import <NeuralAmpModelerAU/NeuralAmpModelerAU.h>
+#import <AmphibiaAU/NeuralAmpModelerAU.h>
 
 void Dummy(void)
 {

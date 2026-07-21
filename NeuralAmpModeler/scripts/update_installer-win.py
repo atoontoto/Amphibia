@@ -40,28 +40,28 @@ def main():
     bundle_name = config["BUNDLE_NAME"]
     display_name = env_or_default("INSTALLER_DISPLAY_NAME", bundle_name)
     installer_suffix = " Demo" if demo else ""
-    default_output_name = display_name + installer_suffix + " Installer"
+    default_output_name = display_name + installer_suffix + " Setup"
 
     setup_values = {
         "AppName": display_name,
         "AppContact": env_or_default(
             "INSTALLER_APP_CONTACT",
-            "neuralampmodeler@gmail.com",
+            "",
         ),
         "AppCopyright": env_or_default(
             "INSTALLER_APP_COPYRIGHT",
-            "Copyright (C) 2022 Steven Atkinson",
+            "Copyright (C) 2022 Steven Atkinson; Amphibia modifications 2026 Amphibia contributors",
         ),
         "AppPublisher": env_or_default(
-            "INSTALLER_APP_PUBLISHER", "Steven Atkinson"
+            "INSTALLER_APP_PUBLISHER", "Amphibia Project"
         ),
         "AppPublisherURL": env_or_default(
             "INSTALLER_APP_PUBLISHER_URL",
-            "https://www.neuralampmodeler.com/",
+            "",
         ),
         "AppSupportURL": env_or_default(
             "INSTALLER_APP_SUPPORT_URL",
-            "https://www.neuralampmodeler.com/",
+            "",
         ),
         "AppVersion": config["FULL_VER_STR"],
         "VersionInfoVersion": config["FULL_VER_STR"],
@@ -84,7 +84,7 @@ def main():
     print("Updating Windows Installer version info...")
 
     for line in fileinput.input(
-        projectpath + "/installer/" + bundle_name + ".iss", inplace=1
+        projectpath + "/installer/Amphibia.iss", inplace=1
     ):
         if "=" in line:
             key = line.split("=", 1)[0]

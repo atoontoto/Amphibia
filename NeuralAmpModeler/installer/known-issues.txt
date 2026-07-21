@@ -1,1 +1,1 @@
-For known issues, see https://github.com/sdatkinson/NeuralAmpModelerPlugin/issues.
+This development installer is not release-ready. See docs/MILESTONE_1_REPORT.md in the source tree for current blockers.

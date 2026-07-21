@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4F39075F2013EBA300DDA490"
-               BuildableName = "NeuralAmpModeler.appex"
+               BuildableName = "Amphibia.appex"
                BlueprintName = "AUv3"
                ReferencedContainer = "container:NeuralAmpModeler-macOS.xcodeproj">
             </BuildableReference>
@@ -30,7 +30,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4F3EE1BA231438D000004786"
-               BuildableName = "NeuralAmpModeler.app"
+               BuildableName = "Amphibia.app"
                BlueprintName = "AUv3App"
                ReferencedContainer = "container:NeuralAmpModeler-macOS.xcodeproj">
             </BuildableReference>
@@ -68,7 +68,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4F39075F2013EBA300DDA490"
-            BuildableName = "NeuralAmpModeler.appex"
+            BuildableName = "Amphibia.appex"
             BlueprintName = "AUv3"
             ReferencedContainer = "container:NeuralAmpModeler-macOS.xcodeproj">
          </BuildableReference>
@@ -91,7 +91,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4F39075F2013EBA300DDA490"
-            BuildableName = "NeuralAmpModeler.appex"
+            BuildableName = "Amphibia.appex"
             BlueprintName = "AUv3"
             ReferencedContainer = "container:NeuralAmpModeler-macOS.xcodeproj">
          </BuildableReference>

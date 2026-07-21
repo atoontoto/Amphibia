@@ -2,7 +2,7 @@ Third-Party Notices
 ===================
 
 This product includes open-source and third-party software. The notices below
-are provided for the Neural Amp Modeler plug-ins and standalone application,
+are provided for the Amphibia plug-ins and standalone application,
 including the VST3, Audio Unit, and standalone application installer outputs.
 
 Downstream product forks should review this file before release, update product

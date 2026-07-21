@@ -193,11 +193,11 @@ private:
   std::function<void(NAM_SAMPLE**, NAM_SAMPLE**, int)> mBlockProcessFunc;
 };
 
-class NeuralAmpModeler final : public iplug::Plugin
+class Amphibia final : public iplug::Plugin
 {
 public:
-  NeuralAmpModeler(const iplug::InstanceInfo& info);
-  ~NeuralAmpModeler();
+  Amphibia(const iplug::InstanceInfo& info);
+  ~Amphibia();
 
   void ProcessBlock(iplug::sample** inputs, iplug::sample** outputs, int nFrames) override;
   void OnReset() override;

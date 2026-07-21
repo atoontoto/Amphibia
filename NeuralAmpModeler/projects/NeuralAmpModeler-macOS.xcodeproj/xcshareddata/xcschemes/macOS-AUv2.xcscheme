@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4F3AE17812C0E5E2001FD7A4"
-               BuildableName = "NeuralAmpModeler.component"
+               BuildableName = "Amphibia.component"
                BlueprintName = "AU"
                ReferencedContainer = "container:NeuralAmpModeler-macOS.xcodeproj">
             </BuildableReference>
@@ -50,7 +50,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4F3AE17812C0E5E2001FD7A4"
-            BuildableName = "NeuralAmpModeler.component"
+            BuildableName = "Amphibia.component"
             BlueprintName = "AU"
             ReferencedContainer = "container:NeuralAmpModeler-macOS.xcodeproj">
          </BuildableReference>

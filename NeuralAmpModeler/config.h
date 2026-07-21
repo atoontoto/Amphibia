@@ -1,18 +1,60 @@
-#define PLUG_NAME "NeuralAmpModeler"
-#define PLUG_MFR "Steven Atkinson"
-#define PLUG_VERSION_HEX 0x0000070f
-#define PLUG_VERSION_STR "0.7.15"
-#define PLUG_UNIQUE_ID '1YEo'
-#define PLUG_MFR_ID 'SDAa'
-#define PLUG_URL_STR "https://github.com/sdatkinson/NeuralAmpModelerPlugin"
-#define PLUG_EMAIL_STR "spam@me.com"
-#define PLUG_COPYRIGHT_STR "Copyright 2022 Steven Atkinson"
-#define PLUG_CLASS_NAME NeuralAmpModeler
-#define BUNDLE_NAME "NeuralAmpModeler"
-#define BUNDLE_MFR "StevenAtkinson"
-#define BUNDLE_DOMAIN "com"
+// Amphibia product metadata. This file is the authoritative metadata source for
+// iPlug projects, resource-generation scripts, About text, and packaging.
+#define PLUG_NAME "Amphibia"
+#define PLUG_MFR "Amphibia Project"
+#define PLUG_VERSION_HEX 0x00000100
+#define PLUG_VERSION_STR "0.1.0"
+#define PLUG_UNIQUE_ID 'AmPh'
+#define PLUG_MFR_ID 'AmBi'
+#define PLUG_URL_STR ""
+#define PLUG_EMAIL_STR ""
+#define PLUG_COPYRIGHT_STR "Copyright 2022 Steven Atkinson; Amphibia modifications 2026 Amphibia contributors"
+#define PLUG_CLASS_NAME Amphibia
+#define BUNDLE_NAME "Amphibia"
+#define BUNDLE_MFR "amphibiaaudio"
+#define BUNDLE_DOMAIN "org"
 
-#define SHARED_RESOURCES_SUBPATH "NeuralAmpModeler"
+#define SHARED_RESOURCES_SUBPATH "Amphibia"
+
+// Explicit VST3 identities. These UUIDv4 values are independent of the
+// processor/controller IDs derived by the official NeuralAmpModeler plugin.
+#define VST3_PROCESSOR_UID 0x7DBF8585, 0x2FC54817, 0xAE21F791, 0x0D0330C1
+#define VST3_CONTROLLER_UID 0x893C1354, 0xA5D5416D, 0xB84CCA8A, 0xE0C27034
+
+// Amphibia-owned metadata not consumed directly by iPlug's parse_config.py.
+#define AMPHIBIA_PRODUCT_NAME PLUG_NAME
+#define AMPHIBIA_PLUGIN_NAME PLUG_NAME
+#define AMPHIBIA_STANDALONE_NAME BUNDLE_NAME
+#define AMPHIBIA_MANUFACTURER_NAME PLUG_MFR
+#define AMPHIBIA_VERSION PLUG_VERSION_STR
+#define AMPHIBIA_STATE_VERSION "1.0.0" // Current path + parameter layout; independent of product SemVer.
+#define AMPHIBIA_INSTALLER_NAME "Amphibia Setup"
+#define AMPHIBIA_SETTINGS_NAMESPACE BUNDLE_NAME
+#define AMPHIBIA_MANAGED_LIBRARY_NAMESPACE BUNDLE_NAME
+#define AMPHIBIA_CACHE_NAMESPACE BUNDLE_NAME
+#define AMPHIBIA_GITHUB_OWNER "amphibia-project" // Placeholder; not asserted to be an existing account.
+#define AMPHIBIA_GITHUB_REPOSITORY_URL "" // Set only after a real repository exists.
+#define AMPHIBIA_WEBSITE_URL "" // Set only after an owner-controlled website exists.
+#define AMPHIBIA_TEMPORARY_NAMESPACE "org.amphibiaaudio"
+#define AMPHIBIA_UPSTREAM_PLUGIN_VERSION "0.7.15"
+#define AMPHIBIA_UPSTREAM_PLUGIN_COMMIT "96337e9"
+#define AMPHIBIA_NAM_CORE_VERSION "0.5.3"
+#define AMPHIBIA_NAM_CORE_COMMIT "9c7b185"
+#define AMPHIBIA_IPLUG2_COMMIT "66f9060"
+
+#ifndef AMPHIBIA_BUILD_COMMIT
+  #define AMPHIBIA_BUILD_COMMIT "unknown"
+#endif
+
+#ifndef AMPHIBIA_BUILD_TYPE
+  #if defined(_DEBUG) || !defined(NDEBUG)
+    #define AMPHIBIA_BUILD_TYPE "Debug"
+  #elif defined(TRACER_BUILD)
+    #define AMPHIBIA_BUILD_TYPE "Tracer"
+  #else
+    #define AMPHIBIA_BUILD_TYPE "Release"
+  #endif
+#endif
 
 #ifdef APP_API
   #define PLUG_CHANNEL_IO "1-2"
@@ -35,16 +77,16 @@
 #define PLUG_MAX_WIDTH PLUG_WIDTH * 4
 #define PLUG_MAX_HEIGHT PLUG_HEIGHT * 4
 
-#define AUV2_ENTRY NeuralAmpModeler_Entry
-#define AUV2_ENTRY_STR "NeuralAmpModeler_Entry"
-#define AUV2_FACTORY NeuralAmpModeler_Factory
-#define AUV2_VIEW_CLASS NeuralAmpModeler_View
-#define AUV2_VIEW_CLASS_STR "NeuralAmpModeler_View"
+#define AUV2_ENTRY Amphibia_Entry
+#define AUV2_ENTRY_STR "Amphibia_Entry"
+#define AUV2_FACTORY Amphibia_Factory
+#define AUV2_VIEW_CLASS Amphibia_View
+#define AUV2_VIEW_CLASS_STR "Amphibia_View"
 
-#define AAX_TYPE_IDS 'ITP1'
-#define AAX_TYPE_IDS_AUDIOSUITE 'ITA1'
-#define AAX_PLUG_MFR_STR "Acme"
-#define AAX_PLUG_NAME_STR "NeuralAmpModeler\nIPEF"
+#define AAX_TYPE_IDS 'AmP1'
+#define AAX_TYPE_IDS_AUDIOSUITE 'AmA1'
+#define AAX_PLUG_MFR_STR "Amphibia Project"
+#define AAX_PLUG_NAME_STR "Amphibia\nAmPh"
 #define AAX_PLUG_CATEGORY_STR "Effect"
 #define AAX_DOES_AUDIOSUITE 1
 

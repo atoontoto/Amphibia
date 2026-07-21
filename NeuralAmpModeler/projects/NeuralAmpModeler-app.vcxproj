@@ -28,9 +28,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{41785AE4-5B70-4A75-880B-4B418B4E13C6}</ProjectGuid>
-    <RootNamespace>NeuralAmpModeler</RootNamespace>
-    <ProjectName>NeuralAmpModeler-app</ProjectName>
+    <ProjectGuid>{0C7F68EC-0584-439E-BBDF-89E8BB5032D2}</ProjectGuid>
+    <RootNamespace>Amphibia</RootNamespace>
+    <ProjectName>Amphibia-app</ProjectName>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -423,7 +423,6 @@
     <ResourceCompile Include="..\resources\main.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\resources\NeuralAmpModeler.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\config\NeuralAmpModeler-ios.xcconfig" />

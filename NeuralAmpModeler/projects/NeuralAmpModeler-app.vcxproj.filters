@@ -435,8 +435,5 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\resources\NeuralAmpModeler.ico">
-      <Filter>resources</Filter>
-    </Image>
   </ItemGroup>
 </Project>

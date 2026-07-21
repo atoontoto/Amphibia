@@ -28,22 +28,22 @@ def main():
     files = []
 
     if not zip:
-        installer = "\\build-win\\installer\\NeuralAmpModeler Installer.exe"
+        installer = "\\build-win\\installer\\Amphibia Setup.exe"
 
         if demo:
-            installer = "\\build-win\\installer\\NeuralAmpModeler Demo Installer.exe"
+            installer = "\\build-win\\installer\\Amphibia Demo Setup.exe"
 
         files = [
             projectpath + installer,
             projectpath + "\\installer\\changelog.txt",
             projectpath + "\\installer\\known-issues.txt",
-            projectpath + "\\manual\\NeuralAmpModeler manual.pdf",
+            projectpath + "\\manual\\Amphibia manual.pdf",
         ]
     else:
         files = [
             projectpath
-            + "\\build-win\\NeuralAmpModeler.vst3\\Contents\\x86_64-win\\NeuralAmpModeler.vst3",
-            projectpath + "\\build-win\\NeuralAmpModeler_x64.exe",
+            + "\\build-win\\Amphibia.vst3\\Contents\\x86_64-win\\Amphibia.vst3",
+            projectpath + "\\build-win\\Amphibia_x64.exe",
         ]
 
     zipname = get_archive_name(projectpath, "win", "demo" if demo == 1 else "full")
@@ -64,8 +64,8 @@ def main():
     )
 
     files = [
-        projectpath + "\\build-win\\pdbs\\NeuralAmpModeler-vst3_x64.pdb",
-        projectpath + "\\build-win\\pdbs\\NeuralAmpModeler-app_x64.pdb",
+        projectpath + "\\build-win\\pdbs\\Amphibia-vst3_x64.pdb",
+        projectpath + "\\build-win\\pdbs\\Amphibia-app_x64.pdb",
     ]
 
     for f in files:

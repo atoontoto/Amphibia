@@ -6,17 +6,17 @@
 	<array>
 		<dict>
 			<key>description</key>
-			<string>NeuralAmpModeler</string>
+			<string>Amphibia</string>
 			<key>factoryFunction</key>
-			<string>NeuralAmpModeler_Factory</string>
+			<string>Amphibia_Factory</string>
 			<key>manufacturer</key>
-			<string>SDAa</string>
+			<string>AmBi</string>
 			<key>name</key>
-			<string>Steven Atkinson: NeuralAmpModeler</string>
+			<string>Amphibia Project: Amphibia</string>
 			<key>sandboxSafe</key>
 			<true/>
 			<key>subtype</key>
-			<string>1YEo</string>
+			<string>AmPh</string>
 			<key>type</key>
 			<string>aufx</string>
 			<key>version</key>
@@ -28,21 +28,21 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>NeuralAmpModeler</string>
+	<string>Amphibia</string>
 	<key>CFBundleGetInfoString</key>
-	<string>NeuralAmpModeler v0.7.15 Copyright 2022 Steven Atkinson</string>
+	<string>Amphibia v0.1.0; derived from NeuralAmpModelerPlugin v0.7.15</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.StevenAtkinson.audiounit.NeuralAmpModeler</string>
+	<string>org.amphibiaaudio.audiounit.Amphibia</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>NeuralAmpModeler</string>
+	<string>Amphibia</string>
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.7.15</string>
 	<key>CFBundleSignature</key>
-	<string>1YEo</string>
+	<string>AmPh</string>
 	<key>CFBundleVersion</key>
 	<string>0.7.15</string>
 	<key>CSResourcesFileMapped</key>
@@ -50,6 +50,6 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>10.15.0</string>
 	<key>NSPrincipalClass</key>
-	<string>NeuralAmpModeler_View</string>
+	<string>Amphibia_View</string>
 </dict>
 </plist>

@@ -5,6 +5,9 @@
 import plistlib, os, sys, shutil
 
 IPLUG2_ROOT = "../../iPlug2"
+# Resource filenames intentionally retain the upstream prefix to reduce merge
+# noise. Their embedded product identity is generated from config.h.
+RESOURCE_FILE_PREFIX = "NeuralAmpModeler"
 
 scriptpath = os.path.dirname(os.path.realpath(__file__))
 projectpath = os.path.abspath(os.path.join(scriptpath, os.pardir))
@@ -57,7 +60,7 @@ def main():
         NSEXTENSIONPOINTIDENTIFIER = "com.apple.AudioUnit"
 
     plistpath = (
-        projectpath + "/resources/" + config["BUNDLE_NAME"] + "-iOS-AUv3-Info.plist"
+        projectpath + "/resources/" + RESOURCE_FILE_PREFIX + "-iOS-AUv3-Info.plist"
     )
 
     NSEXTENSIONATTRDICT = dict(
@@ -123,21 +126,21 @@ def main():
             )
             auv3["NSExtension"]["NSExtensionAttributes"]["AudioComponents"][0][
                 "factoryFunction"
-            ] = "IPlugAUViewController_vNeuralAmpModeler"
+            ] = "IPlugAUViewController_vAmphibia"
             auv3["NSExtension"]["NSExtensionMainStoryboard"] = (
-                config["BUNDLE_NAME"] + "-iOS-MainInterface"
+                RESOURCE_FILE_PREFIX + "-iOS-MainInterface"
             )
         else:
             auv3["NSExtension"][
                 "NSExtensionPrincipalClass"
-            ] = "IPlugAUViewController_vNeuralAmpModeler"
+            ] = "IPlugAUViewController_vAmphibia"
 
         with open(plistpath, "wb") as f2:
             plistlib.dump(auv3, f2)
 
     # Standalone APP
 
-    plistpath = projectpath + "/resources/" + config["BUNDLE_NAME"] + "-iOS-Info.plist"
+    plistpath = projectpath + "/resources/" + RESOURCE_FILE_PREFIX + "-iOS-Info.plist"
     with open(plistpath, "rb") as f:
         iOSapp = plistlib.load(f)
         iOSapp["CFBundleExecutable"] = config["BUNDLE_NAME"]
