@@ -25,6 +25,10 @@ Amphibia is a derivative of NeuralAmpModelerPlugin and should remain able to con
 - OAuth, credentials, network/archive policy, managed cache, and attribution.
 - Amphibia state schema, standalone session persistence, and expanded UI.
 
+Milestone 1 deliberately retains the `NeuralAmpModeler/` directory, primary C++ filenames, platform project filenames, plist/interface filenames, and upstream submodule layout. Product identity lives in central metadata plus platform output/bundle settings. This keeps future merges focused on semantic conflicts instead of wholesale path renames.
+
+The highest-conflict Milestone 1 files are `config.h`, `NeuralAmpModeler.cpp/.h`, `NeuralAmpModelerControls.h`, `Unserialization.cpp`, platform project/config files, `main.rc`, Apple plists/schemes, and distribution scripts. After every upstream merge, run `python tests/identity/validate_identity.py` before native builds and inspect emitted binary/bundle metadata for reintroduced NAM IDs.
+
 ## Sync review
 
 For every upstream release:

@@ -1,10 +1,10 @@
 # Git and GitHub plan
 
-Status: Milestone 0; no Amphibia GitHub repository has been supplied
+Status: Milestone 1 local foundation; no Amphibia GitHub repository has been supplied
 
 ## Current repository state
 
-- `main` is at upstream tag `v0.7.15`, commit `96337e9ab6e3beb619459779bbb5c47e1b04d8c4`.
+- `main` preserves upstream tag `v0.7.15` / commit `96337e9ab6e3beb619459779bbb5c47e1b04d8c4` as its ancestry and now contains the reviewed Milestone 0 record plus Milestone 1 identity/foundation commits.
 - `upstream` points to `https://github.com/sdatkinson/NeuralAmpModelerPlugin.git` for fetch and push configuration, though no upstream push is intended.
 - No `origin` exists. This is correct until the user supplies or creates a real Amphibia repository.
 - Submodules are recursively initialized at the pins recorded in `UPSTREAM_MODIFICATION_MAP.md`.
@@ -37,12 +37,13 @@ Commit principles:
 - Generated product IDs are committed once and then treated as immutable compatibility data.
 - Large/binary test fixtures require license/source/hash review before entry; Git LFS is not assumed.
 
-Proposed initial commits:
+Initial commits now recorded:
 
-1. `docs: record Amphibia architecture and upstream investigation` (Milestone 0).
-2. `refactor: establish independent Amphibia product identity` (reviewable subcommits by build platform are acceptable).
-3. `test: characterize inherited NAM behavior`.
-4. Subsequent commits follow component/milestone boundaries, with tests in the same commit as behavior where practical.
+1. `e4bd397` — `docs: record Amphibia architecture and upstream investigation`.
+2. `64f7290` — `chore: establish Amphibia product identity`.
+3. `b24c018` — `docs: define Amphibia repository foundation`.
+4. `4945d43` — `ci: add identity checks and development builds`.
+5. The Milestone 1 report/record commit follows these; subsequent commits use component/milestone boundaries with tests beside behavior where practical.
 
 ## Upstream sync procedure
 
@@ -54,7 +55,7 @@ Proposed initial commits:
 6. Review third-party notices and submodule pins.
 7. Land through a reviewed PR that records the upstream range and verification artifacts.
 
-`docs/UPSTREAM_SYNC.md` will become the operational version once a CI/build baseline exists; this plan is the Milestone 0 policy.
+`docs/UPSTREAM_SYNC.md` is the operational baseline now that identity checks and native development build workflows exist. Hosted runs still need validation once `origin` is available.
 
 ## GitHub configuration
 
@@ -91,6 +92,6 @@ Each milestone PR should include:
 - Release notes identify the exact upstream NAM plugin/Core bases and disclose material deviations.
 - Never move a published tag or replace an artifact under the same version.
 
-## Milestone 0 commit/tag handling
+## Milestone commit/tag handling
 
-The documentation commit should use the configured developer identity if present and contain only `docs/`. A local lightweight milestone marker may be created only if requested; public tags wait for `origin` and review. The final handoff records the commit hash and dirty/submodule status.
+Local commits use the configured developer identity. No milestone or public tag is created without an explicit request; public tags wait for `origin`, protected checks, and review. Each handoff records commit hashes and dirty/submodule status.
