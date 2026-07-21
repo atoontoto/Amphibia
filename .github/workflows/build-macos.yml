@@ -30,7 +30,7 @@ jobs:
       - name: Build VST3
         run: xcodebuild -project NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj -scheme macOS-VST3 -configuration Release CODE_SIGNING_ALLOWED=NO build
       - name: Upload development artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Amphibia-macos-development
           path: |
