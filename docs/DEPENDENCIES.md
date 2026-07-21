@@ -1,0 +1,72 @@
+# Dependency and license inventory
+
+Status: Milestone 0 preliminary inventory; not legal advice
+
+Release rule: no dependency or inherited asset ships without a recorded version, source, license text, notice treatment, and redistribution decision.
+
+## Current source dependencies
+
+| Component | Pin / source in checkout | License observed | Distribution treatment / issue |
+|---|---|---|---|
+| NeuralAmpModelerPlugin | `96337e9` / root | MIT (`LICENSE`) | Retain copyright/license; document substantial Amphibia modifications. |
+| NeuralAmpModelerCore | submodule `9c7b185` (`v0.5.3`) | MIT | Retain license and pin in notices/SBOM. |
+| AudioDSPTools | submodule `0827c6c` (`v0.1.1`) | MIT | Retain license and pin. Appears twice through Core; deduplicate notices, not source provenance. |
+| iPlug2 fork | submodule `66f9060` | zlib-style (`iPlug2/LICENSE.txt`) | Retain notice; record that this is the pinned NAM fork, not current upstream iPlug2. |
+| WDL / SWELL | within iPlug2 | zlib-style / component-specific | Inventory compiled subset; preserve component notices. |
+| Eigen | three pinned snapshots | Primarily MPL-2.0, with BSD/MINPACK-licensed portions | Include required licenses/notices and source availability information. Confirm exact compiled modules and avoid copying benchmark/test-only code into binaries. |
+| nlohmann/json | within NAM Core | MIT | Retain notice; used for `.nam` parsing. |
+| NanoVG | within iPlug2 | zlib-style | Retain notice if compiled. |
+| NanoSVG | within iPlug2 | zlib-style | Retain notice if compiled. |
+| MetalNanoVG | within iPlug2 | MIT | macOS compiled-subset audit required. |
+| Yoga | within iPlug2 | MIT | Include only if the product build links it. |
+| RtAudio | within iPlug2 standalone | MIT-like | Retain notice; verify enabled Windows/macOS backends. |
+| RtMidi | within iPlug2 standalone | MIT-like | Retain notice. |
+| VST3 SDK | downloaded/present through iPlug tooling | MIT in current upstream notice | Pin exact SDK commit/archive and checksum in CI; ship required notice. |
+| Steinberg ASIO SDK interfaces | iPlug standalone dependency path | Steinberg ASIO SDK license | **Release review required.** Verify the exact files/binaries redistributed and compliance with the SDK's separate terms. |
+| REAPER SDK | within iPlug2 | license file present | Exclude if unused; otherwise review compiled/distributed surface. |
+| HIIR | within iPlug2 extras | license file present | Determine whether linked, then include/exclude from notices accordingly. |
+| libpng / giflib | within WDL | component licenses present | Determine whether linked; retain required notices if shipped. |
+| stb headers | within iPlug2 | public-domain/MIT alternatives as identified per header | Inventory exact headers compiled and record chosen license option. |
+| Khronos platform headers | within graphics dependencies | MIT-like | Retain notice if distributed/compiled. |
+
+The existing `NeuralAmpModeler/installer/ThirdPartyNotices.txt` is a useful starting point but is not an Amphibia release manifest. It does not establish the provenance/permission for all fonts and artwork and must be regenerated from the actual compiled and packaged dependency graph.
+
+## Inherited assets
+
+| Asset group | Checkout evidence | Decision |
+|---|---|---|
+| `Roboto-Regular.ttf` | Present under `NeuralAmpModeler/resources/fonts`; no adjacent license file found. | Do not ship until the exact font version and Apache-2.0/OFL provenance (as applicable to that file) is proven and license text added; replacing it is acceptable. |
+| `Michroma-Regular.ttf` | Present under the same folder; no adjacent license file found. | Do not infer a license from the font name. Prove source/version and include its license, or replace. |
+| NAM icons/backgrounds/knob/meter images | Added in upstream history, but no asset license/provenance manifest was found. | Replace with original Amphibia assets or obtain explicit provenance/permission before release. Source-code MIT alone is not treated as sufficient evidence for third-party visual assets. |
+| NAM application icons (`.ico`, `.icns`, xcassets) | NAM-branded and collision-prone. | Replace in Milestone 1 regardless of license. |
+| TONE3000 brand/logo | Not vendored. Provider guidelines require brand presentation. | Obtain/use only the official asset under documented brand permission; preserve aspect/color/clearspace; otherwise use provider-approved text treatment while seeking clarification. |
+| Model/IR fixtures | NAM Core contains example `.nam` files. | Record each fixture's source and redistribution permission. Real provider downloads never enter source control or release archives. |
+
+## Proposed new dependencies
+
+No new library is approved in Milestone 0.
+
+| Capability | Current decision | Evaluation criteria |
+|---|---|---|
+| HTTP/TLS | Not selected | Native desktop support, TLS via maintained platform/OpenSSL backend, redirects, cancellation, streaming limits, proxy behavior, license, CVE maintenance, reproducible build. Candidate must not require a server-side client secret. |
+| Loopback HTTP | Prefer a minimal Amphibia-owned single-request parser or a small audited component | Bind-address control, header/request caps, deadline/cancel, no general server surface, license. |
+| ZIP | Avoid for initial TONE3000 individual model downloads; not selected for future import | ZIP64 policy, decompression bounds, symlink/device detection, path normalization on Windows/macOS, license and maintenance. |
+| Hashing / CSPRNG | Prefer audited OS crypto APIs or an already linked maintained library | SHA-256 correctness, cryptographic randomness, FIPS concerns if claimed (none planned), no custom crypto. |
+| Persistent index | Start with schema-versioned JSON and atomic replace | Measure startup/write scale first. SQLite is allowed only if justified and then its public-domain status/build provenance must be recorded. |
+| Credential storage | Platform APIs | Windows Credential Manager and macOS Keychain; no plaintext fallback. |
+
+## API and service terms (not software licenses)
+
+| Service | Governing material | Product implication |
+|---|---|---|
+| TONE3000 API | <https://www.tone3000.com/api> and <https://www.tone3000.com/api/terms> (reviewed 2026-07-21) | Free native integration is conditioned on open-source/non-commercial use and brand/attribution/access rules; terms are revocable and must be rechecked before release. No scraping, bulk synchronization, catalog mirroring, or model redistribution. |
+| NAM project name/branding | Upstream project and repository | Amphibia must accurately attribute its derivative basis without presenting itself as the official NAM plugin or reusing product identity. |
+
+## Release checklist for notices
+
+- Generate a machine-readable dependency lock/SBOM from the exact release checkout.
+- Match every linked/static/object dependency to a license and source pin.
+- Match every packaged font, image, document, example, and provider logo to provenance and permission.
+- Include root license, third-party notices, source offer/link obligations, and creator/asset license metadata where applicable.
+- Review ASIO and platform SDK redistribution with a qualified maintainer/legal reviewer.
+- Diff installer/package contents against the manifest; fail CI on an unclassified file.
