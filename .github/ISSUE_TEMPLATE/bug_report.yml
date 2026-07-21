@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a reproducible Amphibia defect
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Amphibia has no supported release yet. Do not attach private models, credentials, or personal data.
+  - type: input
+    id: commit
+    attributes:
+      label: Amphibia commit
+      placeholder: Full commit hash
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Format
+      options: [Standalone, VST3, AU, AUv3, AAX, Build or CI, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS version, architecture, DAW and version, audio device/driver, sample rate, and block size where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data safety
+      options:
+        - label: I removed credentials, private content, and personal data from this report and its logs.
+          required: true

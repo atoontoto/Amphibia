@@ -1,0 +1,39 @@
+name: Build macOS
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate identity
+        run: python tests/identity/validate_identity.py
+      - name: Fetch pinned iPlug SDKs and libraries
+        run: |
+          cd iPlug2/Dependencies/IPlug
+          ./download-iplug-sdks.sh
+          cd ..
+          ./download-prebuilt-libs.sh
+      - name: Build standalone
+        run: xcodebuild -project NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj -scheme macOS-APP -configuration Release CODE_SIGNING_ALLOWED=NO build
+      - name: Build VST3
+        run: xcodebuild -project NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj -scheme macOS-VST3 -configuration Release CODE_SIGNING_ALLOWED=NO build
+      - name: Upload development artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Amphibia-macos-development
+          path: |
+            NeuralAmpModeler/build-mac/**/*.app
+            NeuralAmpModeler/build-mac/**/*.vst3
+          if-no-files-found: error

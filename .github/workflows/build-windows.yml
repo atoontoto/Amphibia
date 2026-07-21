@@ -1,0 +1,43 @@
+name: Build Windows
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: microsoft/setup-msbuild@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate identity
+        run: python tests/identity/validate_identity.py
+      - name: Fetch pinned iPlug SDKs and libraries
+        shell: bash
+        run: |
+          cd iPlug2/Dependencies/IPlug
+          ./download-iplug-sdks.sh
+          cd ..
+          ./download-prebuilt-libs.sh
+      - name: Build standalone and VST3
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP "amphibia-vst3-stage"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          msbuild NeuralAmpModeler/Amphibia.sln "/t:Amphibia-app;Amphibia-vst3" "/p:Configuration=Release;Platform=x64;VST3_64_PATH=$stage" /m /nologo
+      - name: Upload development artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Amphibia-windows-development
+          path: |
+            NeuralAmpModeler/build-win/app/x64/Release/Amphibia.exe
+            NeuralAmpModeler/build-win/Amphibia.vst3
+          if-no-files-found: error

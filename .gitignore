@@ -1,7 +1,7 @@
 .DS_Store
 xcuserdata
 *.RPP-bak
-build-*
+build-*/
 .build-stage/
 .no-system-install/
 .idea/
