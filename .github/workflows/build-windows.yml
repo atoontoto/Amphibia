@@ -15,7 +15,7 @@ jobs:
         with:
           submodules: recursive
       - uses: microsoft/setup-msbuild@v2
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
       - name: Validate identity
