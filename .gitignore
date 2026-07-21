@@ -24,6 +24,7 @@ mkcert*
 *.sln.docstates
 TestResults/
 artifacts/
+tests/milestone2/build/
 
 NeuralAmpModeler/*.wav
 NeuralAmpModeler/peaks/

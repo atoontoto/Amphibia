@@ -20,6 +20,18 @@
 
 // Boilerplate
 
+int _GetStateString(const iplug::IByteChunk& chunk, int startPos, WDL_String& value)
+{
+  int length = 0;
+  const int contentsPos = chunk.Get(&length, startPos);
+  if (contentsPos < 0 || length < 0 || length > chunk.Size() - contentsPos)
+    throw std::runtime_error("Truncated state string");
+  const int endPos = chunk.GetStr(value, startPos);
+  if (endPos < 0)
+    throw std::runtime_error("Truncated state string");
+  return endPos;
+}
+
 void Amphibia::_UnserializeApplyConfig(nlohmann::json& config)
 {
   auto getParamByName = [&](std::string& name) {
@@ -54,16 +66,17 @@ void Amphibia::_UnserializeApplyConfig(nlohmann::json& config)
   OnParamReset(iplug::EParamSource::kPresetRecall);
   LEAVE_PARAMS_MUTEX
 
-  mNAMPath.Set(static_cast<std::string>(config["NAMPath"]).c_str());
-  mIRPath.Set(static_cast<std::string>(config["IRPath"]).c_str());
-
-  if (mNAMPath.GetLength())
+  const std::string requestedNAMPath = config.value("NAMPath", std::string{});
+  const std::string requestedIRPath = config.value("IRPath", std::string{});
+  if (!requestedNAMPath.empty())
   {
-    _StageModel(mNAMPath);
+    WDL_String path(requestedNAMPath.c_str());
+    _RequestModel(path);
   }
-  if (mIRPath.GetLength())
+  if (!requestedIRPath.empty())
   {
-    _StageIR(mIRPath);
+    WDL_String path(requestedIRPath.c_str());
+    _RequestIR(path);
   }
 }
 
@@ -73,15 +86,17 @@ int _UnserializePathsAndExpectedKeys(const iplug::IByteChunk& chunk, int startPo
 {
   int pos = startPos;
   WDL_String path;
-  pos = chunk.GetStr(path, pos);
+  pos = _GetStateString(chunk, pos, path);
   config["NAMPath"] = std::string(path.Get());
-  pos = chunk.GetStr(path, pos);
+  pos = _GetStateString(chunk, pos, path);
   config["IRPath"] = std::string(path.Get());
 
   for (auto it = paramNames.begin(); it != paramNames.end(); ++it)
   {
     double v = 0.0;
     pos = chunk.Get(&v, pos);
+    if (pos < 0)
+      throw std::runtime_error("Truncated parameter state");
     config[*it] = v;
   }
   return pos;
@@ -272,7 +287,7 @@ int Amphibia::_UnserializeStateWithKnownVersion(const iplug::IByteChunk& chunk, 
 
   // Get the version
   WDL_String wVersion;
-  pos = chunk.GetStr(wVersion, pos);
+  pos = _GetStateString(chunk, pos, wVersion);
   std::string versionStr(wVersion.Get());
   _Version version(versionStr);
   // Act accordingly

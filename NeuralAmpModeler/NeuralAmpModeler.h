@@ -1,5 +1,9 @@
 #pragma once
 
+#include <atomic>
+#include <cstdint>
+#include <mutex>
+
 #include "../AudioDSPTools/dsp/ImpulseResponse.h"
 #include "../AudioDSPTools/dsp/NoiseGate.h"
 #include "../AudioDSPTools/dsp/dsp.h"
@@ -9,6 +13,7 @@
 #include "../NeuralAmpModelerCore/NAM/slimmable.h"
 
 #include "Colors.h"
+#include "Loading/AsyncDSPWorker.h"
 #include "ToneStack.h"
 
 #include "IPlug_include_in_plug_hdr.h"
@@ -16,6 +21,8 @@
 
 
 const int kNumPresets = 1;
+static_assert(std::atomic<double>::is_always_lock_free,
+              "Amphibia's audio metadata exchange requires lock-free double atomics");
 // The plugin is mono inside
 constexpr size_t kNumChannelsInternal = 1;
 
@@ -76,6 +83,7 @@ enum EMsgTags
   kMsgTagHighlightColor,
   // The following tags are from DSP -> UI
   kMsgTagLoadFailed,
+  kMsgTagLoadStatus,
   kMsgTagLoadedModel,
   kMsgTagLoadedIR,
   kNumMsgTags
@@ -193,6 +201,35 @@ private:
   std::function<void(NAM_SAMPLE**, NAM_SAMPLE**, int)> mBlockProcessFunc;
 };
 
+enum class NamModelFamily : std::uint8_t
+{
+  Unknown,
+  LegacyOrCustom,
+  A2Nano,
+  A2Standard
+};
+
+struct ModelLoadMetadata
+{
+  double sampleRate{};
+  double loudness{};
+  double inputLevel{};
+  double outputLevel{};
+  bool hasLoudness{};
+  bool hasInputLevel{};
+  bool hasOutputLevel{};
+  bool slimmable{};
+  int latency{};
+  NamModelFamily family{NamModelFamily::Unknown};
+};
+
+struct IRLoadMetadata
+{
+  double sourceSampleRate{};
+  double preparedSampleRate{};
+  std::uint32_t dataBytes{};
+};
+
 class Amphibia final : public iplug::Plugin
 {
 public:
@@ -215,10 +252,8 @@ public:
 private:
   // Allocates mInputPointers and mOutputPointers
   void _AllocateIOPointers(const size_t nChans);
-  // Moves DSP modules from staging area to the main area.
-  // Also deletes DSP modules that are flagged for removal.
-  // Exists so that we don't try to use a DSP module that's only
-  // partially-instantiated.
+  // Adopts fully prepared DSP at a block boundary and publishes the old
+  // processor for non-real-time reclamation.
   void _ApplyDSPStaging();
   // Deallocates mInputPointers and mOutputPointers
   void _DeallocateIOPointers();
@@ -228,15 +263,17 @@ private:
   size_t _GetBufferNumChannels() const;
   size_t _GetBufferNumFrames() const;
   void _InitToneStack();
-  // Loads a NAM model and stores it to mStagedNAM
-  // Returns an empty string on success, or an error message on failure.
-  std::string _StageModel(const WDL_String& dspFile);
-  // Loads an IR and stores it to mStagedIR.
-  // Return status code so that error messages can be relayed if
-  // it wasn't successful.
-  dsp::wav::LoadReturnCode _StageIR(const WDL_String& irPath);
-
-  bool _HaveModel() const { return this->mModel != nullptr; };
+  void _RequestModel(const WDL_String& dspFile);
+  void _RequestIR(const WDL_String& irPath);
+  amphibia::loading::PreparedDSP<ResamplingNAM, ModelLoadMetadata>
+  _PrepareModel(const amphibia::loading::LoadRequest& request,
+                const amphibia::loading::AsyncDSPWorker<ResamplingNAM, ModelLoadMetadata>::CancelCheck& cancelled,
+                const amphibia::loading::AsyncDSPWorker<ResamplingNAM, ModelLoadMetadata>::ProgressCallback& progress);
+  amphibia::loading::PreparedDSP<dsp::ImpulseResponse, IRLoadMetadata>
+  _PrepareIR(const amphibia::loading::LoadRequest& request,
+             const amphibia::loading::AsyncDSPWorker<dsp::ImpulseResponse, IRLoadMetadata>::CancelCheck& cancelled,
+             const amphibia::loading::AsyncDSPWorker<dsp::ImpulseResponse, IRLoadMetadata>::ProgressCallback& progress);
+  void _PollLoadingStatus();
   // Prepare the input & output buffers
   void _PrepareBuffers(const size_t numChannels, const size_t numFrames);
   // Manage pointers
@@ -250,9 +287,6 @@ private:
   // :param nChansOut: Out to external
   void _ProcessOutput(iplug::sample** inputs, iplug::sample** outputs, const size_t nFrames, const size_t nChansIn,
                       const size_t nChansOut);
-  // Resetting for models and IRs, called by OnReset
-  void _ResetModelAndIR(const double sampleRate, const int maxBlockSize);
-
   void _SetInputGain();
   void _SetOutputGain();
   void _ApplySlimParamToLoadedNAMs();
@@ -266,9 +300,6 @@ private:
 
   // Update all controls that depend on a model
   void _UpdateControlsFromModel();
-
-  // Make sure that the latency is reported correctly.
-  void _UpdateLatency();
 
   // Update level meters
   // Called within ProcessBlock().
@@ -293,17 +324,6 @@ private:
   // Noise gates
   dsp::noise_gate::Trigger mNoiseGateTrigger;
   dsp::noise_gate::Gain mNoiseGateGain;
-  // The model actually being used:
-  std::unique_ptr<ResamplingNAM> mModel;
-  // And the IR
-  std::unique_ptr<dsp::ImpulseResponse> mIR;
-  // Manages switching what DSP is being used.
-  std::unique_ptr<ResamplingNAM> mStagedModel;
-  std::unique_ptr<dsp::ImpulseResponse> mStagedIR;
-  // Flags to take away the modules at a safe time.
-  std::atomic<bool> mShouldRemoveModel = false;
-  std::atomic<bool> mShouldRemoveIR = false;
-
   std::atomic<bool> mNewModelLoadedInDSP = false;
   std::atomic<bool> mModelCleared = false;
 
@@ -318,10 +338,35 @@ private:
   WDL_String mNAMPath;
   // Path to IR (.wav file)
   WDL_String mIRPath;
+  mutable std::mutex mPathMutex;
+
+  mutable std::mutex mProcessingConfigurationMutex;
+  amphibia::loading::ProcessingConfiguration mProcessingConfiguration;
+  std::atomic<std::uint64_t> mProcessingGeneration{0};
+
+  std::atomic<bool> mModelHasLoudness{false};
+  std::atomic<bool> mModelHasInputLevel{false};
+  std::atomic<bool> mModelHasOutputLevel{false};
+  std::atomic<double> mModelLoudness{0.0};
+  std::atomic<double> mModelInputLevel{0.0};
+  std::atomic<double> mModelOutputLevel{0.0};
+  std::atomic<double> mModelSampleRate{0.0};
+  std::atomic<bool> mModelSlimmable{false};
+  std::atomic<std::uint64_t> mSlimRevision{1};
+  std::uint64_t mAppliedSlimRevision{}; // audio-thread-only
+  std::atomic<int> mPendingLatency{-1};
+  std::uint64_t mLastModelStatusRequest{};
+  std::uint64_t mLastIRStatusRequest{};
+  amphibia::loading::LoadState mLastModelLoadState{amphibia::loading::LoadState::Idle};
+  amphibia::loading::LoadState mLastIRLoadState{amphibia::loading::LoadState::Idle};
 
   WDL_String mHighLightColor{PluginColors::NAM_THEMECOLOR.ToColorCode()};
 
   std::unordered_map<std::string, double> mNAMParams = {{"Input", 0.0}, {"Output", 0.0}};
 
   NAMSender mInputSender, mOutputSender;
+
+  // Declared last so their threads are stopped first during member teardown.
+  amphibia::loading::AsyncDSPWorker<ResamplingNAM, ModelLoadMetadata> mModelLoader;
+  amphibia::loading::AsyncDSPWorker<dsp::ImpulseResponse, IRLoadMetadata> mIRLoader;
 };

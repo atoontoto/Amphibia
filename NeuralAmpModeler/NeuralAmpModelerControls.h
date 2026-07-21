@@ -428,11 +428,21 @@ public:
     switch (msgTag)
     {
       case kMsgTagLoadFailed:
-        // Honestly, not sure why I made a big stink of it before. Why not just say it failed and move on? :)
         {
-          std::string label(std::string("(FAILED) ") + std::string(mFileNameControl->GetLabelStr()));
+          std::string label;
+          if (pData != nullptr && dataSize > 0)
+            label.assign(reinterpret_cast<const char*>(pData), static_cast<size_t>(dataSize));
+          else
+            label = std::string("(FAILED) ") + std::string(mFileNameControl->GetLabelStr());
           mFileNameControl->SetLabelAndTooltip(label.c_str());
-          SetBrowserState(NAMBrowserState::Empty);
+        }
+        break;
+      case kMsgTagLoadStatus:
+        if (pData != nullptr && dataSize > 0)
+        {
+          const std::string label(reinterpret_cast<const char*>(pData), static_cast<size_t>(dataSize));
+          const WDL_String labelString(label.c_str());
+          mFileNameControl->SetLabelAndTooltipEllipsizing(labelString);
         }
         break;
       case kMsgTagLoadedModel:

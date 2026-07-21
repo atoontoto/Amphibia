@@ -1,12 +1,15 @@
 #include <algorithm> // std::clamp, std::min
 #include <cmath> // pow
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <utility>
 
 #include "Colors.h"
+#include "Loading/FileInspection.h"
 #include "../NeuralAmpModelerCore/NAM/activations.h"
 #include "../NeuralAmpModelerCore/NAM/get_dsp.h"
+#include "../NeuralAmpModelerCore/NAM/wavenet/a2_fast.h"
 // clang-format off
 // These includes need to happen in this order or else the latter won't know
 // a bunch of stuff.
@@ -21,6 +24,8 @@ using namespace iplug;
 using namespace igraphics;
 
 const double kDCBlockerFrequency = 5.0;
+
+int _GetStateString(const iplug::IByteChunk& chunk, int startPos, WDL_String& value);
 
 // Styles
 const IVColorSpec colorSpec{
@@ -77,6 +82,16 @@ const double kDefaultInputCalibrationLevel = 12.0;
 
 Amphibia::Amphibia(const InstanceInfo& info)
 : Plugin(info, MakeConfig(kNumParams, kNumPresets))
+, mModelLoader([this](const amphibia::loading::LoadRequest& request,
+                      const decltype(mModelLoader)::CancelCheck& cancelled,
+                      const decltype(mModelLoader)::ProgressCallback& progress) {
+    return _PrepareModel(request, cancelled, progress);
+  })
+, mIRLoader([this](const amphibia::loading::LoadRequest& request,
+                   const decltype(mIRLoader)::CancelCheck& cancelled,
+                   const decltype(mIRLoader)::ProgressCallback& progress) {
+    return _PrepareIR(request, cancelled, progress);
+  })
 {
   _InitToneStack();
   nam::activations::Activation::enable_fast_tanh();
@@ -185,16 +200,7 @@ Amphibia::Amphibia(const InstanceInfo& info)
     auto loadModelCompletionHandler = [&](const WDL_String& fileName, const WDL_String& path) {
       if (fileName.GetLength())
       {
-        // Sets mNAMPath and mStagedNAM
-        const std::string msg = _StageModel(fileName);
-        // TODO error messages like the IR loader.
-        if (msg.size())
-        {
-          std::stringstream ss;
-          ss << "Failed to load NAM model. Message:\n\n" << msg;
-          _ShowMessageBox(GetUI(), ss.str().c_str(), "Failed to load model!", kMB_OK);
-        }
-        std::cout << "Loaded: " << fileName.Get() << std::endl;
+        _RequestModel(fileName);
       }
     };
 
@@ -202,16 +208,7 @@ Amphibia::Amphibia(const InstanceInfo& info)
     auto loadIRCompletionHandler = [&](const WDL_String& fileName, const WDL_String& path) {
       if (fileName.GetLength())
       {
-        mIRPath = fileName;
-        const dsp::wav::LoadReturnCode retCode = _StageIR(fileName);
-        if (retCode != dsp::wav::LoadReturnCode::SUCCESS)
-        {
-          std::stringstream message;
-          message << "Failed to load IR file " << fileName.Get() << ":\n";
-          message << dsp::wav::GetMsgForLoadReturnCode(retCode);
-
-          _ShowMessageBox(GetUI(), message.str().c_str(), "Failed to load IR!", kMB_OK);
-        }
+        _RequestIR(fileName);
       }
     };
 
@@ -316,6 +313,10 @@ Amphibia::Amphibia(const InstanceInfo& info)
 
 Amphibia::~Amphibia()
 {
+  // Factories capture this plug-in, so join them while the complete owner is
+  // still alive. Shutdown is idempotent for member teardown.
+  mModelLoader.Shutdown();
+  mIRLoader.Shutdown();
   _DeallocateIOPointers();
 }
 
@@ -355,9 +356,16 @@ void Amphibia::ProcessBlock(iplug::sample** inputs, iplug::sample** outputs, int
     triggerOutput = mNoiseGateTrigger.Process(mInputPointers, numChannelsInternal, numFrames);
   }
 
-  if (mModel != nullptr)
+  if (auto* model = mModelLoader.ActiveForAudio())
   {
-    mModel->process(triggerOutput, mOutputPointers, nFrames);
+    const auto slimRevision = mSlimRevision.load(std::memory_order_acquire);
+    if (slimRevision != mAppliedSlimRevision)
+    {
+      if (auto* slimmable = model->GetSlimmableModel())
+        slimmable->SetSlimmableSize(GetParam(kSlim)->Value());
+      mAppliedSlimRevision = slimRevision;
+    }
+    model->process(triggerOutput, mOutputPointers, nFrames);
   }
   else
   {
@@ -372,8 +380,8 @@ void Amphibia::ProcessBlock(iplug::sample** inputs, iplug::sample** outputs, int
                                     : gateGainOutput;
 
   sample** irPointers = toneStackOutPointers;
-  if (mIR != nullptr && GetParam(kIRToggle)->Value())
-    irPointers = mIR->Process(toneStackOutPointers, numChannelsInternal, numFrames);
+  if (auto* ir = mIRLoader.ActiveForAudio(); ir != nullptr && GetParam(kIRToggle)->Value())
+    irPointers = ir->Process(toneStackOutPointers, numChannelsInternal, numFrames);
 
   // And the HPF for DC offset (Issue 271)
   const double highPassCutoffFreq = kDCBlockerFrequency;
@@ -409,16 +417,31 @@ void Amphibia::OnReset()
   SetTailSize(tailCycles * (int)(sampleRate / kDCBlockerFrequency));
   mInputSender.Reset(sampleRate);
   mOutputSender.Reset(sampleRate);
-  // If there is a model or IR loaded, they need to be checked for resampling.
-  _ResetModelAndIR(sampleRate, GetBlockSize());
+  _PrepareBuffers(kNumChannelsInternal, static_cast<size_t>(std::max(1, maxBlockSize)));
+  amphibia::loading::ProcessingConfiguration configuration;
+  configuration.sampleRate = sampleRate;
+  configuration.maximumBlockSize = std::max(1, maxBlockSize);
+  configuration.inputChannels = NInChansConnected();
+  configuration.outputChannels = NOutChansConnected();
+  configuration.generation = mProcessingGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+  {
+    std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
+    mProcessingConfiguration = configuration;
+    mModelLoader.Reconfigure(configuration, GetParam(kSlim)->Value());
+    mIRLoader.Reconfigure(configuration);
+  }
   mToneStack->Reset(sampleRate, maxBlockSize);
-  _UpdateLatency();
+  mPendingLatency.store(0, std::memory_order_release);
 }
 
 void Amphibia::OnIdle()
 {
   mInputSender.TransmitData(*this);
   mOutputSender.TransmitData(*this);
+  _PollLoadingStatus();
+  const int latency = mPendingLatency.exchange(-1, std::memory_order_acq_rel);
+  if (latency >= 0 && GetLatency() != latency)
+    SetLatency(latency);
 
   if (mNewModelLoadedInDSP)
   {
@@ -458,27 +481,34 @@ bool Amphibia::SerializeState(IByteChunk& chunk) const
   chunk.PutStr(version.Get());
   // Model directory (don't serialize the model itself; we'll just load it again
   // when we unserialize)
-  chunk.PutStr(mNAMPath.Get());
-  chunk.PutStr(mIRPath.Get());
+  {
+    std::lock_guard<std::mutex> lock(mPathMutex);
+    chunk.PutStr(mNAMPath.Get());
+    chunk.PutStr(mIRPath.Get());
+  }
   return SerializeParams(chunk);
 }
 
 int Amphibia::UnserializeState(const IByteChunk& chunk, int startPos)
 {
-  // Look for the expected header. If it's there, then we'll know what to do.
-  WDL_String header;
-  int pos = startPos;
-  pos = chunk.GetStr(header, pos);
+  try
+  {
+    // Look for the expected header. If it's there, then we'll know what to do.
+    WDL_String header;
+    int pos = startPos;
+    pos = _GetStateString(chunk, pos, header);
 
-  const char* kAmphibiaHeader = "###Amphibia###";
-  const char* kLegacyNamHeader = "###NeuralAmpModeler###";
-  if (strcmp(header.Get(), kAmphibiaHeader) == 0 || strcmp(header.Get(), kLegacyNamHeader) == 0)
-  {
-    return _UnserializeStateWithKnownVersion(chunk, pos);
-  }
-  else
-  {
+    const char* kAmphibiaHeader = "###Amphibia###";
+    const char* kLegacyNamHeader = "###NeuralAmpModeler###";
+    if (strcmp(header.Get(), kAmphibiaHeader) == 0 || strcmp(header.Get(), kLegacyNamHeader) == 0)
+      return _UnserializeStateWithKnownVersion(chunk, pos);
     return _UnserializeStateWithUnknownVersion(chunk, startPos);
+  }
+  catch (...)
+  {
+    // Host-provided state is untrusted. Parameters and active DSP remain as
+    // they were when a chunk cannot be decoded completely.
+    return -1;
   }
 }
 
@@ -486,23 +516,24 @@ void Amphibia::OnUIOpen()
 {
   Plugin::OnUIOpen();
 
+  std::lock_guard<std::mutex> pathLock(mPathMutex);
   if (mNAMPath.GetLength())
   {
     SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadedModel, mNAMPath.GetLength(), mNAMPath.Get());
     // If it's not loaded yet, then mark as failed.
     // If it's yet to be loaded, then the completion handler will set us straight once it runs.
-    if (mModel == nullptr && mStagedModel == nullptr)
+    if (!mModelLoader.HasRetainedProcessor())
       SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed);
   }
 
   if (mIRPath.GetLength())
   {
     SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadedIR, mIRPath.GetLength(), mIRPath.Get());
-    if (mIR == nullptr && mStagedIR == nullptr)
+    if (!mIRLoader.HasRetainedProcessor())
       SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed);
   }
 
-  if (mModel != nullptr)
+  if (mModelLoader.HasRetainedProcessor())
   {
     _UpdateControlsFromModel();
   }
@@ -550,8 +581,18 @@ bool Amphibia::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
 {
   switch (msgTag)
   {
-    case kMsgTagClearModel: mShouldRemoveModel = true; return true;
-    case kMsgTagClearIR: mShouldRemoveIR = true; return true;
+    case kMsgTagClearModel:
+    {
+      std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
+      mModelLoader.SubmitClear(mProcessingConfiguration);
+      return true;
+    }
+    case kMsgTagClearIR:
+    {
+      std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
+      mIRLoader.SubmitClear(mProcessingConfiguration);
+      return true;
+    }
     case kMsgTagHighlightColor:
     {
       mHighLightColor.Set((const char*)pData);
@@ -596,38 +637,25 @@ void Amphibia::_AllocateIOPointers(const size_t nChans)
 
 void Amphibia::_ApplyDSPStaging()
 {
-  // Remove marked modules
-  if (mShouldRemoveModel)
+  const auto modelActivation = mModelLoader.ActivateAtBlockBoundary();
+  if (modelActivation.activated)
   {
-    mModel = nullptr;
-    mNAMPath.Set("");
-    mShouldRemoveModel = false;
-    mModelCleared = true;
-    _UpdateLatency();
+    const auto& metadata = modelActivation.metadata;
+    mModelHasLoudness.store(!modelActivation.cleared && metadata.hasLoudness, std::memory_order_release);
+    mModelHasInputLevel.store(!modelActivation.cleared && metadata.hasInputLevel, std::memory_order_release);
+    mModelHasOutputLevel.store(!modelActivation.cleared && metadata.hasOutputLevel, std::memory_order_release);
+    mModelLoudness.store(metadata.loudness, std::memory_order_release);
+    mModelInputLevel.store(metadata.inputLevel, std::memory_order_release);
+    mModelOutputLevel.store(metadata.outputLevel, std::memory_order_release);
+    mModelSampleRate.store(metadata.sampleRate, std::memory_order_release);
+    mModelSlimmable.store(!modelActivation.cleared && metadata.slimmable, std::memory_order_release);
+    mPendingLatency.store(modelActivation.cleared ? 0 : metadata.latency, std::memory_order_release);
+    mNewModelLoadedInDSP.store(!modelActivation.cleared, std::memory_order_release);
+    mModelCleared.store(modelActivation.cleared, std::memory_order_release);
     _SetInputGain();
     _SetOutputGain();
   }
-  if (mShouldRemoveIR)
-  {
-    mIR = nullptr;
-    mIRPath.Set("");
-    mShouldRemoveIR = false;
-  }
-  // Move things from staged to live
-  if (mStagedModel != nullptr)
-  {
-    mModel = std::move(mStagedModel);
-    mStagedModel = nullptr;
-    mNewModelLoadedInDSP = true;
-    _UpdateLatency();
-    _SetInputGain();
-    _SetOutputGain();
-  }
-  if (mStagedIR != nullptr)
-  {
-    mIR = std::move(mStagedIR);
-    mStagedIR = nullptr;
-  }
+  (void)mIRLoader.ActivateAtBlockBoundary();
 }
 
 void Amphibia::_DeallocateIOPointers()
@@ -656,46 +684,13 @@ void Amphibia::_FallbackDSP(iplug::sample** inputs, iplug::sample** outputs, con
       mOutputArray[c][s] = mInputArray[c][s];
 }
 
-void Amphibia::_ResetModelAndIR(const double sampleRate, const int maxBlockSize)
-{
-  // Model
-  if (mStagedModel != nullptr)
-  {
-    mStagedModel->Reset(sampleRate, maxBlockSize);
-  }
-  else if (mModel != nullptr)
-  {
-    mModel->Reset(sampleRate, maxBlockSize);
-  }
-
-  // IR
-  if (mStagedIR != nullptr)
-  {
-    const double irSampleRate = mStagedIR->GetSampleRate();
-    if (irSampleRate != sampleRate)
-    {
-      const auto irData = mStagedIR->GetData();
-      mStagedIR = std::make_unique<dsp::ImpulseResponse>(irData, sampleRate);
-    }
-  }
-  else if (mIR != nullptr)
-  {
-    const double irSampleRate = mIR->GetSampleRate();
-    if (irSampleRate != sampleRate)
-    {
-      const auto irData = mIR->GetData();
-      mStagedIR = std::make_unique<dsp::ImpulseResponse>(irData, sampleRate);
-    }
-  }
-}
-
 void Amphibia::_SetInputGain()
 {
   iplug::sample inputGainDB = GetParam(kInputLevel)->Value();
   // Input calibration
-  if ((mModel != nullptr) && (mModel->HasInputLevel()) && GetParam(kCalibrateInput)->Bool())
+  if (mModelHasInputLevel.load(std::memory_order_acquire) && GetParam(kCalibrateInput)->Bool())
   {
-    inputGainDB += GetParam(kInputCalibrationLevel)->Value() - mModel->GetInputLevel();
+    inputGainDB += GetParam(kInputCalibrationLevel)->Value() - mModelInputLevel.load(std::memory_order_acquire);
   }
   mInputGain = DBToAmp(inputGainDB);
 }
@@ -703,24 +698,24 @@ void Amphibia::_SetInputGain()
 void Amphibia::_SetOutputGain()
 {
   double gainDB = GetParam(kOutputLevel)->Value();
-  if (mModel != nullptr)
+  if (mModelLoader.HasRetainedProcessor())
   {
     const int outputMode = GetParam(kOutputMode)->Int();
     switch (outputMode)
     {
       case 1: // Normalized
-        if (mModel->HasLoudness())
+        if (mModelHasLoudness.load(std::memory_order_acquire))
         {
-          const double loudness = mModel->GetLoudness();
+          const double loudness = mModelLoudness.load(std::memory_order_acquire);
           const double targetLoudness = -18.0;
           gainDB += (targetLoudness - loudness);
         }
         break;
       case 2: // Calibrated
-        if (mModel->HasOutputLevel())
+        if (mModelHasOutputLevel.load(std::memory_order_acquire))
         {
           const double inputLevel = GetParam(kInputCalibrationLevel)->Value();
-          const double outputLevel = mModel->GetOutputLevel();
+          const double outputLevel = mModelOutputLevel.load(std::memory_order_acquire);
           gainDB += (outputLevel - inputLevel);
         }
         break;
@@ -733,98 +728,229 @@ void Amphibia::_SetOutputGain()
 
 void Amphibia::_ApplySlimParamToLoadedNAMs()
 {
-  const double v = GetParam(kSlim)->Value();
-  auto apply = [v](ResamplingNAM* p) {
-    if (p == nullptr)
-      return;
-    if (nam::SlimmableModel* s = p->GetSlimmableModel())
-      s->SetSlimmableSize(v);
+  mSlimRevision.fetch_add(1, std::memory_order_release);
+}
+
+void Amphibia::_RequestModel(const WDL_String& modelPath)
+{
+  std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
+  mModelLoader.Submit(modelPath.Get(), mProcessingConfiguration, GetParam(kSlim)->Value());
+}
+
+void Amphibia::_RequestIR(const WDL_String& irPath)
+{
+  std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
+  mIRLoader.Submit(irPath.Get(), mProcessingConfiguration);
+}
+
+amphibia::loading::PreparedDSP<ResamplingNAM, ModelLoadMetadata>
+Amphibia::_PrepareModel(const amphibia::loading::LoadRequest& request,
+                        const decltype(mModelLoader)::CancelCheck& cancelled,
+                        const decltype(mModelLoader)::ProgressCallback& progress)
+{
+  using namespace amphibia::loading;
+  const auto path = std::filesystem::u8path(request.path);
+  InspectRegularFile(path, ".nam", kMaximumNamBytes);
+  if (cancelled())
+    throw LoadException(LoadErrorCode::Superseded, "Model load was superseded");
+
+  nlohmann::json config;
+  try
+  {
+    std::ifstream stream(path);
+    if (!stream)
+      throw LoadException(LoadErrorCode::FileUnreadable, "The model file could not be opened");
+    stream >> config;
+  }
+  catch (const LoadException&)
+  {
+    throw;
+  }
+  catch (...)
+  {
+    throw LoadException(LoadErrorCode::InvalidModel, "The NAM file is malformed");
+  }
+
+  if (!config.is_object() || !config.contains("version") || !config.contains("architecture")
+      || !config.contains("config") || !config.contains("weights"))
+    throw LoadException(LoadErrorCode::InvalidModel, "The NAM file is missing required model data");
+
+  ModelLoadMetadata metadata;
+  try
+  {
+    const std::string architecture = config.at("architecture").get<std::string>();
+    metadata.family = NamModelFamily::LegacyOrCustom;
+#if defined(NAM_ENABLE_A2_FAST)
+    if (architecture == "WaveNet")
+    {
+      int channels = 0;
+      if (nam::wavenet::a2_fast::is_a2_shape(config.at("config"), &channels))
+        metadata.family = channels == 3 ? NamModelFamily::A2Nano : NamModelFamily::A2Standard;
+    }
+#endif
+  }
+  catch (...)
+  {
+    throw LoadException(LoadErrorCode::InvalidModel, "The NAM architecture description is invalid");
+  }
+
+  progress(LoadState::Preparing, 0.35f);
+  if (cancelled())
+    throw LoadException(LoadErrorCode::Superseded, "Model load was superseded");
+
+  std::unique_ptr<nam::DSP> model;
+  try
+  {
+    model = nam::get_dsp(config);
+  }
+  catch (...)
+  {
+    throw LoadException(LoadErrorCode::InvalidModel, "The NAM model could not be constructed");
+  }
+
+  if (cancelled())
+    throw LoadException(LoadErrorCode::Superseded, "Model load was superseded");
+  if (model->NumInputChannels() != 1 || model->NumOutputChannels() != 1)
+    throw LoadException(LoadErrorCode::UnsupportedArchitecture, "The model must have one input and one output");
+  if (request.configuration.sampleRate <= 0.0 || request.configuration.maximumBlockSize <= 0)
+    throw LoadException(LoadErrorCode::StaleProcessingConfiguration, "The audio configuration is not ready");
+
+  progress(LoadState::Preparing, 0.75f);
+  auto prepared = std::make_unique<ResamplingNAM>(std::move(model), request.configuration.sampleRate);
+  prepared->Reset(request.configuration.sampleRate, request.configuration.maximumBlockSize);
+  if (auto* slimmable = prepared->GetSlimmableModel())
+    slimmable->SetSlimmableSize(request.userValue);
+
+  metadata.sampleRate = prepared->GetEncapsulatedSampleRate();
+  metadata.hasLoudness = prepared->HasLoudness();
+  metadata.hasInputLevel = prepared->HasInputLevel();
+  metadata.hasOutputLevel = prepared->HasOutputLevel();
+  metadata.loudness = metadata.hasLoudness ? prepared->GetLoudness() : 0.0;
+  metadata.inputLevel = metadata.hasInputLevel ? prepared->GetInputLevel() : 0.0;
+  metadata.outputLevel = metadata.hasOutputLevel ? prepared->GetOutputLevel() : 0.0;
+  metadata.slimmable = prepared->GetSlimmableModel() != nullptr;
+  metadata.latency = prepared->GetLatency();
+  return {std::move(prepared), metadata};
+}
+
+amphibia::loading::PreparedDSP<dsp::ImpulseResponse, IRLoadMetadata>
+Amphibia::_PrepareIR(const amphibia::loading::LoadRequest& request,
+                     const decltype(mIRLoader)::CancelCheck& cancelled,
+                     const decltype(mIRLoader)::ProgressCallback& progress)
+{
+  using namespace amphibia::loading;
+  const auto path = std::filesystem::u8path(request.path);
+  const auto inspection = InspectWaveFile(path);
+  if (cancelled())
+    throw LoadException(LoadErrorCode::Superseded, "IR load was superseded");
+  if (request.configuration.sampleRate <= 0.0 || request.configuration.maximumBlockSize <= 0)
+    throw LoadException(LoadErrorCode::StaleProcessingConfiguration, "The audio configuration is not ready");
+
+  progress(LoadState::Preparing, 0.45f);
+  std::unique_ptr<dsp::ImpulseResponse> prepared;
+  try
+  {
+    prepared = std::make_unique<dsp::ImpulseResponse>(path.string().c_str(), request.configuration.sampleRate);
+  }
+  catch (...)
+  {
+    throw LoadException(LoadErrorCode::PreparationFailed, "The IR could not be decoded or resampled");
+  }
+  if (prepared->GetWavState() != dsp::wav::LoadReturnCode::SUCCESS)
+    throw LoadException(LoadErrorCode::InvalidWave, "The IR WAV could not be decoded");
+  if (cancelled())
+    throw LoadException(LoadErrorCode::Superseded, "IR load was superseded");
+
+  // Exercise the maximum configured block with silence on the worker so the
+  // convolution history/output buffers have allocated before publication.
+  progress(LoadState::Preparing, 0.8f);
+  std::vector<double> silence(static_cast<size_t>(request.configuration.maximumBlockSize), 0.0);
+  double* channel = silence.data();
+  prepared->Process(&channel, 1, silence.size());
+
+  IRLoadMetadata metadata;
+  metadata.sourceSampleRate = inspection.sampleRate;
+  metadata.preparedSampleRate = request.configuration.sampleRate;
+  metadata.dataBytes = inspection.dataBytes;
+  return {std::move(prepared), metadata};
+}
+
+void Amphibia::_PollLoadingStatus()
+{
+  auto basename = [](const std::string& path) {
+    if (path.empty())
+      return std::string("None");
+    try
+    {
+      return std::filesystem::u8path(path).filename().string();
+    }
+    catch (...)
+    {
+      return std::string("active file");
+    }
   };
-  apply(mModel.get());
-  apply(mStagedModel.get());
-}
 
-std::string Amphibia::_StageModel(const WDL_String& modelPath)
-{
-  WDL_String previousNAMPath = mNAMPath;
-  try
+  auto modelStatus = mModelLoader.Status();
+  if (modelStatus.requestId != mLastModelStatusRequest || modelStatus.state != mLastModelLoadState)
   {
-    auto dspPath = std::filesystem::u8path(modelPath.Get());
-    std::unique_ptr<nam::DSP> model = nam::get_dsp(dspPath);
-
-    // Check that the model has 1 input and 1 output channel
-    if (model->NumInputChannels() != 1)
+    mLastModelStatusRequest = modelStatus.requestId;
+    mLastModelLoadState = modelStatus.state;
+    if (modelStatus.state == amphibia::loading::LoadState::Active)
     {
-      throw std::runtime_error("Model must have 1 input channel, but has " + std::to_string(model->NumInputChannels()));
+      const auto path = mModelLoader.ActivePath();
+      {
+        std::lock_guard<std::mutex> lock(mPathMutex);
+        mNAMPath.Set(path.c_str());
+      }
+      if (path.empty())
+        SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadStatus, 7, "No model");
+      else
+        SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadedModel, static_cast<int>(path.size()), path.c_str());
     }
-    if (model->NumOutputChannels() != 1)
+    else if (modelStatus.state == amphibia::loading::LoadState::Failed)
     {
-      throw std::runtime_error("Model must have 1 output channel, but has "
-                               + std::to_string(model->NumOutputChannels()));
+      const std::string text = "Failed: " + modelStatus.displayName + " (active: " + basename(mModelLoader.ActivePath()) + ")";
+      SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed, static_cast<int>(text.size()), text.c_str());
     }
-
-    std::unique_ptr<ResamplingNAM> temp = std::make_unique<ResamplingNAM>(std::move(model), GetSampleRate());
-    temp->Reset(GetSampleRate(), GetBlockSize());
-    if (nam::SlimmableModel* slimmable = temp->GetSlimmableModel())
+    else if (modelStatus.state == amphibia::loading::LoadState::Inspecting
+             || modelStatus.state == amphibia::loading::LoadState::Preparing
+             || modelStatus.state == amphibia::loading::LoadState::ReadyToActivate)
     {
-      slimmable->SetSlimmableSize(GetParam(kSlim)->Value());
+      const std::string text = "Loading: " + modelStatus.displayName + " (active: " + basename(mModelLoader.ActivePath()) + ")";
+      SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadStatus, static_cast<int>(text.size()), text.c_str());
     }
-    mStagedModel = std::move(temp);
-    mNAMPath = modelPath;
-    SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadedModel, mNAMPath.GetLength(), mNAMPath.Get());
   }
-  catch (std::runtime_error& e)
-  {
-    SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed);
 
-    if (mStagedModel != nullptr)
+  auto irStatus = mIRLoader.Status();
+  if (irStatus.requestId != mLastIRStatusRequest || irStatus.state != mLastIRLoadState)
+  {
+    mLastIRStatusRequest = irStatus.requestId;
+    mLastIRLoadState = irStatus.state;
+    if (irStatus.state == amphibia::loading::LoadState::Active)
     {
-      mStagedModel = nullptr;
+      const auto path = mIRLoader.ActivePath();
+      {
+        std::lock_guard<std::mutex> lock(mPathMutex);
+        mIRPath.Set(path.c_str());
+      }
+      if (path.empty())
+        SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadStatus, 5, "No IR");
+      else
+        SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadedIR, static_cast<int>(path.size()), path.c_str());
     }
-    mNAMPath = previousNAMPath;
-    std::cerr << "Failed to read DSP module" << std::endl;
-    std::cerr << e.what() << std::endl;
-    return e.what();
-  }
-  return "";
-}
-
-dsp::wav::LoadReturnCode Amphibia::_StageIR(const WDL_String& irPath)
-{
-  // FIXME it'd be better for the path to be "staged" as well. Just in case the
-  // path and the model got caught on opposite sides of the fence...
-  WDL_String previousIRPath = mIRPath;
-  const double sampleRate = GetSampleRate();
-  dsp::wav::LoadReturnCode wavState = dsp::wav::LoadReturnCode::ERROR_OTHER;
-  try
-  {
-    auto irPathU8 = std::filesystem::u8path(irPath.Get());
-    mStagedIR = std::make_unique<dsp::ImpulseResponse>(irPathU8.string().c_str(), sampleRate);
-    wavState = mStagedIR->GetWavState();
-  }
-  catch (std::runtime_error& e)
-  {
-    wavState = dsp::wav::LoadReturnCode::ERROR_OTHER;
-    std::cerr << "Caught unhandled exception while attempting to load IR:" << std::endl;
-    std::cerr << e.what() << std::endl;
-  }
-
-  if (wavState == dsp::wav::LoadReturnCode::SUCCESS)
-  {
-    mIRPath = irPath;
-    SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadedIR, mIRPath.GetLength(), mIRPath.Get());
-  }
-  else
-  {
-    if (mStagedIR != nullptr)
+    else if (irStatus.state == amphibia::loading::LoadState::Failed)
     {
-      mStagedIR = nullptr;
+      const std::string text = "Failed: " + irStatus.displayName + " (active: " + basename(mIRLoader.ActivePath()) + ")";
+      SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed, static_cast<int>(text.size()), text.c_str());
     }
-    mIRPath = previousIRPath;
-    SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed);
+    else if (irStatus.state == amphibia::loading::LoadState::Inspecting
+             || irStatus.state == amphibia::loading::LoadState::Preparing
+             || irStatus.state == amphibia::loading::LoadState::ReadyToActivate)
+    {
+      const std::string text = "Loading: " + irStatus.displayName + " (active: " + basename(mIRLoader.ActivePath()) + ")";
+      SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadStatus, static_cast<int>(text.size()), text.c_str());
+    }
   }
-
-  return wavState;
 }
 
 size_t Amphibia::_GetBufferNumChannels() const
@@ -848,7 +974,10 @@ void Amphibia::_InitToneStack()
 void Amphibia::_PrepareBuffers(const size_t numChannels, const size_t numFrames)
 {
   const bool updateChannels = numChannels != _GetBufferNumChannels();
-  const bool updateFrames = updateChannels || (_GetBufferNumFrames() != numFrames);
+  // OnReset reserves the advertised maximum. Variable smaller host blocks keep
+  // the same storage, avoiding resize/allocation churn in ProcessBlock(). A
+  // host violating its advertised maximum can still force one defensive grow.
+  const bool updateFrames = updateChannels || (_GetBufferNumFrames() < numFrames);
   //  if (!updateChannels && !updateFrames)  // Could we do this?
   //    return;
 
@@ -933,7 +1062,7 @@ void Amphibia::_ProcessOutput(iplug::sample** inputs, iplug::sample** outputs, c
 
 void Amphibia::_UpdateControlsFromModel()
 {
-  if (mModel == nullptr)
+  if (!mModelLoader.HasRetainedProcessor())
   {
     return;
   }
@@ -941,44 +1070,27 @@ void Amphibia::_UpdateControlsFromModel()
   {
     ModelInfo modelInfo;
     modelInfo.sampleRate.known = true;
-    modelInfo.sampleRate.value = mModel->GetEncapsulatedSampleRate();
-    modelInfo.inputCalibrationLevel.known = mModel->HasInputLevel();
-    modelInfo.inputCalibrationLevel.value = mModel->HasInputLevel() ? mModel->GetInputLevel() : 0.0;
-    modelInfo.outputCalibrationLevel.known = mModel->HasOutputLevel();
-    modelInfo.outputCalibrationLevel.value = mModel->HasOutputLevel() ? mModel->GetOutputLevel() : 0.0;
+    modelInfo.sampleRate.value = mModelSampleRate.load(std::memory_order_acquire);
+    modelInfo.inputCalibrationLevel.known = mModelHasInputLevel.load(std::memory_order_acquire);
+    modelInfo.inputCalibrationLevel.value = mModelInputLevel.load(std::memory_order_acquire);
+    modelInfo.outputCalibrationLevel.known = mModelHasOutputLevel.load(std::memory_order_acquire);
+    modelInfo.outputCalibrationLevel.value = mModelOutputLevel.load(std::memory_order_acquire);
 
     static_cast<NAMSettingsPageControl*>(pGraphics->GetControlWithTag(kCtrlTagSettingsBox))->SetModelInfo(modelInfo);
 
-    const bool disableInputCalibrationControls = !mModel->HasInputLevel();
+    const bool disableInputCalibrationControls = !mModelHasInputLevel.load(std::memory_order_acquire);
     pGraphics->GetControlWithTag(kCtrlTagCalibrateInput)->SetDisabled(disableInputCalibrationControls);
     pGraphics->GetControlWithTag(kCtrlTagInputCalibrationLevel)->SetDisabled(disableInputCalibrationControls);
     {
       auto* c = static_cast<OutputModeControl*>(pGraphics->GetControlWithTag(kCtrlTagOutputMode));
-      c->SetNormalizedDisable(!mModel->HasLoudness());
-      c->SetCalibratedDisable(!mModel->HasOutputLevel());
+      c->SetNormalizedDisable(!mModelHasLoudness.load(std::memory_order_acquire));
+      c->SetCalibratedDisable(!mModelHasOutputLevel.load(std::memory_order_acquire));
     }
 
     if (auto* pSlimIcon = pGraphics->GetControlWithTag(kCtrlTagSlimmableIcon))
     {
-      const bool show = mModel->GetSlimmableModel() != nullptr;
-      pSlimIcon->Hide(!show);
+      pSlimIcon->Hide(!mModelSlimmable.load(std::memory_order_acquire));
     }
-  }
-}
-
-void Amphibia::_UpdateLatency()
-{
-  int latency = 0;
-  if (mModel)
-  {
-    latency += mModel->GetLatency();
-  }
-  // Other things that add latency here...
-
-  // Feels weird to have to do this.
-  if (GetLatency() != latency)
-  {
-    SetLatency(latency);
   }
 }
 
@@ -992,4 +1104,5 @@ void Amphibia::_UpdateMeters(sample** inputPointer, sample** outputPointer, cons
 }
 
 // HACK
+#include "Loading/FileInspection.cpp"
 #include "Unserialization.cpp"
