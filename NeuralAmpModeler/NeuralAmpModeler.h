@@ -14,6 +14,8 @@
 
 #include "Colors.h"
 #include "Loading/AsyncDSPWorker.h"
+#include "Library/ImportWorker.h"
+#include "Library/ContentHash.h"
 #include "ToneStack.h"
 
 #include "IPlug_include_in_plug_hdr.h"
@@ -265,6 +267,10 @@ private:
   void _InitToneStack();
   void _RequestModel(const WDL_String& dspFile);
   void _RequestIR(const WDL_String& irPath);
+  void _HandleDroppedPaths(const std::vector<std::string>& paths, bool modelSlot);
+  void _PollImportStatus();
+  void _RequestManaged(const amphibia::library::ContentHash& hash,
+                       amphibia::library::ManagedObjectType type);
   amphibia::loading::PreparedDSP<ResamplingNAM, ModelLoadMetadata>
   _PrepareModel(const amphibia::loading::LoadRequest& request,
                 const amphibia::loading::AsyncDSPWorker<ResamplingNAM, ModelLoadMetadata>::CancelCheck& cancelled,
@@ -365,6 +371,17 @@ private:
   std::unordered_map<std::string, double> mNAMParams = {{"Input", 0.0}, {"Output", 0.0}};
 
   NAMSender mInputSender, mOutputSender;
+
+  enum class ImportTarget { None, Model, IR };
+  std::unique_ptr<amphibia::library::ManagedLibrary> mLibrary;
+  std::unique_ptr<amphibia::library::ImportWorker> mImportWorker;
+  ImportTarget mImportTarget{ImportTarget::None};
+  std::uint64_t mReviewedImportTask{};
+  std::uint64_t mCompletedImportTask{};
+  std::optional<amphibia::library::ContentHash> mPendingManagedModel;
+  std::optional<amphibia::library::ContentHash> mPendingManagedIR;
+  std::optional<amphibia::library::ContentHash> mActiveManagedModel;
+  std::optional<amphibia::library::ContentHash> mActiveManagedIR;
 
   // Declared last so their threads are stopped first during member teardown.
   amphibia::loading::AsyncDSPWorker<ResamplingNAM, ModelLoadMetadata> mModelLoader;

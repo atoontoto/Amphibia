@@ -18,6 +18,7 @@
 
 using namespace iplug;
 using namespace igraphics;
+using NAMDropHandler = std::function<void(const std::vector<std::string>&)>;
 
 enum class NAMBrowserState
 {
@@ -48,6 +49,19 @@ public:
 
     ISVGButtonControl::Draw(g);
   }
+
+  void SetDropHandler(NAMDropHandler handler) { mDropHandler = std::move(handler); }
+  void OnDrop(const char* path) override { if (mDropHandler && path) mDropHandler({path}); }
+  void OnDropMultiple(const std::vector<const char*>& paths) override
+  {
+    if (!mDropHandler) return;
+    std::vector<std::string> owned;
+    for (const auto* path : paths) if (path) owned.emplace_back(path);
+    mDropHandler(owned);
+  }
+
+private:
+  NAMDropHandler mDropHandler;
 };
 
 class NAMCircleButtonControl : public ISVGButtonControl
@@ -242,6 +256,20 @@ public:
     SetLabelStr(ellipsizedFileName.c_str());
     SetTooltip(fileName.get_filepart());
   }
+
+  void SetDropHandler(NAMDropHandler handler) { mDropHandler = std::move(handler); }
+  void OnDrop(const char* path) override { if (mDropHandler && path) mDropHandler({path}); }
+  void OnDropMultiple(const std::vector<const char*>& paths) override
+  {
+    if (!mDropHandler) return;
+    std::vector<std::string> owned;
+    owned.reserve(paths.size());
+    for (const auto* path : paths) if (path) owned.emplace_back(path);
+    mDropHandler(owned);
+  }
+
+private:
+  NAMDropHandler mDropHandler;
 };
 
 // URL control for the "Get" models/irs links
@@ -264,10 +292,13 @@ public:
 class NAMFileBrowserControl : public IDirBrowseControlBase
 {
 public:
+  using DropHandler = NAMDropHandler;
+
   NAMFileBrowserControl(const IRECT& bounds, int clearMsgTag, const char* labelStr, const char* fileExtension,
                         IFileDialogCompletionHandlerFunc ch, const IVStyle& style, const ISVG& loadSVG,
                         const ISVG& clearSVG, const ISVG& leftSVG, const ISVG& rightSVG, const IBitmap& bitmap,
-                        const ISVG& globeSVG, const char* getButtonLabel, const char* getButtonURL)
+                        const ISVG& globeSVG, const char* getButtonLabel, const char* getButtonURL,
+                        DropHandler dropHandler = {})
   : IDirBrowseControlBase(bounds, fileExtension, false, false)
   , mClearMsgTag(clearMsgTag)
   , mDefaultLabelStr(labelStr)
@@ -281,12 +312,27 @@ public:
   , mGlobeSVG(globeSVG)
   , mGetButtonLabel(getButtonLabel)
   , mGetButtonURL(getButtonURL)
+  , mDropHandler(std::move(dropHandler))
   , mBrowserState(NAMBrowserState::Empty)
   {
     mIgnoreMouse = true;
   }
 
   void Draw(IGraphics& g) override { g.DrawFittedBitmap(mBitmap, mRECT); }
+
+  void OnDrop(const char* path) override
+  {
+    if (mDropHandler && path) mDropHandler({path});
+  }
+
+  void OnDropMultiple(const std::vector<const char*>& paths) override
+  {
+    if (!mDropHandler) return;
+    std::vector<std::string> owned;
+    owned.reserve(paths.size());
+    for (const auto* path : paths) if (path) owned.emplace_back(path);
+    mDropHandler(owned);
+  }
 
   void OnPopupMenuSelection(IPopupMenu* pSelectedMenu, int valIdx) override
   {
@@ -391,21 +437,27 @@ public:
     const auto rightButtonBounds = padded.ReduceFromLeft(buttonWidth);
     const auto fileNameButtonBounds = padded;
 
-    AddChildControl(new NAMSquareButtonControl(loadFileButtonBounds, DefaultClickActionFunc, mLoadSVG))
-      ->SetAnimationEndActionFunction(loadFileFunc);
-    AddChildControl(new NAMSquareButtonControl(leftButtonBounds, DefaultClickActionFunc, mLeftSVG))
-      ->SetAnimationEndActionFunction(prevFileFunc);
-    AddChildControl(new NAMSquareButtonControl(rightButtonBounds, DefaultClickActionFunc, mRightSVG))
-      ->SetAnimationEndActionFunction(nextFileFunc);
+    auto* loadButton = new NAMSquareButtonControl(loadFileButtonBounds, DefaultClickActionFunc, mLoadSVG);
+    loadButton->SetDropHandler(mDropHandler);
+    AddChildControl(loadButton)->SetAnimationEndActionFunction(loadFileFunc);
+    auto* leftButton = new NAMSquareButtonControl(leftButtonBounds, DefaultClickActionFunc, mLeftSVG);
+    leftButton->SetDropHandler(mDropHandler);
+    AddChildControl(leftButton)->SetAnimationEndActionFunction(prevFileFunc);
+    auto* rightButton = new NAMSquareButtonControl(rightButtonBounds, DefaultClickActionFunc, mRightSVG);
+    rightButton->SetDropHandler(mDropHandler);
+    AddChildControl(rightButton)->SetAnimationEndActionFunction(nextFileFunc);
     AddChildControl(mFileNameControl = new NAMFileNameControl(fileNameButtonBounds, mDefaultLabelStr.Get(), mStyle))
       ->SetAnimationEndActionFunction(chooseFileFunc);
+    mFileNameControl->SetDropHandler(mDropHandler);
 
     // creates both right-side controls but only show one based on state
     mClearButton = new NAMSquareButtonControl(clearAndGetButtonBounds, DefaultClickActionFunc, mClearSVG);
+    mClearButton->SetDropHandler(mDropHandler);
     mClearButton->SetAnimationEndActionFunction(clearFileFunc);
     AddChildControl(mClearButton);
 
     mGetButton = new NAMGetButtonControl(clearAndGetButtonBounds, mGetButtonLabel, mGetButtonURL, mGlobeSVG);
+    mGetButton->SetDropHandler(mDropHandler);
     AddChildControl(mGetButton);
 
     // initialize control visibility
@@ -504,6 +556,7 @@ private:
   // new members for the "Get" button
   const char* mGetButtonLabel;
   const char* mGetButtonURL;
+  DropHandler mDropHandler;
   NAMBrowserState mBrowserState;
   NAMSquareButtonControl* mClearButton = nullptr;
   NAMGetButtonControl* mGetButton = nullptr;
@@ -689,12 +742,24 @@ public:
   };
 };
 
+struct LibraryUIActions
+{
+  std::function<std::string()> information;
+  IActionFunction openFolder;
+  IActionFunction verify;
+  IActionFunction removeUnused;
+  IActionFunction clearStaging;
+  IActionFunction importFiles;
+  IActionFunction importFolder;
+  IActionFunction importZip;
+};
+
 class NAMSettingsPageControl : public IContainerBaseWithNamedChildren
 {
 public:
   NAMSettingsPageControl(const IRECT& bounds, const IBitmap& bitmap, const IBitmap& inputLevelBackgroundBitmap,
                          const IBitmap& switchBitmap, ISVG closeSVG, const IVStyle& style,
-                         const IVStyle& radioButtonStyle)
+                         const IVStyle& radioButtonStyle, LibraryUIActions libraryActions = {})
   : IContainerBaseWithNamedChildren(bounds)
   , mAnimationTime(0)
   , mBitmap(bitmap)
@@ -703,6 +768,7 @@ public:
   , mStyle(style)
   , mRadioButtonStyle(radioButtonStyle)
   , mCloseSVG(closeSVG)
+  , mLibraryActions(std::move(libraryActions))
   {
     mIgnoreMouse = false;
   }
@@ -712,6 +778,12 @@ public:
     auto* modelInfoControl = static_cast<ModelInfoControl*>(GetNamedChild(mControlNames.modelInfo));
     assert(modelInfoControl != nullptr);
     modelInfoControl->ClearModelInfo();
+  }
+
+  void RefreshLibraryInfo()
+  {
+    if (mLibraryInfo && mLibraryActions.information)
+      mLibraryInfo->SetStr(mLibraryActions.information().c_str());
   }
 
   bool OnKeyDown(float x, float y, const IKeyPress& key) override
@@ -818,6 +890,23 @@ public:
     AddNamedChildControl(new ModelInfoControl(modelInfoArea, leftStyle), mControlNames.modelInfo);
     AddNamedChildControl(new AboutControl(aboutArea, leftStyle, leftText), mControlNames.about);
 
+    const auto libraryArea = GetRECT().GetPadded(-pad).GetCentredInside(GetRECT().W() - 2.f * pad, 112.f)
+                               .GetVShifted(66.f);
+    mLibraryInfo = new IVLabelControl(libraryArea.GetFromTop(34.f), "Managed library unavailable", leftStyle);
+    AddNamedChildControl(mLibraryInfo, mControlNames.libraryInfo);
+    RefreshLibraryInfo();
+    const auto buttons = libraryArea.GetReducedFromTop(38.f);
+    const IVStyle buttonStyle = style.WithShowLabel(false).WithDrawFrame(true);
+    const std::array<std::pair<const char*, IActionFunction>, 7> actions{{
+      {"Open folder", mLibraryActions.openFolder}, {"Verify", mLibraryActions.verify},
+      {"Remove unused", mLibraryActions.removeUnused}, {"Clear staging", mLibraryActions.clearStaging},
+      {"Import files", mLibraryActions.importFiles}, {"Import folder", mLibraryActions.importFolder},
+      {"Import ZIP", mLibraryActions.importZip}}};
+    for (std::size_t index = 0; index < actions.size(); ++index)
+      AddChildControl(new IVButtonControl(buttons.GetGridCell(static_cast<int>(index / 4),
+                                                             static_cast<int>(index % 4), 2, 4).GetPadded(-2.f),
+                                          actions[index].second, actions[index].first, buttonStyle));
+
     auto closeAction = [&](IControl* pCaller) {
       static_cast<NAMSettingsPageControl*>(pCaller->GetParent())->HideAnimated(true);
     };
@@ -841,6 +930,8 @@ private:
   IVStyle mStyle;
   IVStyle mRadioButtonStyle;
   ISVG mCloseSVG;
+  LibraryUIActions mLibraryActions;
+  IVLabelControl* mLibraryInfo{};
   int mAnimationTime = 200;
   bool mWillHide = false;
 
@@ -854,6 +945,7 @@ private:
     const std::string close = "Close";
     const std::string inputCalibrationLevel = "InputCalibrationLevel";
     const std::string modelInfo = "ModelInfo";
+    const std::string libraryInfo = "LibraryInfo";
     const std::string outputMode = "OutputMode";
     const std::string title = "Title";
   } mControlNames;

@@ -27,7 +27,7 @@
 #define AMPHIBIA_STANDALONE_NAME BUNDLE_NAME
 #define AMPHIBIA_MANUFACTURER_NAME PLUG_MFR
 #define AMPHIBIA_VERSION PLUG_VERSION_STR
-#define AMPHIBIA_STATE_VERSION "1.0.0" // Current path + parameter layout; independent of product SemVer.
+#define AMPHIBIA_STATE_VERSION "1.1.0" // Adds optional managed-library references after the 1.0 payload.
 #define AMPHIBIA_INSTALLER_NAME "Amphibia Setup"
 #define AMPHIBIA_SETTINGS_NAMESPACE BUNDLE_NAME
 #define AMPHIBIA_MANAGED_LIBRARY_NAMESPACE BUNDLE_NAME

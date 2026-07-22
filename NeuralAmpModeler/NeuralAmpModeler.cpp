@@ -1,4 +1,5 @@
 #include <algorithm> // std::clamp, std::min
+#include <cctype>
 #include <cmath> // pow
 #include <filesystem>
 #include <fstream>
@@ -7,6 +8,7 @@
 
 #include "Colors.h"
 #include "Loading/FileInspection.h"
+#include "Library/PathSafety.h"
 #include "../NeuralAmpModelerCore/NAM/activations.h"
 #include "../NeuralAmpModelerCore/NAM/get_dsp.h"
 #include "../NeuralAmpModelerCore/NAM/wavenet/a2_fast.h"
@@ -93,6 +95,16 @@ Amphibia::Amphibia(const InstanceInfo& info)
     return _PrepareIR(request, cancelled, progress);
   })
 {
+  try
+  {
+    mLibrary = std::make_unique<amphibia::library::ManagedLibrary>(amphibia::library::DefaultLibraryPath());
+    mLibrary->Initialize();
+    mImportWorker = std::make_unique<amphibia::library::ImportWorker>(*mLibrary);
+  }
+  catch (const std::exception& exception)
+  {
+    std::cerr << "Managed library unavailable: " << exception.what() << '\n';
+  }
   _InitToneStack();
   nam::activations::Activation::enable_fast_tanh();
   GetParam(kInputLevel)->InitGain("Input", 0.0, -20.0, 20.0, 0.1);
@@ -196,6 +208,91 @@ Amphibia::Amphibia(const InstanceInfo& info)
     // Misc Areas
     const auto settingsButtonArea = CornerButtonArea(b);
 
+    LibraryUIActions libraryActions;
+    libraryActions.information = [this] {
+      if (!mLibrary) return std::string("Managed library unavailable");
+      try
+      {
+        const auto stats = mLibrary->Statistics();
+        auto snapshot = mLibrary->Snapshot();
+        std::vector<amphibia::library::LibraryObject> recent;
+        recent.reserve(snapshot.objects.size());
+        for (const auto& [hash, object] : snapshot.objects) recent.push_back(object);
+        std::sort(recent.begin(), recent.end(), [](const auto& left, const auto& right) {
+          const auto leftTime = std::max(left.lastUsedAt, left.importedAt);
+          const auto rightTime = std::max(right.lastUsedAt, right.importedAt);
+          return leftTime > rightTime;
+        });
+        std::string text = amphibia::library::PathToUtf8(mLibrary->Root()) + "\n" +
+               std::to_string(stats.managedBytes) + " bytes | " +
+               std::to_string(stats.namObjects) + " NAM | " + std::to_string(stats.irObjects) + " IR | " +
+               std::to_string(stats.packs) + " packs";
+        if (!recent.empty())
+        {
+          text += "\nRecent: ";
+          const auto count = std::min<std::size_t>(3, recent.size());
+          for (std::size_t index = 0; index < count; ++index)
+          {
+            if (index != 0) text += " | ";
+            text += recent[index].originalDisplayName;
+          }
+        }
+        return text;
+      }
+      catch (const std::exception& exception) { return std::string("Library error: ") + exception.what(); }
+    };
+    libraryActions.openFolder = [this](IControl* caller) {
+      if (!mLibrary) return;
+      WDL_String path(amphibia::library::PathToUtf8(mLibrary->Root()).c_str());
+      caller->GetUI()->RevealPathInExplorerOrFinder(path, false);
+    };
+    libraryActions.verify = [this](IControl*) {
+      if (mImportWorker) { mImportTarget = ImportTarget::None; mCompletedImportTask = 0; mImportWorker->VerifyLibrary(); }
+    };
+    libraryActions.clearStaging = [this](IControl*) {
+      if (mImportWorker) { mImportTarget = ImportTarget::None; mCompletedImportTask = 0; mImportWorker->ClearStaging(); }
+    };
+    libraryActions.removeUnused = [this](IControl*) {
+      if (!mImportWorker) return;
+      std::vector<std::string> protectedHashes;
+      {
+        std::lock_guard<std::mutex> lock(mPathMutex);
+        if (mActiveManagedModel) protectedHashes.push_back(amphibia::library::ToHex(*mActiveManagedModel));
+        if (mActiveManagedIR) protectedHashes.push_back(amphibia::library::ToHex(*mActiveManagedIR));
+      }
+      mImportTarget = ImportTarget::None;
+      mCompletedImportTask = 0;
+      mImportWorker->RemoveUnused(std::move(protectedHashes));
+    };
+    const auto startManagedImport = [this](std::vector<std::filesystem::path> sources) {
+      if (!mImportWorker || sources.empty()) return;
+      mImportTarget = ImportTarget::None;
+      mReviewedImportTask = 0;
+      mCompletedImportTask = 0;
+      mImportWorker->Scan(std::move(sources));
+    };
+    libraryActions.importFiles = [startManagedImport](IControl* caller) {
+      WDL_String file, directory;
+      caller->GetUI()->PromptForFile(file, directory, EFileAction::Open, "nam wav",
+        [startManagedImport](const WDL_String& selected, const WDL_String&) {
+          if (selected.GetLength()) startManagedImport({std::filesystem::u8path(selected.Get())});
+        });
+    };
+    libraryActions.importFolder = [startManagedImport](IControl* caller) {
+      WDL_String directory;
+      caller->GetUI()->PromptForDirectory(directory,
+        [startManagedImport](const WDL_String&, const WDL_String& selected) {
+          if (selected.GetLength()) startManagedImport({std::filesystem::u8path(selected.Get())});
+        });
+    };
+    libraryActions.importZip = [startManagedImport](IControl* caller) {
+      WDL_String file, directory;
+      caller->GetUI()->PromptForFile(file, directory, EFileAction::Open, "zip",
+        [startManagedImport](const WDL_String& selected, const WDL_String&) {
+          if (selected.GetLength()) startManagedImport({std::filesystem::u8path(selected.Get())});
+        });
+    };
+
     // Model loader button
     auto loadModelCompletionHandler = [&](const WDL_String& fileName, const WDL_String& path) {
       if (fileName.GetLength())
@@ -229,7 +326,8 @@ Amphibia::Amphibia(const InstanceInfo& info)
     pGraphics->AttachControl(
       new NAMFileBrowserControl(modelArea, kMsgTagClearModel, defaultNamFileString.c_str(), "nam",
                                 loadModelCompletionHandler, style, fileSVG, crossSVG, leftArrowSVG, rightArrowSVG,
-                                fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl),
+                                fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl,
+                                [this](const std::vector<std::string>& paths) { _HandleDroppedPaths(paths, true); }),
       kCtrlTagModelFileBrowser);
 
     auto hideSlimOverlay = [](IControl* pCaller) {
@@ -259,7 +357,8 @@ Amphibia::Amphibia(const InstanceInfo& info)
     pGraphics->AttachControl(
       new NAMFileBrowserControl(irArea, kMsgTagClearIR, defaultIRString.c_str(), "wav", loadIRCompletionHandler, style,
                                 fileSVG, crossSVG, leftArrowSVG, rightArrowSVG, fileBackgroundBitmap, globeSVG,
-                                "Get IRs", getUrl),
+                                "Get IRs", getUrl,
+                                [this](const std::vector<std::string>& paths) { _HandleDroppedPaths(paths, false); }),
       kCtrlTagIRFileBrowser);
     pGraphics->AttachControl(
       new NAMSwitchControl(ngToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap));
@@ -284,13 +383,15 @@ Amphibia::Amphibia(const InstanceInfo& info)
     pGraphics->AttachControl(new NAMCircleButtonControl(
       settingsButtonArea,
       [pGraphics](IControl* pCaller) {
-        pGraphics->GetControlWithTag(kCtrlTagSettingsBox)->As<NAMSettingsPageControl>()->HideAnimated(false);
+        auto* settings = pGraphics->GetControlWithTag(kCtrlTagSettingsBox)->As<NAMSettingsPageControl>();
+        settings->RefreshLibraryInfo();
+        settings->HideAnimated(false);
       },
       gearSVG));
 
     pGraphics
       ->AttachControl(new NAMSettingsPageControl(b, backgroundBitmap, inputLevelBackgroundBitmap, switchHandleBitmap,
-                                                 crossSVG, style, radioButtonStyle),
+                                                 crossSVG, style, radioButtonStyle, std::move(libraryActions)),
                       kCtrlTagSettingsBox)
       ->Hide(true);
 
@@ -315,6 +416,7 @@ Amphibia::~Amphibia()
 {
   // Factories capture this plug-in, so join them while the complete owner is
   // still alive. Shutdown is idempotent for member teardown.
+  if (mImportWorker) mImportWorker->Shutdown();
   mModelLoader.Shutdown();
   mIRLoader.Shutdown();
   _DeallocateIOPointers();
@@ -439,6 +541,7 @@ void Amphibia::OnIdle()
     mSubmittedSlimRevision = slimRevision;
   }
   _PollLoadingStatus();
+  _PollImportStatus();
   const int latency = mPendingLatency.exchange(-1, std::memory_order_acq_rel);
   if (latency >= 0 && GetLatency() != latency)
     SetLatency(latency);
@@ -479,14 +582,26 @@ bool Amphibia::SerializeState(IByteChunk& chunk) const
   // State-layout version is independent from Amphibia's product SemVer.
   WDL_String version(AMPHIBIA_STATE_VERSION);
   chunk.PutStr(version.Get());
+  nlohmann::json references = nlohmann::json::object();
   // Model directory (don't serialize the model itself; we'll just load it again
   // when we unserialize)
   {
     std::lock_guard<std::mutex> lock(mPathMutex);
     chunk.PutStr(mNAMPath.Get());
     chunk.PutStr(mIRPath.Get());
+    references["schema"] = 1;
+    references["model"] = mActiveManagedModel ?
+      nlohmann::json{{"kind", "managed"}, {"sha256", amphibia::library::ToHex(*mActiveManagedModel)}} :
+      nlohmann::json{{"kind", mNAMPath.GetLength() ? "referenced" : "clear"}};
+    references["ir"] = mActiveManagedIR ?
+      nlohmann::json{{"kind", "managed"}, {"sha256", amphibia::library::ToHex(*mActiveManagedIR)}} :
+      nlohmann::json{{"kind", mIRPath.GetLength() ? "referenced" : "clear"}};
   }
-  return SerializeParams(chunk);
+  const bool serialized = SerializeParams(chunk);
+  chunk.PutStr("###AmphibiaLocalReferences###");
+  const auto encoded = references.dump();
+  chunk.PutStr(encoded.c_str());
+  return serialized;
 }
 
 int Amphibia::UnserializeState(const IByteChunk& chunk, int startPos)
@@ -501,7 +616,56 @@ int Amphibia::UnserializeState(const IByteChunk& chunk, int startPos)
     const char* kAmphibiaHeader = "###Amphibia###";
     const char* kLegacyNamHeader = "###NeuralAmpModeler###";
     if (strcmp(header.Get(), kAmphibiaHeader) == 0 || strcmp(header.Get(), kLegacyNamHeader) == 0)
-      return _UnserializeStateWithKnownVersion(chunk, pos);
+    {
+      const bool amphibiaState = strcmp(header.Get(), kAmphibiaHeader) == 0;
+      pos = _UnserializeStateWithKnownVersion(chunk, pos);
+      if (amphibiaState && pos < chunk.Size())
+      {
+        const int compatibilityEnd = pos;
+        try
+        {
+          WDL_String marker;
+          pos = _GetStateString(chunk, pos, marker);
+          if (strcmp(marker.Get(), "###AmphibiaLocalReferences###") == 0 && pos < chunk.Size())
+          {
+            WDL_String payload;
+            pos = _GetStateString(chunk, pos, payload);
+            if (payload.GetLength() > 65536) throw std::runtime_error("Managed state reference is too large");
+            const auto references = nlohmann::json::parse(payload.Get());
+            if (references.value("schema", 0) == 1)
+            {
+              const auto restore = [this, &references](const char* key, amphibia::library::ManagedObjectType type) {
+                if (!references.contains(key)) return;
+                const auto kind = references[key].value("kind", "");
+                if (kind == "managed")
+                {
+                  const auto hash = amphibia::library::ContentHashFromHex(references[key].value("sha256", ""));
+                  _RequestManaged(hash, type);
+                }
+                else if (kind == "clear")
+                {
+                  std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
+                  if (type == amphibia::library::ManagedObjectType::NamModel)
+                  {
+                    mModelLoader.SubmitClear(mProcessingConfiguration);
+                    mPendingManagedModel.reset();
+                  }
+                  else
+                  {
+                    mIRLoader.SubmitClear(mProcessingConfiguration);
+                    mPendingManagedIR.reset();
+                  }
+                }
+              };
+              restore("model", amphibia::library::ManagedObjectType::NamModel);
+              restore("ir", amphibia::library::ManagedObjectType::WaveImpulseResponse);
+            }
+          }
+        }
+        catch (...) { return compatibilityEnd; }
+      }
+      return pos;
+    }
     return _UnserializeStateWithUnknownVersion(chunk, startPos);
   }
   catch (...)
@@ -585,12 +749,14 @@ bool Amphibia::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pDat
     {
       std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
       mModelLoader.SubmitClear(mProcessingConfiguration);
+      mPendingManagedModel.reset();
       return true;
     }
     case kMsgTagClearIR:
     {
       std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
       mIRLoader.SubmitClear(mProcessingConfiguration);
+      mPendingManagedIR.reset();
       return true;
     }
     case kMsgTagHighlightColor:
@@ -733,14 +899,143 @@ void Amphibia::_ApplySlimParamToLoadedNAMs()
 
 void Amphibia::_RequestModel(const WDL_String& modelPath)
 {
+  mPendingManagedModel.reset();
   std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
   mModelLoader.Submit(modelPath.Get(), mProcessingConfiguration, GetParam(kSlim)->Value());
 }
 
 void Amphibia::_RequestIR(const WDL_String& irPath)
 {
+  mPendingManagedIR.reset();
   std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
   mIRLoader.Submit(irPath.Get(), mProcessingConfiguration);
+}
+
+void Amphibia::_RequestManaged(const amphibia::library::ContentHash& hash,
+                               amphibia::library::ManagedObjectType type)
+{
+  if (!mLibrary) return;
+  const auto path = mLibrary->Resolve(hash, type);
+  if (!path) return;
+  WDL_String value(amphibia::library::PathToUtf8(*path).c_str());
+  if (type == amphibia::library::ManagedObjectType::NamModel)
+  {
+    _RequestModel(value);
+    mPendingManagedModel = hash;
+  }
+  else
+  {
+    _RequestIR(value);
+    mPendingManagedIR = hash;
+  }
+}
+
+void Amphibia::_HandleDroppedPaths(const std::vector<std::string>& paths, bool modelSlot)
+{
+  if (paths.empty()) return;
+  if (paths.size() == 1)
+  {
+    const auto path = std::filesystem::u8path(paths.front());
+    auto extension = amphibia::library::PathToUtf8(path.extension());
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
+      return static_cast<char>(std::tolower(c));
+    });
+    if (std::filesystem::is_regular_file(path) &&
+        ((modelSlot && extension == ".nam") || (!modelSlot && extension == ".wav")))
+    {
+      WDL_String value(paths.front().c_str());
+      if (modelSlot) _RequestModel(value); else _RequestIR(value);
+      return;
+    }
+  }
+  if (!mImportWorker)
+  {
+    const std::string message = "Managed library is unavailable";
+    SendControlMsgFromDelegate(modelSlot ? kCtrlTagModelFileBrowser : kCtrlTagIRFileBrowser,
+                               kMsgTagLoadFailed, static_cast<int>(message.size()), message.c_str());
+    return;
+  }
+  std::vector<std::filesystem::path> sources;
+  sources.reserve(paths.size());
+  for (const auto& path : paths) sources.push_back(std::filesystem::u8path(path));
+  mImportTarget = modelSlot ? ImportTarget::Model : ImportTarget::IR;
+  mReviewedImportTask = 0;
+  mCompletedImportTask = 0;
+  mImportWorker->Scan(std::move(sources));
+}
+
+void Amphibia::_PollImportStatus()
+{
+  if (!mImportWorker) return;
+  const auto progress = mImportWorker->Progress();
+  const auto targetTag = mImportTarget == ImportTarget::IR ? kCtrlTagIRFileBrowser : kCtrlTagModelFileBrowser;
+  if (progress.state == amphibia::library::ImportTaskState::AwaitingSelection &&
+      progress.taskId != mReviewedImportTask)
+  {
+    const auto plan = mImportWorker->Plan();
+    if (!plan) return;
+    std::vector<std::size_t> selected;
+    for (std::size_t index = 0; index < plan->entries.size(); ++index)
+      if (plan->entries[index].selected &&
+          plan->entries[index].status == amphibia::library::ImportEntryStatus::Candidate)
+        selected.push_back(index);
+    mReviewedImportTask = progress.taskId;
+    std::string review = "Found " + std::to_string(selected.size()) + " supported candidate item(s), " +
+                         std::to_string(plan->unsafeEntries) + " unsafe and " +
+                         std::to_string(plan->unsupportedEntries) + " unsupported. Import selected items?";
+    const auto previewCount = std::min<std::size_t>(selected.size(), 8);
+    for (std::size_t preview = 0; preview < previewCount; ++preview)
+    {
+      const auto& entry = plan->entries[selected[preview]];
+      review += "\n" + entry.displayName + " (" +
+                (entry.fileType == amphibia::library::ImportedFileType::NamModel ? "NAM" : "WAV") + ", " +
+                std::to_string(entry.uncompressedSize) + " bytes)";
+    }
+    if (selected.size() > previewCount)
+      review += "\n...and " + std::to_string(selected.size() - previewCount) + " more";
+    if (auto* graphics = GetUI())
+    {
+      const auto result = _ShowMessageBox(graphics, review.c_str(), "Review local import", kMB_YESNO);
+      if (result == kYES) mImportWorker->ImportSelected(selected);
+      else if (result != kNoResult) mImportWorker->Cancel();
+    }
+  }
+  else if (progress.state == amphibia::library::ImportTaskState::Completed &&
+           progress.taskId != mCompletedImportTask)
+  {
+    mCompletedImportTask = progress.taskId;
+    if (const auto summary = mImportWorker->Summary(); summary && mImportTarget != ImportTarget::None)
+    {
+      const auto type = mImportTarget == ImportTarget::IR ?
+        amphibia::library::ManagedObjectType::WaveImpulseResponse :
+        amphibia::library::ManagedObjectType::NamModel;
+      for (const auto& hash : summary->objects)
+      {
+        if (mLibrary && mLibrary->Resolve(hash, type))
+        {
+          _RequestManaged(hash, type);
+          break;
+        }
+      }
+    }
+    if (auto* graphics = GetUI())
+      if (auto* settings = graphics->GetControlWithTag(kCtrlTagSettingsBox))
+        settings->As<NAMSettingsPageControl>()->RefreshLibraryInfo();
+  }
+  else if (progress.state == amphibia::library::ImportTaskState::Failed && progress.message)
+  {
+    if (progress.taskId == mCompletedImportTask) return;
+    mCompletedImportTask = progress.taskId;
+    SendControlMsgFromDelegate(targetTag, kMsgTagLoadFailed, static_cast<int>(progress.message->size()),
+                               progress.message->c_str());
+  }
+  else if (progress.state != amphibia::library::ImportTaskState::Idle &&
+           progress.state != amphibia::library::ImportTaskState::Cancelled)
+  {
+    const std::string text = progress.currentDisplayName.empty() ? "Importing local content..." :
+      "Importing: " + progress.currentDisplayName;
+    SendControlMsgFromDelegate(targetTag, kMsgTagLoadStatus, static_cast<int>(text.size()), text.c_str());
+  }
 }
 
 amphibia::loading::PreparedDSP<ResamplingNAM, ModelLoadMetadata>
@@ -850,7 +1145,8 @@ Amphibia::_PrepareIR(const amphibia::loading::LoadRequest& request,
   std::unique_ptr<dsp::ImpulseResponse> prepared;
   try
   {
-    prepared = std::make_unique<dsp::ImpulseResponse>(path.string().c_str(), request.configuration.sampleRate);
+    prepared = std::make_unique<dsp::ImpulseResponse>(amphibia::library::PathToUtf8(path).c_str(),
+                                                      request.configuration.sampleRate);
   }
   catch (...)
   {
@@ -882,7 +1178,7 @@ void Amphibia::_PollLoadingStatus()
       return std::string("None");
     try
     {
-      return std::filesystem::u8path(path).filename().string();
+      return amphibia::library::PathToUtf8(std::filesystem::u8path(path).filename());
     }
     catch (...)
     {
@@ -906,9 +1202,21 @@ void Amphibia::_PollLoadingStatus()
         SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadStatus, 7, "No model");
       else
         SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadedModel, static_cast<int>(path.size()), path.c_str());
+      if (!path.empty() && mPendingManagedModel)
+      {
+        { std::lock_guard<std::mutex> lock(mPathMutex); mActiveManagedModel = mPendingManagedModel; }
+        try { if (mLibrary) mLibrary->MarkUsed(*mPendingManagedModel); } catch (...) {}
+        mPendingManagedModel.reset();
+      }
+      else
+      {
+        std::lock_guard<std::mutex> lock(mPathMutex);
+        mActiveManagedModel.reset();
+      }
     }
     else if (modelStatus.state == amphibia::loading::LoadState::Failed)
     {
+      mPendingManagedModel.reset();
       const std::string text = "Failed: " + modelStatus.displayName + " (active: " + basename(mModelLoader.ActivePath()) + ")";
       SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed, static_cast<int>(text.size()), text.c_str());
     }
@@ -937,9 +1245,21 @@ void Amphibia::_PollLoadingStatus()
         SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadStatus, 5, "No IR");
       else
         SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadedIR, static_cast<int>(path.size()), path.c_str());
+      if (!path.empty() && mPendingManagedIR)
+      {
+        { std::lock_guard<std::mutex> lock(mPathMutex); mActiveManagedIR = mPendingManagedIR; }
+        try { if (mLibrary) mLibrary->MarkUsed(*mPendingManagedIR); } catch (...) {}
+        mPendingManagedIR.reset();
+      }
+      else
+      {
+        std::lock_guard<std::mutex> lock(mPathMutex);
+        mActiveManagedIR.reset();
+      }
     }
     else if (irStatus.state == amphibia::loading::LoadState::Failed)
     {
+      mPendingManagedIR.reset();
       const std::string text = "Failed: " + irStatus.displayName + " (active: " + basename(mIRLoader.ActivePath()) + ")";
       SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed, static_cast<int>(text.size()), text.c_str());
     }
@@ -1105,4 +1425,12 @@ void Amphibia::_UpdateMeters(sample** inputPointer, sample** outputPointer, cons
 
 // HACK
 #include "Loading/FileInspection.cpp"
+#include "Library/ContentHash.cpp"
+#include "Library/PathSafety.cpp"
+#include "Library/FolderScanner.cpp"
+#include "Library/ZipArchive.cpp"
+#include "Library/LibraryIndex.cpp"
+#include "Library/ManagedLibrary.cpp"
+#include "Library/ImportWorker.cpp"
+#include "Library/LibraryPaths.cpp"
 #include "Unserialization.cpp"
