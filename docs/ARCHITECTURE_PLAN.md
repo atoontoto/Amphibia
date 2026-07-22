@@ -265,3 +265,8 @@ Selection is two-step for hosted content: select a tone/IR, then select one exac
 - TONE3000 API: <https://www.tone3000.com/api>
 - TONE3000 API terms: <https://www.tone3000.com/api/terms>
 - iPlug2 documentation: <https://iplug2.github.io/docs/>
+# Milestone 3 local content slice
+
+Milestone 3 adds a provider-neutral local content boundary under `NeuralAmpModeler/Library/`: source/plan/result types, path policy, recursive scanner, ZIP inventory/extractor, OS SHA-256, schema-1 JSON index, managed object transactions, and a joined import/maintenance worker. UI drag/drop and Settings actions are adapters; they do not own archive or database policy. `ManagedLibrary` is the only publisher of permanent objects/metadata, and `_RequestModel()` / `_RequestIR()` remain the only product loading gateways.
+
+The managed root is optional and separate from referenced browsing. Its content-addressed objects and pack associations are suitable inputs for a future provider adapter, but no provider/network concept enters this slice. The existing upstream-heavy DSP/UI translation unit includes the library implementation at its established amalgamation boundary; vendored C readers are explicit app/VST3 build inputs. Future extraction into a standalone library target is allowed if it preserves these APIs and merge boundaries.

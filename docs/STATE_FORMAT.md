@@ -1,10 +1,10 @@
 # Amphibia state format
 
-Status: Milestone 2 compatibility record
+Status: Milestone 3 compatibility record
 
-## Current writer
+## Version 1.0 compatibility prefix
 
-Milestone 2 does not change the Milestone 1 payload:
+Milestone 3 preserves the complete Milestone 1/2 payload as the prefix of every current state:
 
 ```text
 IByteChunk string  "###Amphibia###"
@@ -20,8 +20,9 @@ writer serializes only paths committed after a successful audio-boundary
 activation. A requested, failed, cancelled, stale, or merely ready path is not
 serialized.
 
-No provider reference, model bytes, IR bytes, hash, secret, OAuth value, URL,
-or state-schema addition is present.
+The compatibility prefix contains no provider reference, model bytes, IR bytes,
+secret, OAuth value, URL, or schema addition. Managed identities exist only in
+the bounded optional 1.1 tail documented below.
 
 ## Readers
 
@@ -55,6 +56,20 @@ invalid, or stale restored files fail without replacing that stage. UI objects
 are not accessed from restoration or worker code; a later `OnIdle()`/UI open
 reflects current status.
 
-Empty restored paths retain the inherited behavior: no new load is submitted.
-Milestone 3 may define explicit empty-reference clearing as part of its richer
-state schema only with a compatibility test and migration decision.
+For a 1.0 state, empty restored paths retain inherited behavior: no new load is
+submitted. A 1.1 optional tail can explicitly classify a slot as `clear` while
+leaving the frozen prefix readable.
+# Milestone 3 managed local references
+
+The current Amphibia state-layout version is `1.1.0`. The frozen header remains `###Amphibia###`; the legacy `###NeuralAmpModeler###` and headerless readers remain unchanged.
+
+Version 1.1 writes the complete 1.0 payload first, in the same order: header, layout version, active NAM path, active IR path, and serialized parameters. It then appends two length-prefixed strings:
+
+```text
+###AmphibiaLocalReferences###
+{"schema":1,"model":{"kind":"managed","sha256":"..."},"ir":{"kind":"referenced"}}
+```
+
+Each slot is `managed`, `referenced`, or `clear`. Managed values contain only a lowercase SHA-256 identity; referenced paths remain in the inherited prefix. The JSON tail is limited to 64 KiB and unknown fields are ignored under schema 1. Readers that stop after parameters can ignore the tail. Existing Amphibia 1.0 and legacy NAM state has no tail and follows the existing path restoration route.
+
+On 1.1 restore, parameters and inherited paths are decoded first. A managed hash, when present, is resolved under the managed root and submitted asynchronously through `_RequestModel()` or `_RequestIR()`, superseding the provisional path request. A `clear` kind submits the matching asynchronous clear request. A missing hash/object produces no synchronous mutation; normal async failure behavior preserves active DSP. Because the extension is optional, an invalid, oversized, or truncated tail is ignored after the valid 1.0 compatibility prefix has restored; corruption in the required prefix still returns `-1`.

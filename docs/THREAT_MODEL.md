@@ -125,3 +125,10 @@ On any failure, the active DSP is unchanged. Temporary data is removed by a best
 - Hosted downloads still require streaming byte caps and promotion rules before they may feed the local bounded preflight.
 - The inherited DSP path outside the Milestone 2 loading bridge still needs allocator instrumentation across the supported host matrix before a product-wide real-time-safety claim.
 - Platform signing/notarization and CI provenance are not yet implemented.
+# Milestone 3 local import additions
+
+Local files, recursive folders, archives, metadata, and the managed index are untrusted. Added controls include bounded traversal without symlink/junction following; ZIP path normalization and duplicate/case collision rejection; special/link/encryption/method rejection; entry/count/depth/type/total/ratio limits; streaming CRC/size checks; pre-extraction free-space checks; create-new no-follow staging writes; content-addressed final paths; reinspection and second hash; root/path containment checks; OS writer locks; atomic JSON replacement; and conservative verification/recovery.
+
+Source files and archives are opened read-only and never cleaned up by Amphibia. Randomized staging is confined to the managed root and removed on cancellation/failure. Unknown data, corrupt metadata, and orphan objects are reported rather than automatically repaired or uploaded. Remaining native-parser and filesystem time-of-check/time-of-use risk is reduced by generated destination names, secure create flags, root reparse rejection, same-filesystem rename, and revalidation, but sandboxed archive parsing is not present.
+
+No network, provider, OAuth, TLS, telemetry, scripting, executable loading, or trusted HTML surface was added.

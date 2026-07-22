@@ -138,3 +138,14 @@ See `NAM_ARCHITECTURES.md` for exact labeling and validation policy.
 - ASIO SDK redistribution obligations need legal review.
 - Inherited fonts/artwork lack adequate provenance records in the repository.
 - macOS signing/notarization and Windows code signing are not configured as releasable pipelines.
+# Milestone 3 overlay
+
+| Area | Amphibia change | Upstream-sync treatment |
+| --- | --- | --- |
+| `NeuralAmpModeler/Library/**` | New local import, archive policy, hashing, storage, metadata, recovery and worker slice | Amphibia-owned; retain and adapt call-site conflicts explicitly. |
+| `NeuralAmpModeler.cpp/.h` | Optional library ownership, Settings/drop adapters, hash-state restore, successful-activation bookkeeping | Sensitive merge seam around existing M2 workers and state; never replace wholesale. |
+| `NeuralAmpModelerControls.h` | Drop callback and compact read-only library settings surface | Reapply around upstream control/layout changes. Preserve inherited browser behavior. |
+| `config.h` | State layout `1.1.0`; product SemVer/identity untouched | Keep Amphibia header and IDs frozen. |
+| Windows/macOS project/config files | Reader-only archive sources, include paths, feature disables, OS crypto link | Reconcile generated upstream projects; do not copy old GUIDs or enable AAX. |
+| `ThirdParty/minizip-ng`, `ThirdParty/zlib` | Exact vendored reader subset and licenses | Amphibia pin; update only through reviewed dependency change. |
+| `tests/milestone3`, local-library docs | Generated security/transaction fixtures and design record | Amphibia-owned. |

@@ -2,6 +2,15 @@
 
 All notable Amphibia changes are recorded here. The project has no public release yet.
 
+## Unreleased - Milestone 3
+
+- Added optional referenced-versus-managed local content modes and platform application-data library paths.
+- Added background multi-file/folder scanning, drag-and-drop intent, review confirmation, cancellation, and maintenance tasks.
+- Added reader-only ZIP64 inventory and selective extraction with traversal, link, collision, bomb, size, CRC, and disk-space defenses.
+- Added streaming SHA-256, content-addressed NAM/IR objects, byte deduplication, pack associations, schema-versioned transactional JSON metadata, verification, staging recovery, and unused cleanup.
+- Added optional state 1.1 managed hash references while preserving the Amphibia header, the complete 1.0 prefix, parameter order, and legacy NAM reader.
+- Added native generated-fixture coverage and local-library/archive/state/security documentation. No network, OAuth, telemetry, installer, provider, or DSP feature was added.
+
 ## Unreleased - Milestone 2
 
 - Added per-instance asynchronous NAM and IR inspection, preparation, and newest-request handling.

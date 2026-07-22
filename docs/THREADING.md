@@ -1,6 +1,6 @@
 # Amphibia threading contract
 
-Status: Milestone 2 implementation
+Status: Milestone 3 implementation
 
 ## Threads and responsibilities
 
@@ -69,8 +69,9 @@ paths are not instrumented with a global allocator trap in this milestone.
 - Failure: structured `LoadErrorCode` plus concise message; active DSP/path is
   unchanged.
 
-The compact Milestone 2 UI does not expose a cancel button. The cancellation
-API is exercised by tests and available to later local-library UI work.
+The model/IR loader UI does not expose a separate cancel button. Its cancellation
+API remains exercised by tests. Local-library review can cancel its independent
+import task before publication.
 
 ## Diagnostics and tests
 
@@ -83,3 +84,10 @@ was added.
 ThreadSanitizer was not claimed on Windows. The available MSVC build and race
 stress suite were used; ASan/UBSan and macOS/Linux TSan remain platform matrix
 work.
+# Milestone 3 import/library worker
+
+Each plugin instance may own one `ImportWorker`, separate from the model and IR preparation workers. It serializes scan, review-selected import, verify, staging cleanup, and unused cleanup tasks. New task IDs supersede pending work; cancellation is cooperative; destruction cancels and joins. It never detaches and is explicitly shut down before library ownership ends.
+
+Folder traversal, ZIP enumeration/extraction, SHA-256, validation, copying, JSON index access, free-space checks, verification, and cleanup run only on this worker (startup initialization is a constructor-time non-audio exception). UI callbacks submit immutable sources/selections and poll copied progress/results from `OnIdle()`. No import worker calls `ProcessBlock()` or accesses an audio processor.
+
+Managed activation resolves a path and submits it through the existing Milestone 2 request gateway. Object `last_used_at` and active managed state change only after the DSP worker reports Active. Model/IR preparation, block-boundary pointer exchange, and old-processor reclamation retain the Milestone 2 ownership model.

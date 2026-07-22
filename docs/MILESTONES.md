@@ -120,3 +120,8 @@ a pass.
 ## Global non-claims
 
 Until the relevant boxes are evidenced, do not claim that Amphibia is buildable, release-ready, fully real-time safe, production-authorized for TONE3000, signed/notarized, or fully A1/A2 validated. Milestone completion is recorded by commit hash and verification output, not by prose alone.
+# Milestone 3 evidence record
+
+Milestone 3 implements the optional local managed-library slice: individual reference drops, multi-file/folder/ZIP review, recursive scanning, reader-only secure ZIP extraction, streamed SHA-256, content-addressed deduplication, pack associations, schema-1 transactional metadata, verification/recovery/cleanup, hash-based state restoration, and Settings statistics/actions. It adds no network, OAuth, provider, telemetry, installer, or DSP behavior.
+
+Windows native unit/security tests and standalone/VST3 build evidence are recorded in `MILESTONE_3_REPORT.md`. macOS project inputs are updated but validation remains platform-dependent and must not be inferred from Windows. The next milestone remains Milestone 4, TONE3000 foundation; no Milestone 4 work is complete.
