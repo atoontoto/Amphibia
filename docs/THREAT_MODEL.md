@@ -1,8 +1,24 @@
 # Amphibia threat model
 
-Status: Milestone 0 baseline
+Status: Milestone 0 baseline, reviewed for Milestone 2 local loading
 
 Review trigger: any new provider, network/archive library, state-schema change, installer change, or credential flow change
+
+## Milestone 2 security status
+
+Milestone 2 adds no network, provider, OAuth, archive, cache, or credential
+surface. Local NAM input is capped at 512 MiB and local IR input at 64 MiB
+before parser construction. RIFF/WAVE chunk arithmetic, format, channel count,
+sample rate, and non-empty data are preflighted before the inherited decoder.
+NAM JSON parsing, NAM Core construction, WAV decoding/resampling, and stale or
+retired object destruction run only on per-instance workers.
+
+The stale-completion, malformed local NAM/WAV, active-state preservation, and
+audio-thread retirement controls below are implemented and covered by the
+Milestone 2 deterministic harness. A single indivisible NAM Core operation is
+not preemptible, and the complete inherited signal path has not been checked
+with a global allocation trap; these remain explicit limitations rather than
+weakened invariants for the loading bridge.
 
 ## Scope and assets
 
@@ -106,6 +122,6 @@ On any failure, the active DSP is unchanged. Temporary data is removed by a best
 
 - Production OAuth client registration and exact redirect rules are unknown.
 - HTTP/TLS and optional ZIP implementations are not selected or audited.
-- Existing WAV parsing uses signed `int` chunk sizes and allocates from untrusted sizes; hosted IR activation needs a bounded preflight/hardened parser.
-- Real-time retirement is not safe in the upstream baseline.
+- Hosted downloads still require streaming byte caps and promotion rules before they may feed the local bounded preflight.
+- The inherited DSP path outside the Milestone 2 loading bridge still needs allocator instrumentation across the supported host matrix before a product-wide real-time-safety claim.
 - Platform signing/notarization and CI provenance are not yet implemented.

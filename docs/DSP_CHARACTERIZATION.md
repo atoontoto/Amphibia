@@ -129,3 +129,19 @@ The refactor test instead compares synchronous factory output with the same
 prepared object after asynchronous handoff. Local full-model renders must
 record sample rate, block size, input/model/IR hashes, parameter vector, peak,
 RMS, finite counts, CPU, build, platform, and host with the result.
+
+## Milestone 2 post-refactor evidence
+
+The source-contract characterization and state-contract tests pass after the
+refactor. The Debug and Release deterministic worker/WAV suites pass; their
+fake-DSP lifetime accounting returns to zero and retired depth never exceeds
+one. The tracked Core A1 and A2-shaped fixtures both load successfully through
+Core's portable `loadmodel` tool with the hashes recorded in
+`tests/fixtures/README.md`.
+
+The optional local variables `AMPHIBIA_TEST_A1_NAM`,
+`AMPHIBIA_TEST_A2_NAM`, and `AMPHIBIA_TEST_IR_WAV` were not set, producing
+three explicit skips. Consequently no released third-party A1/A2 render
+matrix, full inherited IR audio comparison, peak/RMS comparison, or host audio
+continuity result is claimed. Exact pass, skip, build, and platform details are
+recorded in `MILESTONE_2_REPORT.md`.

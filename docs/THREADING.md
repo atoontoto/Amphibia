@@ -1,0 +1,85 @@
+# Amphibia threading contract
+
+Status: Milestone 2 implementation
+
+## Threads and responsibilities
+
+| Context | Permitted work | Prohibited work |
+|---|---|---|
+| UI/message or host state callback | Submit/cancel requests, copy status, serialize active paths, update controls | NAM/IR construction, direct worker-buffer access |
+| Host reset callback | Capture/increment processing configuration, reserve plug-in buffers, submit re-preparation | Reset active model/IR in place, wait for workers |
+| NAM worker | File preflight, JSON parse, A2 inspection, Core construction, resampler reset/prewarm, stale/retired NAM destruction | UI control mutation, audio-buffer processing after publication |
+| IR worker | RIFF preflight, WAV decode, cubic resampling, weight/history/output preparation, stale/retired IR destruction | UI control mutation, audio-buffer processing after publication |
+| Audio callback | Fixed-size request/generation validation, pointer handoff, parameter DSP, audio processing, atomic diagnostics | File I/O, parsing, construction, mutex/wait, logging, string formatting, DSP destruction |
+| Plug-in destruction thread | Invalidate, wake and join workers; destroy final active processors after callbacks stop | Detach workers or permit callbacks into a destroyed owner |
+
+## Request state
+
+Model and IR expose copied `LoadStatus` values with `Idle`, `Inspecting`,
+`Preparing`, `ReadyToActivate`, `Active`, `Failed`, and `Cancelled`. Status
+strings live behind the worker mutex and are read only from `OnIdle()` or other
+non-audio callers. The audio callback never reads them.
+
+The UI and state reader submit through the same path. `OnIdle()` converts a
+new status snapshot into framework control messages. Workers never call iPlug
+controls. Loading and failure labels include requested basename and active
+basename; full personal paths are not placed in error text.
+
+## Locks
+
+`mProcessingConfigurationMutex` serializes reset with UI/state submission.
+`mPathMutex` protects active paths used by serialization/UI. Each worker mutex
+protects pending request, status strings, and non-audio metadata. All are
+outside `ProcessBlock()`.
+
+`ProcessBlock()` and everything it calls in the new loading bridge acquire no
+mutex and wait on no condition variable. NAM Core's version registry mutex is
+reachable only from the NAM worker's `nam::get_dsp()` call.
+
+Host/UI Slim changes increment only an atomic revision in `OnParamChange()`.
+`OnIdle()` observes that revision and submits a full worker-prepared model
+replacement using the new Slim value. Core `SetSlimmableSize()` is explicitly
+not real-time safe for all model variants, so it is never invoked from
+`ProcessBlock()`. This is a compatible re-preparation: the old model remains
+active until success, unlike sample-rate reconfiguration, which must bypass an
+incompatible object.
+
+## Configuration and buffers
+
+Every preparation captures `ProcessingConfiguration`. Reset increments its
+generation before re-preparation. The worker and audio boundary both reject a
+generation mismatch.
+
+The plug-in input/output vectors are grown to the advertised maximum in
+`OnReset()` and no longer shrink for smaller variable blocks. A host providing
+more than its advertised maximum can still trigger one defensive grow in
+`ProcessBlock()`. Inherited noise gate, tone stack, filter, meter, and DSP base
+buffer helpers may resize vector lengths as block sizes vary; capacity normally
+prevents allocation after the maximum-size preparation, but these general DSP
+paths are not instrumented with a global allocator trap in this milestone.
+
+## Cancellation meanings
+
+- User cancellation: `Cancel()`, status `Cancelled`, never activates.
+- Superseded: current request ID changed; discarded silently off-thread.
+- Stale processing configuration: generation mismatch; discarded off-thread
+  or reported if preparation began without a valid configuration.
+- Shutdown: stop flag plus request invalidation; worker joins after the current
+  cooperative boundary/Core call.
+- Failure: structured `LoadErrorCode` plus concise message; active DSP/path is
+  unchanged.
+
+The compact Milestone 2 UI does not expose a cancel button. The cancellation
+API is exercised by tests and available to later local-library UI work.
+
+## Diagnostics and tests
+
+The bridge exposes peak retired depth without formatting on the callback. Unit
+tests use fake DSP lifetime counters and thread IDs to prove preparation and
+retired destruction do not run on the simulated audio thread. They also time
+the activation call externally. No external telemetry or release-time logging
+was added.
+
+ThreadSanitizer was not claimed on Windows. The available MSVC build and race
+stress suite were used; ASan/UBSan and macOS/Linux TSan remain platform matrix
+work.

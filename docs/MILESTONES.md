@@ -35,12 +35,18 @@ Exit evidence: this documentation set, clean submodules, validation report, and 
 
 ## Milestone 2 — DSP safety and A1/A2 validation
 
-- [ ] Add characterization tests for parameters, DSP ordering, resampling, navigation, and legacy state.
-- [ ] Implement bounded `NamInspector`/`IrInspector` and async preparation.
-- [ ] Implement generation cancellation, real-time exchange, and non-RT reclamation.
-- [ ] Eliminate model/IR parsing, preparation, allocation-heavy reset, and destruction from the audio callback.
+- [x] Add characterization tests for parameters, DSP ordering, resampling, navigation, and legacy state.
+- [x] Implement bounded `NamInspector`/`IrInspector` and async preparation.
+- [x] Implement generation cancellation, real-time exchange, and non-RT reclamation.
+- [x] Eliminate model/IR parsing, preparation, allocation-heavy reset, and destruction from the audio callback.
 - [ ] Validate redistributable real A1 and released A2 fixtures over sample-rate/block-size matrix.
-- [ ] Harden hosted-facing NAM/WAV bounds and malformed-file behavior.
+- [x] Harden hosted-facing NAM/WAV bounds and malformed-file behavior.
+
+The remaining fixture item is intentionally open. The tracked NAM Core A1 and
+A2-shaped fixtures load successfully, and generated WAV/error cases pass, but
+no redistributable released third-party A1/A2 captures were supplied for the
+declared local matrix. Their absence is reported as a skip, not converted into
+a pass.
 
 ## Milestone 3 — local provider, library, and state
 

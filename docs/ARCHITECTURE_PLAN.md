@@ -1,12 +1,22 @@
 # Amphibia architecture plan
 
-Status: Milestone 0 design baseline
+Status: Milestone 0 design baseline with Milestone 2 implementation addendum
 
 Evidence date: 2026-07-21
 
 Upstream baseline: `sdatkinson/NeuralAmpModelerPlugin` `v0.7.15` at `96337e9ab6e3beb619459779bbb5c47e1b04d8c4`
 
 This document is a design gate, not an implementation claim. No Amphibia product code is introduced in Milestone 0.
+
+Milestone 2 implementation note (2026-07-22): ADR-002 and ADR-003 are now
+implemented at the existing plug-in seam as two independent, per-instance
+`AsyncDSPWorker` objects rather than one combined `ProcessingAssetSet`. Model
+and IR requests, preparation, activation, and reclamation remain independent,
+so a slow NAM request cannot prevent an IR request from becoming ready. The
+one-element ready and completion mailboxes preserve the original bounded
+handoff intent. The provider-neutral coordinator and proposed source-tree
+migration remain Milestone 3 work; `DSP_OWNERSHIP.md` is the authoritative
+record of the concrete Milestone 2 ownership protocol.
 
 ## Product boundary
 
@@ -104,14 +114,25 @@ Each request gets a monotonically increasing generation. Workers may finish out 
 1. UI or state restore submits a path/cache reference without altering the active DSP.
 2. A worker applies path policy, bounded-size checks, format inspection, and content hashing.
 3. A worker constructs and prewarms the NAM processor or decodes/resamples/prepares the IR for the current sample rate and maximum block size.
-4. The worker publishes one immutable ready object to a single-producer/single-consumer handoff.
+4. The corresponding per-stage worker publishes one immutable activation record to its one-element atomic ready mailbox.
 5. At a block boundary, `ProcessBlock()` exchanges the active pointer using bounded operations only.
-6. The old pointer is enqueued into a bounded reclamation queue and destroyed by a non-real-time worker.
-7. If either bounded queue is full, publication is deferred; audio continues with the last valid object.
+6. The old pointer is returned in that stage's one-element completion mailbox and destroyed by its non-real-time worker.
+7. If the completion mailbox is occupied, activation is deferred; audio continues with the last valid object. A newer pending request replaces the older pending request before preparation.
 
-No promise of lock freedom will be made until the concrete primitive is reviewed and stress-tested. The acceptance property is more important: `ProcessBlock()` contains no mutex acquisition, waits, file/network activity, parser work, memory reclamation, or unbounded operation.
+The concrete pointer atomics are required to be always lock-free by compile-time
+assertions and the bridge has deterministic stress coverage. `ProcessBlock()`
+contains no loading-related mutex acquisition, wait, file/network activity,
+parser work, allocation, string operation, or memory reclamation. General
+inherited DSP helpers and a defensive host-contract buffer grow are separately
+documented limitations in `THREADING.md`; Milestone 2 does not claim a global
+allocator trap over the complete inherited signal path.
 
 `OnReset()` presents a related hazard because upstream resets/rebuilds staged and active assets. Amphibia will create sample-rate-specific prepared replacements off-thread and atomically adopt them. Until ready, it may retain a compatible current asset or use a documented bypass/fallback; it must not construct an IR on the audio callback.
+
+Milestone 2 implements the conservative option: configuration generation is
+incremented, existing stage objects are retained but marked incompatible and
+bypassed, and matching replacements are prepared asynchronously. The audio
+callback never resets or reconstructs the old objects.
 
 ## State model
 
