@@ -22,7 +22,7 @@ Windows Release and Debug standalone/VST3 targets and the Milestone 2/3 regressi
 Clone recursively, then follow [BUILDING.md](BUILDING.md). The short form is:
 
 ```text
-git clone --recursive <your-amphibia-repository-url>
+git clone --recursive https://github.com/atoontoto/Amphibia.git
 cd amphibia
 ```
 
