@@ -41,7 +41,7 @@ def main() -> int:
         '#define SHARED_RESOURCES_SUBPATH "Amphibia"',
         '#define VST3_PROCESSOR_UID 0x7DBF8585, 0x2FC54817, 0xAE21F791, 0x0D0330C1',
         '#define VST3_CONTROLLER_UID 0x893C1354, 0xA5D5416D, 0xB84CCA8A, 0xE0C27034',
-        '#define AMPHIBIA_STATE_VERSION "1.0.0"',
+        '#define AMPHIBIA_STATE_VERSION "1.1.0"',
     )
     for value in expected:
         require(config, value, "config.h")

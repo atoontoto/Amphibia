@@ -111,7 +111,8 @@ def test_navigation(controls: str, iplug: str) -> None:
 def test_state_and_architecture(source: str, config: str, core: str) -> None:
     require('WDL_String header("###Amphibia###");' in source, "Amphibia state writer changed")
     require('"###NeuralAmpModeler###"' in source, "legacy state reader removed")
-    require('#define AMPHIBIA_STATE_VERSION "1.0.0"' in config, "state layout version changed")
+    require('#define AMPHIBIA_STATE_VERSION "1.1.0"' in config, "managed-reference state layout missing")
+    require('###AmphibiaLocalReferences###' in source, "optional managed state tail missing")
     require('#define PLUG_VERSION_STR "0.1.0"' in config, "product version changed")
     require("NAM_ENABLE_A2_FAST" in core and "is_a2_shape" in core, "Core A2 fast-path wiring missing")
 

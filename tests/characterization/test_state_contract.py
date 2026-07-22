@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static compatibility assertions for the unchanged state payload."""
+"""Static compatibility assertions for the preserved state prefix and optional local-reference tail."""
 
 from __future__ import annotations
 
@@ -28,8 +28,12 @@ def main() -> int:
         writer.index("chunk.PutStr(mIRPath.Get())"),
         writer.index("SerializeParams(chunk)"),
     ]
-    require(positions == sorted(positions), "current state payload order changed")
-    require('#define AMPHIBIA_STATE_VERSION "1.0.0"' in config, "state version changed")
+    require(positions == sorted(positions), "current state payload prefix order changed")
+    require('#define AMPHIBIA_STATE_VERSION "1.1.0"' in config, "managed-reference state version missing")
+    require(writer.index('SerializeParams(chunk)') < writer.index('###AmphibiaLocalReferences###'),
+            "optional managed references no longer follow the complete 1.0 prefix")
+    require('references["schema"] = 1' in writer and '"sha256"' in writer,
+            "managed hash-reference schema missing")
     require('"###NeuralAmpModeler###"' in source, "legacy NAM header is no longer accepted")
     require("_UnserializeStateWithUnknownVersion(chunk, startPos)" in source, "headerless legacy fallback removed")
     require("length < 0 || length > chunk.Size() - contentsPos" in restore, "truncated string guard missing")
@@ -42,7 +46,13 @@ def main() -> int:
             "parameters no longer restore before async IR submission")
     require("_StageModel" not in restore and "_StageIR" not in restore,
             "state restoration still reaches synchronous staging")
-    print("Milestone 2 state compatibility contract: PASS")
+    require('payload.GetLength() > 65536' in source, "managed state extension is not bounded")
+    require('references.value("schema", 0) == 1' in source, "managed state extension is not versioned")
+    require('kind == "clear"' in source and "SubmitClear(mProcessingConfiguration)" in source,
+            "explicit managed-state clear does not use the asynchronous clear gateway")
+    require("catch (...) { return compatibilityEnd; }" in source,
+            "optional-tail corruption no longer preserves the valid compatibility prefix")
+    print("Milestone 3 state compatibility contract: PASS")
     return 0
 
 
@@ -50,5 +60,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except (AssertionError, ValueError) as error:
-        print(f"Milestone 2 state compatibility contract: FAIL: {error}", file=sys.stderr)
+        print(f"Milestone 3 state compatibility contract: FAIL: {error}", file=sys.stderr)
         raise SystemExit(1)

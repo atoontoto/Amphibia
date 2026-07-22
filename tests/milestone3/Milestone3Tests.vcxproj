@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{AA0B6C48-3286-46B1-945E-06DD8708319A}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword><RootNamespace>AmphibiaMilestone3Tests</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType><UseDebugLibraries>true</UseDebugLibraries><PlatformToolset>v143</PlatformToolset><CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType><UseDebugLibraries>false</UseDebugLibraries><PlatformToolset>v143</PlatformToolset><WholeProgramOptimization>true</WholeProgramOptimization><CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup><OutDir>$(ProjectDir)build\$(Platform)\$(Configuration)\</OutDir><IntDir>$(ProjectDir)build\$(Platform)\$(Configuration)\int\</IntDir></PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><WarningLevel>Level4</WarningLevel><SDLCheck>true</SDLCheck><ConformanceMode>true</ConformanceMode><LanguageStandard>stdcpp20</LanguageStandard><DebugInformationFormat Condition="'$(Configuration)'=='Debug'">OldStyle</DebugInformationFormat>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\ThirdParty\minizip-ng;$(ProjectDir)..\..\ThirdParty\zlib;$(ProjectDir)..\..\NeuralAmpModelerCore\Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CONSOLE;HAVE_ZLIB;ZLIB_COMPAT;MZ_ZIP_NO_COMPRESSION;MZ_ZIP_NO_ENCRYPTION;MZ_ZIP_NO_CRYPTO;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_SILENCE_CXX20_U8PATH_DEPRECATION_WARNING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link><SubSystem>Console</SubSystem><AdditionalDependencies>bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="LibraryTests.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Library\ContentHash.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Library\PathSafety.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Library\FolderScanner.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Library\ZipArchive.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Library\LibraryIndex.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Library\ManagedLibrary.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Library\ImportWorker.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Loading\FileInspection.cpp" />
+    <ClCompile Include="..\..\ThirdParty\minizip-ng\mz_crypt.c" /><ClCompile Include="..\..\ThirdParty\minizip-ng\mz_os.c" />
+    <ClCompile Include="..\..\ThirdParty\minizip-ng\mz_os_win32.c" /><ClCompile Include="..\..\ThirdParty\minizip-ng\mz_strm.c" />
+    <ClCompile Include="..\..\ThirdParty\minizip-ng\mz_strm_buf.c" /><ClCompile Include="..\..\ThirdParty\minizip-ng\mz_strm_mem.c" />
+    <ClCompile Include="..\..\ThirdParty\minizip-ng\mz_strm_split.c" /><ClCompile Include="..\..\ThirdParty\minizip-ng\mz_strm_os_win32.c" />
+    <ClCompile Include="..\..\ThirdParty\minizip-ng\mz_strm_zlib.c" /><ClCompile Include="..\..\ThirdParty\minizip-ng\mz_zip.c" />
+    <ClCompile Include="..\..\ThirdParty\minizip-ng\mz_zip_rw.c" />
+    <ClCompile Include="..\..\ThirdParty\zlib\adler32.c" /><ClCompile Include="..\..\ThirdParty\zlib\crc32.c" />
+    <ClCompile Include="..\..\ThirdParty\zlib\inflate.c" /><ClCompile Include="..\..\ThirdParty\zlib\inffast.c" />
+    <ClCompile Include="..\..\ThirdParty\zlib\inftrees.c" /><ClCompile Include="..\..\ThirdParty\zlib\zutil.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
