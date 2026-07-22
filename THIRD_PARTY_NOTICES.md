@@ -4,6 +4,8 @@ Amphibia is derived from NeuralAmpModelerPlugin by Steven Atkinson and contribut
 
 The source tree includes pinned dependencies including NeuralAmpModelerCore, AudioDSPTools, iPlug2, Eigen, nlohmann/json, NanoVG/NanoSVG, RtAudio, RtMidi, and platform/SDK components. Their authoritative license files remain beside their source in the repository and must accompany any distribution as required.
 
+Milestone 3 vendors the reader subset of **minizip-ng 4.2.2** (zlib license) from <https://github.com/zlib-ng/minizip-ng/releases/tag/4.2.2> and **zlib 1.3.2** (zlib license) from <https://zlib.net/> under `ThirdParty/`. Their license files are retained beside the source. Amphibia disables archive writing/compression, encryption/crypto, OpenSSL, bzip2, LZMA, zstd, and iconv integrations; only stored/deflated local ZIP reading is compiled. Windows SHA-256 uses the operating-system CNG API and macOS uses CommonCrypto.
+
 This file is a repository-level summary, not a release artifact manifest. The detailed version, license, and redistribution review is maintained in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). `NeuralAmpModeler/installer/ThirdPartyNotices.txt` is the inherited packaging notice under active revision.
 
 No Amphibia binary should be publicly distributed until the exact packaged file inventory has been matched to licenses and notices, including the ASIO/VST3 SDK review and the asset blockers described in [ATTRIBUTION.md](ATTRIBUTION.md).

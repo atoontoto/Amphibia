@@ -34,6 +34,40 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		A31000000000000000000000 /* mz_crypt.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000000 /* mz_crypt.c */; };
+		A32000000000000000000000 /* mz_crypt.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000000 /* mz_crypt.c */; };
+		A31000000000000000000001 /* mz_os.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000001 /* mz_os.c */; };
+		A32000000000000000000001 /* mz_os.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000001 /* mz_os.c */; };
+		A31000000000000000000002 /* mz_os_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000002 /* mz_os_posix.c */; };
+		A32000000000000000000002 /* mz_os_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000002 /* mz_os_posix.c */; };
+		A31000000000000000000003 /* mz_strm.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000003 /* mz_strm.c */; };
+		A32000000000000000000003 /* mz_strm.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000003 /* mz_strm.c */; };
+		A31000000000000000000004 /* mz_strm_buf.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000004 /* mz_strm_buf.c */; };
+		A32000000000000000000004 /* mz_strm_buf.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000004 /* mz_strm_buf.c */; };
+		A31000000000000000000005 /* mz_strm_mem.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000005 /* mz_strm_mem.c */; };
+		A32000000000000000000005 /* mz_strm_mem.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000005 /* mz_strm_mem.c */; };
+		A31000000000000000000006 /* mz_strm_split.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000006 /* mz_strm_split.c */; };
+		A32000000000000000000006 /* mz_strm_split.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000006 /* mz_strm_split.c */; };
+		A31000000000000000000007 /* mz_strm_os_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000007 /* mz_strm_os_posix.c */; };
+		A32000000000000000000007 /* mz_strm_os_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000007 /* mz_strm_os_posix.c */; };
+		A31000000000000000000008 /* mz_strm_zlib.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000008 /* mz_strm_zlib.c */; };
+		A32000000000000000000008 /* mz_strm_zlib.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000008 /* mz_strm_zlib.c */; };
+		A31000000000000000000009 /* mz_zip.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000009 /* mz_zip.c */; };
+		A32000000000000000000009 /* mz_zip.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000009 /* mz_zip.c */; };
+		A3100000000000000000000A /* mz_zip_rw.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000A /* mz_zip_rw.c */; };
+		A3200000000000000000000A /* mz_zip_rw.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000A /* mz_zip_rw.c */; };
+		A3100000000000000000000B /* adler32.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000B /* adler32.c */; };
+		A3200000000000000000000B /* adler32.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000B /* adler32.c */; };
+		A3100000000000000000000C /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000C /* crc32.c */; };
+		A3200000000000000000000C /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000C /* crc32.c */; };
+		A3100000000000000000000D /* inflate.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000D /* inflate.c */; };
+		A3200000000000000000000D /* inflate.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000D /* inflate.c */; };
+		A3100000000000000000000E /* inffast.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000E /* inffast.c */; };
+		A3200000000000000000000E /* inffast.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000E /* inffast.c */; };
+		A3100000000000000000000F /* inftrees.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000F /* inftrees.c */; };
+		A3200000000000000000000F /* inftrees.c in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000000F /* inftrees.c */; };
+		A31000000000000000000010 /* zutil.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000010 /* zutil.c */; };
+		A32000000000000000000010 /* zutil.c in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000010 /* zutil.c */; };
 		4F037D76261F9DB400A752B5 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F037D75261F9DB400A752B5 /* Images.xcassets */; };
 		4F037D77261F9DB400A752B5 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F037D75261F9DB400A752B5 /* Images.xcassets */; };
 		4F03A58C20A4621100EBDFFB /* IGraphicsNanoVG.h in Headers */ = {isa = PBXBuildFile; fileRef = 4F03A55020A4621000EBDFFB /* IGraphicsNanoVG.h */; };
@@ -614,6 +648,23 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A30000000000000000000000 /* mz_crypt.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_crypt.c; path = ../../ThirdParty/minizip-ng/mz_crypt.c; sourceTree = "<group>"; };
+		A30000000000000000000001 /* mz_os.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_os.c; path = ../../ThirdParty/minizip-ng/mz_os.c; sourceTree = "<group>"; };
+		A30000000000000000000002 /* mz_os_posix.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_os_posix.c; path = ../../ThirdParty/minizip-ng/mz_os_posix.c; sourceTree = "<group>"; };
+		A30000000000000000000003 /* mz_strm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_strm.c; path = ../../ThirdParty/minizip-ng/mz_strm.c; sourceTree = "<group>"; };
+		A30000000000000000000004 /* mz_strm_buf.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_strm_buf.c; path = ../../ThirdParty/minizip-ng/mz_strm_buf.c; sourceTree = "<group>"; };
+		A30000000000000000000005 /* mz_strm_mem.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_strm_mem.c; path = ../../ThirdParty/minizip-ng/mz_strm_mem.c; sourceTree = "<group>"; };
+		A30000000000000000000006 /* mz_strm_split.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_strm_split.c; path = ../../ThirdParty/minizip-ng/mz_strm_split.c; sourceTree = "<group>"; };
+		A30000000000000000000007 /* mz_strm_os_posix.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_strm_os_posix.c; path = ../../ThirdParty/minizip-ng/mz_strm_os_posix.c; sourceTree = "<group>"; };
+		A30000000000000000000008 /* mz_strm_zlib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_strm_zlib.c; path = ../../ThirdParty/minizip-ng/mz_strm_zlib.c; sourceTree = "<group>"; };
+		A30000000000000000000009 /* mz_zip.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_zip.c; path = ../../ThirdParty/minizip-ng/mz_zip.c; sourceTree = "<group>"; };
+		A3000000000000000000000A /* mz_zip_rw.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mz_zip_rw.c; path = ../../ThirdParty/minizip-ng/mz_zip_rw.c; sourceTree = "<group>"; };
+		A3000000000000000000000B /* adler32.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = adler32.c; path = ../../ThirdParty/zlib/adler32.c; sourceTree = "<group>"; };
+		A3000000000000000000000C /* crc32.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = crc32.c; path = ../../ThirdParty/zlib/crc32.c; sourceTree = "<group>"; };
+		A3000000000000000000000D /* inflate.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = inflate.c; path = ../../ThirdParty/zlib/inflate.c; sourceTree = "<group>"; };
+		A3000000000000000000000E /* inffast.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = inffast.c; path = ../../ThirdParty/zlib/inffast.c; sourceTree = "<group>"; };
+		A3000000000000000000000F /* inftrees.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = inftrees.c; path = ../../ThirdParty/zlib/inftrees.c; sourceTree = "<group>"; };
+		A30000000000000000000010 /* zutil.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = zutil.c; path = ../../ThirdParty/zlib/zutil.c; sourceTree = "<group>"; };
 		4F037D75261F9DB400A752B5 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ../resources/Images.xcassets; sourceTree = "<group>"; };
 		4F03A55020A4621000EBDFFB /* IGraphicsNanoVG.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IGraphicsNanoVG.h; sourceTree = "<group>"; };
 		4F03A55420A4621000EBDFFB /* IGraphicsNanoVG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IGraphicsNanoVG.cpp; sourceTree = "<group>"; };
@@ -2750,6 +2801,23 @@
 				B8E22A0C220268C4007CBF4C /* IPlugVST3_ProcessorBase.cpp in Sources */,
 				4F2FB1C62A0047430027AB66 /* get_dsp.cpp in Sources */,
 				4F3862F12014BBEC0009F402 /* NeuralAmpModeler.cpp in Sources */,
+				A32000000000000000000000 /* mz_crypt.c in Sources */,
+				A32000000000000000000001 /* mz_os.c in Sources */,
+				A32000000000000000000002 /* mz_os_posix.c in Sources */,
+				A32000000000000000000003 /* mz_strm.c in Sources */,
+				A32000000000000000000004 /* mz_strm_buf.c in Sources */,
+				A32000000000000000000005 /* mz_strm_mem.c in Sources */,
+				A32000000000000000000006 /* mz_strm_split.c in Sources */,
+				A32000000000000000000007 /* mz_strm_os_posix.c in Sources */,
+				A32000000000000000000008 /* mz_strm_zlib.c in Sources */,
+				A32000000000000000000009 /* mz_zip.c in Sources */,
+				A3200000000000000000000A /* mz_zip_rw.c in Sources */,
+				A3200000000000000000000B /* adler32.c in Sources */,
+				A3200000000000000000000C /* crc32.c in Sources */,
+				A3200000000000000000000D /* inflate.c in Sources */,
+				A3200000000000000000000E /* inffast.c in Sources */,
+				A3200000000000000000000F /* inftrees.c in Sources */,
+				A32000000000000000000010 /* zutil.c in Sources */,
 				4F81591F205D50EB00393585 /* pluginfactory.cpp in Sources */,
 				4F6FD2B322675B6300FC59E6 /* IGraphicsCoreText.mm in Sources */,
 				4F815973205D50EB00393585 /* vstinitiids.cpp in Sources */,
@@ -2928,6 +2996,23 @@
 				4F2FB1602A0047430027AB66 /* dsp.cpp in Sources */,
 				4FB1F58920E4B004004157C8 /* IGraphicsMac.mm in Sources */,
 				4F3862EF2014BBEC0009F402 /* NeuralAmpModeler.cpp in Sources */,
+				A31000000000000000000000 /* mz_crypt.c in Sources */,
+				A31000000000000000000001 /* mz_os.c in Sources */,
+				A31000000000000000000002 /* mz_os_posix.c in Sources */,
+				A31000000000000000000003 /* mz_strm.c in Sources */,
+				A31000000000000000000004 /* mz_strm_buf.c in Sources */,
+				A31000000000000000000005 /* mz_strm_mem.c in Sources */,
+				A31000000000000000000006 /* mz_strm_split.c in Sources */,
+				A31000000000000000000007 /* mz_strm_os_posix.c in Sources */,
+				A31000000000000000000008 /* mz_strm_zlib.c in Sources */,
+				A31000000000000000000009 /* mz_zip.c in Sources */,
+				A3100000000000000000000A /* mz_zip_rw.c in Sources */,
+				A3100000000000000000000B /* adler32.c in Sources */,
+				A3100000000000000000000C /* crc32.c in Sources */,
+				A3100000000000000000000D /* inflate.c in Sources */,
+				A3100000000000000000000E /* inffast.c in Sources */,
+				A3100000000000000000000F /* inftrees.c in Sources */,
+				A31000000000000000000010 /* zutil.c in Sources */,
 				4F2FB19C2A0047430027AB66 /* convnet.cpp in Sources */,
 				4F78D90B13B63BA50032E0F3 /* IPlugAPIBase.cpp in Sources */,
 				4F35DEAD207E5C5A00867D8F /* IPlugPluginBase.cpp in Sources */,

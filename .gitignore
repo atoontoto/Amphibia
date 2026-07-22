@@ -25,6 +25,7 @@ mkcert*
 TestResults/
 artifacts/
 tests/milestone2/build/
+tests/milestone3/build/
 
 NeuralAmpModeler/*.wav
 NeuralAmpModeler/peaks/

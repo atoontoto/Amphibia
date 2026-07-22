@@ -50,10 +50,21 @@ No new library is approved in Milestone 1.
 |---|---|---|
 | HTTP/TLS | Not selected | Native desktop support, TLS via maintained platform/OpenSSL backend, redirects, cancellation, streaming limits, proxy behavior, license, CVE maintenance, reproducible build. Candidate must not require a server-side client secret. |
 | Loopback HTTP | Prefer a minimal Amphibia-owned single-request parser or a small audited component | Bind-address control, header/request caps, deadline/cancel, no general server surface, license. |
-| ZIP | Avoid for initial TONE3000 individual model downloads; not selected for future import | ZIP64 policy, decompression bounds, symlink/device detection, path normalization on Windows/macOS, license and maintenance. |
+| ZIP | **Selected for Milestone 3 local import:** minizip-ng 4.2.2 plus zlib 1.3.2, vendored exact release source | Reader-only stored/deflate and ZIP64 support. Encryption/crypto, writers, OpenSSL, bzip2, LZMA, zstd, and iconv disabled. Amphibia owns cancellation, path/link checks, declared/actual limits, randomized safe writes, CRC handling, and staging transactions. |
 | Hashing / CSPRNG | Prefer audited OS crypto APIs or an already linked maintained library | SHA-256 correctness, cryptographic randomness, FIPS concerns if claimed (none planned), no custom crypto. |
 | Persistent index | Start with schema-versioned JSON and atomic replace | Measure startup/write scale first. SQLite is allowed only if justified and then its public-domain status/build provenance must be recorded. |
 | Credential storage | Platform APIs | Windows Credential Manager and macOS Keychain; no plaintext fallback. |
+
+## Milestone 3 pinned local-import dependencies
+
+| Dependency | Pin | License | Build and risk record |
+| --- | --- | --- | --- |
+| minizip-ng | release `4.2.2` (2026-06-30) | zlib | Maintained cross-platform C reader with ZIP64, Unicode paths, streaming and CRC. Vendored release source makes builds reproducible. Reader calls are confined to one import task; no shared archive handle. The library does not supply cancellation or Amphibia's security policy, so all reads are bounded and cancellation-checked by the caller. Symlink/special metadata is rejected before extraction. |
+| zlib | release `1.3.2` | zlib | Vendored inflater/CRC subset used by minizip-ng. No runtime package lookup. Only inflate-related source enters app/VST3 builds. |
+| nlohmann/json | existing pinned checkout | MIT | Reused for schema-1 snapshots and bounded NAM structure checks. Atomic snapshot replacement avoids a new SQLite dependency at current scale. |
+| Windows CNG / macOS CommonCrypto | platform API | OS SDK terms | Streaming SHA-256 and OS CSPRNG; no custom cryptography or added crypto binary. |
+
+The dependency evaluation considered minizip-ng maintenance/release cadence, zlib-compatible license, Windows/macOS source support, ZIP64 and filename handling, external-stream design, special-entry metadata exposure, static build size, lack of hidden runtime downloads, and reproducible vendoring. libarchive offered broader format coverage but a substantially larger unused parser surface. A handwritten decoder was rejected. Remaining risks are malformed-archive bugs in native parsers and platform filename edge cases; generated adversarial tests, conservative feature disabling, and outer policy limits reduce but do not eliminate them.
 
 ## API and service terms (not software licenses)
 

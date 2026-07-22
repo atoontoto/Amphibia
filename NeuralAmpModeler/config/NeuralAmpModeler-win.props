@@ -3,7 +3,7 @@
   <PropertyGroup Label="UserMacros">
     <IPLUG2_ROOT>$(ProjectDir)..\..\iPlug2</IPLUG2_ROOT>
     <BINARY_NAME>Amphibia</BINARY_NAME>
-    <EXTRA_ALL_DEFS>IGRAPHICS_NANOVG;IGRAPHICS_GL2;GRAYED_ALPHA=0.5f;NAM_ENABLE_A2_FAST</EXTRA_ALL_DEFS>
+    <EXTRA_ALL_DEFS>IGRAPHICS_NANOVG;IGRAPHICS_GL2;GRAYED_ALPHA=0.5f;NAM_ENABLE_A2_FAST;HAVE_ZLIB;ZLIB_COMPAT;MZ_ZIP_NO_COMPRESSION;MZ_ZIP_NO_ENCRYPTION;MZ_ZIP_NO_CRYPTO;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE</EXTRA_ALL_DEFS>
     <EXTRA_DEBUG_DEFS />
     <EXTRA_RELEASE_DEFS />
     <EXTRA_TRACER_DEFS />
@@ -19,11 +19,12 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)dsp;$(IPLUG2_ROOT)\..\eigen;$(EXTRA_INC_PATHS);$(IPLUG_INC_PATHS);$(IGRAPHICS_INC_PATHS);$(GLAD_GL2_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">OldStyle</DebugInformationFormat>
+      <AdditionalIncludeDirectories>$(SolutionDir)dsp;$(SolutionDir)..\ThirdParty\minizip-ng;$(SolutionDir)..\ThirdParty\zlib;$(IPLUG2_ROOT)\Dependencies\Extras;$(IPLUG2_ROOT)\..\eigen;$(EXTRA_INC_PATHS);$(IPLUG_INC_PATHS);$(IGRAPHICS_INC_PATHS);$(GLAD_GL2_PATHS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>$(EXTRA_ALL_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>wininet.lib;comctl32.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wininet.lib;comctl32.lib;Shlwapi.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ProgramDatabaseFile>$(PDB_FILE)</ProgramDatabaseFile>
     </Link>
     <PostBuildEvent>

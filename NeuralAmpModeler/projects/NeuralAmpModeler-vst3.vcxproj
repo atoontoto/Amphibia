@@ -426,16 +426,33 @@
     <ClCompile Include="..\..\AudioDSPTools\dsp\RecursiveLinearFilter.cpp" />
     <ClCompile Include="..\..\AudioDSPTools\dsp\wav.cpp" />
     <ClCompile Include="..\NeuralAmpModeler.cpp" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_crypt.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_os.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_os_win32.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_strm.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_strm_buf.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_strm_mem.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_strm_split.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_strm_os_win32.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_strm_zlib.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_zip.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_zip_rw.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\zlib\\adler32.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\zlib\\crc32.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\zlib\\inflate.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\zlib\\inffast.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\zlib\\inftrees.c" />
+    <ClCompile Include="..\\..\\ThirdParty\\zlib\\zutil.c" />
     <ClCompile Include="..\..\NeuralAmpModelerCore\NAM\activations.cpp" />
     <ClCompile Include="..\..\NeuralAmpModelerCore\NAM\conv1d.cpp" />
     <ClCompile Include="..\..\NeuralAmpModelerCore\NAM\convnet.cpp" />
     <ClCompile Include="..\..\NeuralAmpModelerCore\NAM\dsp.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(RelativeDir)</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Tracer|Win32'">$(IntDir)%(RelativeDir)</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(RelativeDir)</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(RelativeDir)</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Tracer|x64'">$(IntDir)%(RelativeDir)</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(RelativeDir)</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)nam-core-dsp.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Tracer|Win32'">$(IntDir)nam-core-dsp.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)nam-core-dsp.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)nam-core-dsp.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Tracer|x64'">$(IntDir)nam-core-dsp.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)nam-core-dsp.obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\NeuralAmpModelerCore\NAM\get_dsp.cpp" />
     <ClCompile Include="..\..\NeuralAmpModelerCore\NAM\lstm.cpp" />
