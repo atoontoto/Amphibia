@@ -94,6 +94,9 @@ def test_dsp_order(source: str) -> None:
         ],
         "DSP order",
     )
+    require("SetSlimmableSize" not in block, "non-real-time-safe Slim rebuild entered ProcessBlock")
+    idle = source[source.index("void Amphibia::OnIdle"): source.index("void Amphibia::OnParamChange")]
+    require("mModelLoader.Reprepare" in idle, "Slim changes no longer use compatible worker re-preparation")
 
 
 def test_navigation(controls: str, iplug: str) -> None:

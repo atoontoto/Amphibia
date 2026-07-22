@@ -353,7 +353,7 @@ private:
   std::atomic<double> mModelSampleRate{0.0};
   std::atomic<bool> mModelSlimmable{false};
   std::atomic<std::uint64_t> mSlimRevision{1};
-  std::uint64_t mAppliedSlimRevision{}; // audio-thread-only
+  std::uint64_t mSubmittedSlimRevision{}; // message-thread-only
   std::atomic<int> mPendingLatency{-1};
   std::uint64_t mLastModelStatusRequest{};
   std::uint64_t mLastIRStatusRequest{};

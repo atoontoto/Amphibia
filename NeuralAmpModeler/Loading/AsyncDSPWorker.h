@@ -115,6 +115,36 @@ public:
     return clear ? SubmitClear(configuration) : Submit(std::move(path), configuration, userValue);
   }
 
+  // Rebuild the newest selected processor without invalidating the compatible
+  // active processor. Used for non-configuration changes such as Slim so a
+  // failed refresh preserves the currently working sound.
+  std::uint64_t Reprepare(const ProcessingConfiguration& configuration, double userValue = 0.0)
+  {
+    std::string path;
+    bool clear = false;
+    bool haveSelection = false;
+    {
+      std::lock_guard<std::mutex> lock(mMutex);
+      const bool requestPending = mStatus.state == LoadState::Inspecting || mStatus.state == LoadState::Preparing
+                                  || mStatus.state == LoadState::ReadyToActivate;
+      if (requestPending)
+      {
+        path = mRequestedPath;
+        clear = mRequestedClear;
+        haveSelection = true;
+      }
+      else if (!mActivePath.empty())
+      {
+        path = mActivePath;
+        haveSelection = true;
+      }
+    }
+
+    if (!haveSelection)
+      return 0;
+    return clear ? SubmitClear(configuration) : Submit(std::move(path), configuration, userValue);
+  }
+
   void Cancel()
   {
     const auto requestId = mRequestCounter.fetch_add(1, std::memory_order_relaxed) + 1;

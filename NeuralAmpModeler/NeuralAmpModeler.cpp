@@ -358,13 +358,6 @@ void Amphibia::ProcessBlock(iplug::sample** inputs, iplug::sample** outputs, int
 
   if (auto* model = mModelLoader.ActiveForAudio())
   {
-    const auto slimRevision = mSlimRevision.load(std::memory_order_acquire);
-    if (slimRevision != mAppliedSlimRevision)
-    {
-      if (auto* slimmable = model->GetSlimmableModel())
-        slimmable->SetSlimmableSize(GetParam(kSlim)->Value());
-      mAppliedSlimRevision = slimRevision;
-    }
     model->process(triggerOutput, mOutputPointers, nFrames);
   }
   else
@@ -438,6 +431,13 @@ void Amphibia::OnIdle()
 {
   mInputSender.TransmitData(*this);
   mOutputSender.TransmitData(*this);
+  const auto slimRevision = mSlimRevision.load(std::memory_order_acquire);
+  if (slimRevision != mSubmittedSlimRevision)
+  {
+    std::lock_guard<std::mutex> lock(mProcessingConfigurationMutex);
+    mModelLoader.Reprepare(mProcessingConfiguration, GetParam(kSlim)->Value());
+    mSubmittedSlimRevision = slimRevision;
+  }
   _PollLoadingStatus();
   const int latency = mPendingLatency.exchange(-1, std::memory_order_acq_rel);
   if (latency >= 0 && GetLatency() != latency)

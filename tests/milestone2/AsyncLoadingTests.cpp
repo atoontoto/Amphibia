@@ -108,7 +108,7 @@ void TestNewestWinsAndFailurePreservesActive()
   Worker worker([&](const LoadRequest& request, const Worker::CancelCheck&, const Worker::ProgressCallback& progress) {
     if (std::this_thread::get_id() == callbackThread)
       preparedOnCallbackThread = true;
-    if (request.path == "invalid.nam")
+    if (request.path == "invalid.nam" || request.userValue < 0.0)
       throw LoadException(LoadErrorCode::InvalidModel, "Invalid model");
     if (request.path == "A.nam" && !releaseA.load())
     {
@@ -129,6 +129,11 @@ void TestNewestWinsAndFailurePreservesActive()
   ActivateReady(worker, 3);
   Require(worker.Status().requestId == cRequest, "older request reported active");
   Require(!preparedOnCallbackThread.load(), "DSP preparation ran on the simulated audio thread");
+
+  worker.Reprepare(Config(1), -1.0);
+  WaitUntil([&] { return worker.Status().state == LoadState::Failed; }, "compatible reprepare did not fail");
+  Require(worker.ActiveForAudio() != nullptr && worker.ActiveForAudio()->identity == 3,
+          "failed compatible reprepare bypassed the active DSP");
 
   worker.Submit("invalid.nam", Config(1));
   WaitUntil([&] { return worker.Status().state == LoadState::Failed; }, "invalid model did not fail");
@@ -165,6 +170,7 @@ void TestGenerationCancellationAndReclamation()
   worker.Submit("C.nam", Config(1));
   WaitUntil([&] { return worker.Status().state == LoadState::ReadyToActivate; }, "generation-1 C was not ready");
   const auto newRequest = worker.Reconfigure(Config(2));
+  Require(worker.ActiveForAudio() == nullptr, "incompatible reconfiguration did not bypass the active DSP");
   Require(!worker.ActivateAtBlockBoundary().activated, "old processing generation activated");
   ActivateReady(worker, 3);
   Require(worker.Status().requestId == newRequest, "reconfigured request was not active");
