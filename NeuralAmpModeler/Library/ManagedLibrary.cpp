@@ -24,7 +24,7 @@
 namespace amphibia::library {
 namespace {
 
-bool IsLinkOrReparsePoint(const std::filesystem::path& path)
+bool IsManagedLinkOrReparsePoint(const std::filesystem::path& path)
 {
   std::error_code error;
   if (std::filesystem::is_symlink(std::filesystem::symlink_status(path, error))) return true;
@@ -38,7 +38,7 @@ bool IsLinkOrReparsePoint(const std::filesystem::path& path)
 
 void RemoveManagedTree(const std::filesystem::path& path, std::error_code& error)
 {
-  if (IsLinkOrReparsePoint(path)) std::filesystem::remove(path, error);
+  if (IsManagedLinkOrReparsePoint(path)) std::filesystem::remove(path, error);
   else std::filesystem::remove_all(path, error);
 }
 
@@ -254,19 +254,19 @@ void ManagedLibrary::Initialize()
 {
   std::lock_guard<std::mutex> guard(mMutex);
   std::error_code error;
-  if (std::filesystem::exists(mRoot, error) && IsLinkOrReparsePoint(mRoot))
+  if (std::filesystem::exists(mRoot, error) && IsManagedLinkOrReparsePoint(mRoot))
     throw ImportException(ImportErrorCode::LibraryUnavailable,
                           "Managed library root must not be a link or reparse point");
   error.clear();
   std::filesystem::create_directories(mRoot, error);
-  if (error || !std::filesystem::is_directory(mRoot) || IsLinkOrReparsePoint(mRoot))
+  if (error || !std::filesystem::is_directory(mRoot) || IsManagedLinkOrReparsePoint(mRoot))
     throw ImportException(ImportErrorCode::LibraryUnavailable,
                           "Managed library root is unavailable or redirected");
   for (const auto* name : {"objects/nam", "objects/ir", "packs", "metadata", "staging", "quarantine", "logs"})
   {
     const auto directory = mRoot / name;
     std::filesystem::create_directories(directory, error);
-    if (error || !IsPathWithin(mRoot, directory) || IsLinkOrReparsePoint(directory))
+    if (error || !IsPathWithin(mRoot, directory) || IsManagedLinkOrReparsePoint(directory))
       throw ImportException(ImportErrorCode::LibraryUnavailable,
                             "Managed library directory is unavailable or redirected");
   }
@@ -326,7 +326,7 @@ std::filesystem::path ManagedLibrary::NewStagingDirectory()
 {
   const auto path = mRoot / "staging" / ("task-" + RandomKey());
   std::error_code error;
-  if (!IsPathWithin(mRoot, path.parent_path()) || IsLinkOrReparsePoint(path.parent_path()) ||
+  if (!IsPathWithin(mRoot, path.parent_path()) || IsManagedLinkOrReparsePoint(path.parent_path()) ||
       !std::filesystem::create_directory(path, error) || error || !IsPathWithin(mRoot, path))
     throw ImportException(ImportErrorCode::LibraryUnavailable, "Unique staging directory could not be created");
   return path;
@@ -353,7 +353,7 @@ ManagedLibrary::PromotedObject ManagedLibrary::Promote(const std::filesystem::pa
     const auto destination = ObjectPath(copiedHash, type);
     std::error_code error;
     std::filesystem::create_directories(destination.parent_path(), error);
-    if (error || !IsPathWithin(mRoot, destination) || IsLinkOrReparsePoint(destination.parent_path()))
+    if (error || !IsPathWithin(mRoot, destination) || IsManagedLinkOrReparsePoint(destination.parent_path()))
       throw ImportException(ImportErrorCode::LibraryUnavailable,
                             "Managed object directory is unavailable or redirected");
 
