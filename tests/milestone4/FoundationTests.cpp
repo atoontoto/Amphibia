@@ -26,6 +26,7 @@
 #if defined(_WIN32)
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <wincred.h>
 #endif
 
 using namespace amphibia;
@@ -602,6 +603,24 @@ int main()
     credentials::SecureCredential missing;
     const auto missingResult = store.Load(key, missing);
     Require(missingResult.error == credentials::CredentialError::NotFound, "missing credential not reported");
+    const credentials::CredentialKey isolated{"org.amphibiaaudio.Amphibia.TONE3000.test", "milestone4-isolated"};
+    credentials::SecureCredential isolatedValue;
+    Require(store.Load(isolated, isolatedValue).error == credentials::CredentialError::NotFound,
+            "credential namespace isolation failed");
+#if defined(_WIN32)
+    const credentials::CredentialKey corruptKey{"org.amphibiaaudio.Amphibia.TONE3000.test", "milestone4-corrupt"};
+    store.Remove(corruptKey);
+    const std::wstring target = L"org.amphibiaaudio.Amphibia.TONE3000.test/milestone4-corrupt";
+    std::array<BYTE, 8> corruptBlob{'n','o','t','-','v','a','l','d'};
+    CREDENTIALW corrupt{}; corrupt.Type = CRED_TYPE_GENERIC; corrupt.TargetName = const_cast<wchar_t*>(target.c_str());
+    corrupt.CredentialBlobSize = static_cast<DWORD>(corruptBlob.size()); corrupt.CredentialBlob = corruptBlob.data();
+    corrupt.Persist = CRED_PERSIST_SESSION; corrupt.UserName = const_cast<wchar_t*>(L"Amphibia Milestone 4 test");
+    Require(CredWriteW(&corrupt, 0) != FALSE, "corrupt credential fixture write failed");
+    credentials::SecureCredential corruptValue;
+    Require(store.Load(corruptKey, corruptValue).error == credentials::CredentialError::Corrupt,
+            "corrupt credential was accepted");
+    store.Remove(corruptKey);
+#endif
   });
   std::cout << "Milestone 4 foundation tests passed: " << gPassed << '\n';
   return 0;
