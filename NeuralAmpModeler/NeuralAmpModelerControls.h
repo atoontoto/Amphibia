@@ -3,6 +3,7 @@
 #include <cmath> // std::round
 #include <cstdio> // FILE, fclose
 #include <sstream> // std::stringstream
+#include <tuple>
 #include <unordered_map> // std::unordered_map
 #include "IControls.h"
 #include "IPlugPaths.h"
@@ -754,12 +755,26 @@ struct LibraryUIActions
   IActionFunction importZip;
 };
 
+struct RemoteProviderUIActions
+{
+  std::function<std::string()> information;
+  IActionFunction connect;
+  IActionFunction disconnect;
+  IActionFunction testConnection;
+  IActionFunction cancel;
+  bool connectEnabled{};
+  bool disconnectEnabled{};
+  bool testEnabled{};
+  bool cancelEnabled{};
+};
+
 class NAMSettingsPageControl : public IContainerBaseWithNamedChildren
 {
 public:
   NAMSettingsPageControl(const IRECT& bounds, const IBitmap& bitmap, const IBitmap& inputLevelBackgroundBitmap,
                          const IBitmap& switchBitmap, ISVG closeSVG, const IVStyle& style,
-                         const IVStyle& radioButtonStyle, LibraryUIActions libraryActions = {})
+                         const IVStyle& radioButtonStyle, LibraryUIActions libraryActions = {},
+                         RemoteProviderUIActions providerActions = {})
   : IContainerBaseWithNamedChildren(bounds)
   , mAnimationTime(0)
   , mBitmap(bitmap)
@@ -769,6 +784,7 @@ public:
   , mRadioButtonStyle(radioButtonStyle)
   , mCloseSVG(closeSVG)
   , mLibraryActions(std::move(libraryActions))
+  , mProviderActions(std::move(providerActions))
   {
     mIgnoreMouse = false;
   }
@@ -784,6 +800,12 @@ public:
   {
     if (mLibraryInfo && mLibraryActions.information)
       mLibraryInfo->SetStr(mLibraryActions.information().c_str());
+  }
+
+  void RefreshProviderInfo()
+  {
+    if (mProviderInfo && mProviderActions.information)
+      mProviderInfo->SetStr(mProviderActions.information().c_str());
   }
 
   bool OnKeyDown(float x, float y, const IKeyPress& key) override
@@ -892,6 +914,29 @@ public:
 
     const auto libraryArea = GetRECT().GetPadded(-pad).GetCentredInside(GetRECT().W() - 2.f * pad, 112.f)
                                .GetVShifted(66.f);
+    const auto providerArea = GetRECT().GetPadded(-pad).GetCentredInside(GetRECT().W() - 2.f * pad, 62.f)
+                                .GetVShifted(-34.f);
+    mProviderInfo = new IVLabelControl(providerArea.GetFromTop(26.f),
+      "TONE3000 | Configuration: Not configured | Connection: Disconnected | Secure storage: Available",
+      leftStyle);
+    AddNamedChildControl(mProviderInfo, mControlNames.providerInfo);
+    RefreshProviderInfo();
+    const auto providerButtons = providerArea.GetReducedFromTop(28.f);
+    const IVStyle providerButtonStyle = style.WithShowLabel(false).WithDrawFrame(true);
+    const std::array<std::tuple<const char*, IActionFunction, bool>, 4> providerActions{{
+      {"Connect", mProviderActions.connect, mProviderActions.connectEnabled},
+      {"Disconnect", mProviderActions.disconnect, mProviderActions.disconnectEnabled},
+      {"Test connection", mProviderActions.testConnection, mProviderActions.testEnabled},
+      {"Cancel", mProviderActions.cancel, mProviderActions.cancelEnabled}}};
+    for (std::size_t index = 0; index < providerActions.size(); ++index)
+    {
+      auto action = std::get<1>(providerActions[index]);
+      if (!action) action = [](IControl*) {};
+      auto* button = AddChildControl(new IVButtonControl(
+        providerButtons.GetGridCell(0, static_cast<int>(index), 1, 4).GetPadded(-2.f),
+        std::move(action), std::get<0>(providerActions[index]), providerButtonStyle));
+      button->SetDisabled(!std::get<2>(providerActions[index]));
+    }
     mLibraryInfo = new IVLabelControl(libraryArea.GetFromTop(34.f), "Managed library unavailable", leftStyle);
     AddNamedChildControl(mLibraryInfo, mControlNames.libraryInfo);
     RefreshLibraryInfo();
@@ -931,7 +976,9 @@ private:
   IVStyle mRadioButtonStyle;
   ISVG mCloseSVG;
   LibraryUIActions mLibraryActions;
+  RemoteProviderUIActions mProviderActions;
   IVLabelControl* mLibraryInfo{};
+  IVLabelControl* mProviderInfo{};
   int mAnimationTime = 200;
   bool mWillHide = false;
 
@@ -947,6 +994,7 @@ private:
     const std::string modelInfo = "ModelInfo";
     const std::string libraryInfo = "LibraryInfo";
     const std::string outputMode = "OutputMode";
+    const std::string providerInfo = "ProviderInfo";
     const std::string title = "Title";
   } mControlNames;
 

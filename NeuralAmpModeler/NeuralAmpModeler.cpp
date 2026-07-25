@@ -208,6 +208,16 @@ Amphibia::Amphibia(const InstanceInfo& info)
     // Misc Areas
     const auto settingsButtonArea = CornerButtonArea(b);
 
+    RemoteProviderUIActions providerActions;
+    providerActions.information = [] {
+#if defined(OS_WIN) || defined(OS_MAC)
+      constexpr const char* storage = "Available";
+#else
+      constexpr const char* storage = "Unavailable";
+#endif
+      return std::string("TONE3000 integration | Configuration: Not configured | Connection: Disconnected | API: Offline | Secure storage: ") + storage;
+    };
+
     LibraryUIActions libraryActions;
     libraryActions.information = [this] {
       if (!mLibrary) return std::string("Managed library unavailable");
@@ -385,13 +395,15 @@ Amphibia::Amphibia(const InstanceInfo& info)
       [pGraphics](IControl* pCaller) {
         auto* settings = pGraphics->GetControlWithTag(kCtrlTagSettingsBox)->As<NAMSettingsPageControl>();
         settings->RefreshLibraryInfo();
+        settings->RefreshProviderInfo();
         settings->HideAnimated(false);
       },
       gearSVG));
 
     pGraphics
       ->AttachControl(new NAMSettingsPageControl(b, backgroundBitmap, inputLevelBackgroundBitmap, switchHandleBitmap,
-                                                 crossSVG, style, radioButtonStyle, std::move(libraryActions)),
+                                                 crossSVG, style, radioButtonStyle, std::move(libraryActions),
+                                                 std::move(providerActions)),
                       kCtrlTagSettingsBox)
       ->Hide(true);
 

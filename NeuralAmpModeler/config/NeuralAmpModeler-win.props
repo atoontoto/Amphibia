@@ -24,7 +24,7 @@
       <PreprocessorDefinitions>$(EXTRA_ALL_DEFS);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>wininet.lib;comctl32.lib;Shlwapi.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wininet.lib;winhttp.lib;ws2_32.lib;advapi32.lib;shell32.lib;comctl32.lib;Shlwapi.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ProgramDatabaseFile>$(PDB_FILE)</ProgramDatabaseFile>
     </Link>
     <PostBuildEvent>
