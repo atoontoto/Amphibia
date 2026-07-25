@@ -19,7 +19,11 @@ jobs:
         with:
           python-version: "3.x"
       - name: Validate identity
-        run: python tests/identity/validate_identity.py
+        shell: pwsh
+        run: |
+          python tests/identity/validate_identity.py
+          python tests/characterization/test_inherited_contract.py
+          python tests/characterization/test_state_contract.py
       - name: Fetch pinned iPlug SDKs and libraries
         shell: bash
         run: |
@@ -33,6 +37,15 @@ jobs:
           $stage = Join-Path $env:RUNNER_TEMP "amphibia-vst3-stage"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           msbuild NeuralAmpModeler/Amphibia.sln "/t:Amphibia-app;Amphibia-vst3" "/p:Configuration=Release;Platform=x64;VST3_64_PATH=$stage" /m /nologo
+      - name: Build and run foundation tests
+        shell: pwsh
+        run: |
+          msbuild tests/milestone2/Milestone2Tests.vcxproj /t:Build "/p:Configuration=Release;Platform=x64" /m /nologo
+          & tests/milestone2/build/x64/Release/Milestone2Tests.exe
+          msbuild tests/milestone3/Milestone3Tests.vcxproj /t:Build "/p:Configuration=Release;Platform=x64" /m /nologo
+          & tests/milestone3/build/x64/Release/Milestone3Tests.exe
+          msbuild tests/milestone4/Milestone4Tests.vcxproj /t:Build "/p:Configuration=Release;Platform=x64" /m /nologo
+          & tests/milestone4/build/x64/Release/Milestone4Tests.exe
       - name: Upload development artifacts
         uses: actions/upload-artifact@v4
         with:
