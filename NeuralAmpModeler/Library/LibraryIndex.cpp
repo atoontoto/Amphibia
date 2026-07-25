@@ -56,6 +56,65 @@ Json ObjectJson(const LibraryObject& object)
   return value;
 }
 
+Json ProviderJson(const ProviderAssociation& association)
+{
+  Json value = {{"provider", association.providerKind},
+                {"tone_id", association.providerToneId},
+                {"model_id", association.providerModelId},
+                {"tone_title", association.toneTitle},
+                {"model_title", association.modelTitle},
+                {"creator_id", association.creatorId},
+                {"creator_username", association.creatorUsername},
+                {"format", association.format},
+                {"gear_role", association.gearRole},
+                {"architecture", association.architecture},
+                {"downloaded_at", association.downloadedAt},
+                {"last_verified_at", association.lastVerifiedAt},
+                {"metadata_version", association.providerMetadataVersion},
+                {"object_hash", ToHex(association.objectHash)}};
+  if (association.licenseId) value["license_id"] = *association.licenseId;
+  if (association.licenseName) value["license_name"] = *association.licenseName;
+  if (association.sourcePageUrl) value["source_page_url"] = *association.sourcePageUrl;
+  if (association.originalProviderAssociation)
+    value["original_provider_association"] = *association.originalProviderAssociation;
+  return value;
+}
+
+ProviderAssociation ParseProvider(const Json& value)
+{
+  ProviderAssociation association;
+  association.providerKind = value.at("provider").get<std::string>();
+  association.providerToneId = value.at("tone_id").get<std::string>();
+  association.providerModelId = value.at("model_id").get<std::string>();
+  association.toneTitle = value.at("tone_title").get<std::string>();
+  association.modelTitle = value.at("model_title").get<std::string>();
+  association.creatorId = value.at("creator_id").get<std::string>();
+  association.creatorUsername = value.at("creator_username").get<std::string>();
+  if (value.contains("license_id")) association.licenseId = value.at("license_id").get<std::string>();
+  if (value.contains("license_name")) association.licenseName = value.at("license_name").get<std::string>();
+  if (value.contains("source_page_url")) association.sourcePageUrl = value.at("source_page_url").get<std::string>();
+  association.format = value.at("format").get<std::string>();
+  association.gearRole = value.value("gear_role", std::string{"unknown"});
+  association.architecture = value.value("architecture", std::string{"unknown"});
+  association.downloadedAt = value.at("downloaded_at").get<std::int64_t>();
+  association.lastVerifiedAt = value.at("last_verified_at").get<std::int64_t>();
+  association.providerMetadataVersion = value.value("metadata_version", 1u);
+  association.objectHash = ContentHashFromHex(value.at("object_hash").get<std::string>());
+  if (value.contains("original_provider_association"))
+    association.originalProviderAssociation = value.at("original_provider_association").get<std::string>();
+  const auto bounded = [](const std::string& text, std::size_t maximum) { return !text.empty() && text.size() <= maximum; };
+  if (!bounded(association.providerKind, 64) || !bounded(association.providerToneId, 128) ||
+      !bounded(association.providerModelId, 128) || !bounded(association.toneTitle, 1024) ||
+      !bounded(association.modelTitle, 1024) || !bounded(association.creatorId, 128) ||
+      !bounded(association.creatorUsername, 256) || !bounded(association.format, 64) ||
+      !bounded(association.gearRole, 64) || !bounded(association.architecture, 64) ||
+      (association.sourcePageUrl && association.sourcePageUrl->size() > 8192) ||
+      (association.licenseId && association.licenseId->size() > 256) ||
+      (association.licenseName && association.licenseName->size() > 512))
+    throw ImportException(ImportErrorCode::LibraryCorrupt, "Provider association exceeded metadata limits");
+  return association;
+}
+
 LibraryObject ParseObject(const Json& value)
 {
   LibraryObject object;
@@ -166,11 +225,12 @@ void AtomicReplace(const std::filesystem::path& temporary, const std::filesystem
 
 LibraryIndex::LibraryIndex(std::filesystem::path metadataRoot) : mMetadataRoot(std::move(metadataRoot)) {}
 
-std::filesystem::path LibraryIndex::IndexPath() const { return mMetadataRoot / "index-v1.json"; }
+std::filesystem::path LibraryIndex::IndexPath() const { return mMetadataRoot / "index-v2.json"; }
+std::filesystem::path LibraryIndex::LegacyIndexPath() const { return mMetadataRoot / "index-v1.json"; }
 
 LibrarySnapshot LibraryIndex::Load() const
 {
-  const auto path = IndexPath();
+  const auto path = std::filesystem::exists(IndexPath()) ? IndexPath() : LegacyIndexPath();
   if (!std::filesystem::exists(path)) return {};
   try
   {
@@ -182,8 +242,10 @@ LibrarySnapshot LibraryIndex::Load() const
     snapshot.schemaVersion = root.at("schema_version").get<std::uint32_t>();
     if (snapshot.schemaVersion > kLibrarySchemaVersion)
       throw ImportException(ImportErrorCode::LibraryCorrupt, "Library metadata uses an unsupported future schema");
-    if (snapshot.schemaVersion != kLibrarySchemaVersion)
+    if (snapshot.schemaVersion != 1 && snapshot.schemaVersion != kLibrarySchemaVersion)
       throw ImportException(ImportErrorCode::LibraryCorrupt, "Library metadata schema is unsupported");
+    const auto sourceSchema = snapshot.schemaVersion;
+    snapshot.schemaVersion = kLibrarySchemaVersion;
     snapshot.revision = root.value("revision", 0ull);
     for (const auto& value : root.value("objects", Json::array()))
     {
@@ -218,6 +280,9 @@ LibrarySnapshot LibraryIndex::Load() const
       entry.sortKey = value.value("sort_key", entry.relativePath);
       snapshot.packEntries.push_back(std::move(entry));
     }
+    if (sourceSchema >= 2)
+      for (const auto& value : root.value("provider_associations", Json::array()))
+        snapshot.providerAssociations.push_back(ParseProvider(value));
     const auto classifications = root.value("user_classifications", Json::object());
     for (auto iterator = classifications.begin(); iterator != classifications.end(); ++iterator)
       snapshot.userClassifications.emplace(iterator.key(), static_cast<CaptureRole>(iterator.value().get<int>()));
@@ -266,12 +331,15 @@ void LibraryIndex::Commit(const LibrarySnapshot& snapshot) const
                                      {"display_name", entry.displayName},
                                      {"type", TypeName(entry.type)},
                                      {"sort_key", entry.sortKey}});
+  root["provider_associations"] = Json::array();
+  for (const auto& association : snapshot.providerAssociations)
+    root["provider_associations"].push_back(ProviderJson(association));
   root["user_classifications"] = Json::object();
   for (const auto& [hash, role] : snapshot.userClassifications)
     root["user_classifications"][hash] = static_cast<int>(role);
 
-  const auto temporary = mMetadataRoot / ("index-v1.tmp-" + RandomTemporarySuffix());
-  const auto backup = mMetadataRoot / "index-v1.json.bak";
+  const auto temporary = mMetadataRoot / ("index-v2.tmp-" + RandomTemporarySuffix());
+  const auto backup = mMetadataRoot / "index-v2.json.bak";
   try
   {
     const auto serialized = root.dump(2) + '\n';

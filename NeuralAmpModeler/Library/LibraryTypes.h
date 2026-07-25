@@ -18,7 +18,8 @@ enum class LocalContentSource
   ReferencedFile,
   ReferencedFolder,
   ManagedImport,
-  ManagedArchiveImport
+  ManagedArchiveImport,
+  RemoteProviderDownload
 };
 
 enum class ManagedObjectType { NamModel, WaveImpulseResponse };
@@ -203,6 +204,28 @@ struct PackEntryRecord
   std::string displayName;
   ManagedObjectType type{ManagedObjectType::NamModel};
   std::string sortKey;
+};
+
+struct ProviderAssociation
+{
+  std::string providerKind;
+  std::string providerToneId;
+  std::string providerModelId;
+  std::string toneTitle;
+  std::string modelTitle;
+  std::string creatorId;
+  std::string creatorUsername;
+  std::optional<std::string> licenseId;
+  std::optional<std::string> licenseName;
+  std::optional<std::string> sourcePageUrl;
+  std::string format;
+  std::string gearRole;
+  std::string architecture;
+  std::int64_t downloadedAt{};
+  std::int64_t lastVerifiedAt{};
+  std::uint32_t providerMetadataVersion{1};
+  ContentHash objectHash;
+  std::optional<std::string> originalProviderAssociation;
 };
 
 struct ImportFailure

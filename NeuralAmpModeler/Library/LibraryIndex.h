@@ -6,7 +6,7 @@
 
 namespace amphibia::library {
 
-inline constexpr std::uint32_t kLibrarySchemaVersion = 1;
+inline constexpr std::uint32_t kLibrarySchemaVersion = 2;
 
 struct LibrarySnapshot
 {
@@ -15,6 +15,7 @@ struct LibrarySnapshot
   std::unordered_map<std::string, LibraryObject> objects;
   std::unordered_map<std::string, PackRecord> packs;
   std::vector<PackEntryRecord> packEntries;
+  std::vector<ProviderAssociation> providerAssociations;
   std::unordered_map<std::string, CaptureRole> userClassifications;
 };
 
@@ -27,6 +28,7 @@ public:
   void Commit(const LibrarySnapshot& snapshot) const;
   const std::filesystem::path& MetadataRoot() const { return mMetadataRoot; }
   std::filesystem::path IndexPath() const;
+  std::filesystem::path LegacyIndexPath() const;
 
 private:
   std::filesystem::path mMetadataRoot;

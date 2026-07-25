@@ -168,6 +168,7 @@ struct DownloadResult
 {
   std::filesystem::path verifiedStagingPath;
   std::uint64_t bytes{};
+  std::string managedObjectSha256;
 };
 
 template <typename T> struct ProviderResult

@@ -456,6 +456,57 @@ void TestInvalidFilesDoNotPromote()
   Require(library.Statistics().namObjects == 0 && library.Statistics().irObjects == 0, "invalid objects were published");
 }
 
+void TestProviderProvenanceAndSchemaMigration()
+{
+  TemporaryDirectory temporary;
+  const auto legacyRoot = temporary.path / "legacy";
+  std::filesystem::create_directories(legacyRoot / "metadata");
+  WriteText(legacyRoot / "metadata" / "index-v1.json",
+            R"({"schema_version":1,"revision":4,"objects":[],"packs":[],"pack_entries":[],"user_classifications":{}})");
+  ManagedLibrary migrated(legacyRoot);
+  migrated.Initialize();
+  Require(migrated.Snapshot().schemaVersion == 2 && migrated.Snapshot().revision == 4,
+          "schema-1 metadata did not migrate in memory");
+  Require(std::filesystem::exists(legacyRoot / "metadata" / "index-v1.json") &&
+          std::filesystem::exists(legacyRoot / "metadata" / "index-v2.json"),
+          "schema migration destroyed legacy data or failed to publish v2");
+
+  const auto source = temporary.path / "source" / "Provider.nam";
+  WriteText(source, R"({"architecture":"Linear","config":{},"weights":[]})");
+  ManagedLibrary library(temporary.path / "library");
+  library.Initialize();
+  const auto local = library.ImportFiles({source}, "Local source");
+  Require(local.failures.empty() && local.objects.size() == 1, "local baseline import failed");
+  ProviderAssociation association;
+  association.providerKind = "tone3000";
+  association.providerToneId = "tone-42";
+  association.providerModelId = "model-7";
+  association.toneTitle = "Provider tone";
+  association.modelTitle = "Provider model";
+  association.creatorId = "creator-1";
+  association.creatorUsername = "maker";
+  association.licenseId = "future-license";
+  association.licenseName = "Future License";
+  association.sourcePageUrl = "https://www.tone3000.com/tones/tone-42";
+  association.format = "nam";
+  association.gearRole = "future-gear";
+  association.architecture = "2";
+  const auto first = library.PromoteProviderFile(source, association);
+  const auto duplicate = library.PromoteProviderFile(source, association);
+  Require(first == duplicate && first == local.objects.front(), "provider bytes did not deduplicate");
+  const auto snapshot = library.Snapshot();
+  Require(snapshot.objects.size() == 1 && snapshot.providerAssociations.size() == 1,
+          "provider association deduplication failed");
+  Require(snapshot.providerAssociations.front().licenseId == "future-license" &&
+          snapshot.providerAssociations.front().creatorUsername == "maker" &&
+          snapshot.providerAssociations.front().objectHash == first,
+          "creator, license, or object provenance was lost");
+  Require(snapshot.objects.begin()->second.source == LocalContentSource::ManagedImport,
+          "remote deduplication overwrote original local provenance");
+  LibraryIndex reopened(temporary.path / "library" / "metadata");
+  Require(reopened.Load().providerAssociations.size() == 1, "provider provenance did not reopen");
+}
+
 void TestImportWorkerLifecycle()
 {
   TemporaryDirectory temporary;
@@ -570,6 +621,8 @@ int main()
     TestZipSecurityAndSelection();
     std::cout << "library\n" << std::flush;
     TestLibraryDedupAndTransactions();
+    std::cout << "provider provenance\n" << std::flush;
+    TestProviderProvenanceAndSchemaMigration();
     std::cout << "invalid\n" << std::flush;
     TestInvalidFilesDoNotPromote();
     std::cout << "worker\n" << std::flush;

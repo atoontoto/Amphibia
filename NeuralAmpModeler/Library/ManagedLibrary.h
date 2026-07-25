@@ -50,6 +50,12 @@ public:
                                  const ProgressCallback& progress = {});
   ImportSummary ImportZipPlan(const ImportPackPlan& plan, const CancelCheck& cancelled = {},
                               const ProgressCallback& progress = {});
+  std::filesystem::path CreateProviderDownloadStagingPath();
+  void DiscardProviderDownloadStagingPath(const std::filesystem::path& path) noexcept;
+  ContentHash PromoteProviderFile(const std::filesystem::path& verifiedFile,
+                                  ProviderAssociation association,
+                                  const CancelCheck& cancelled = {},
+                                  const ProgressCallback& progress = {});
 
   void MarkUsed(const ContentHash& hash);
   void RemovePack(const std::string& packKey);

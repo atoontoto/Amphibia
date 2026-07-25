@@ -332,6 +332,92 @@ std::filesystem::path ManagedLibrary::NewStagingDirectory()
   return path;
 }
 
+std::filesystem::path ManagedLibrary::CreateProviderDownloadStagingPath()
+{
+  std::lock_guard<std::mutex> guard(mMutex);
+  const auto directory = NewStagingDirectory();
+  return directory / "payload.part";
+}
+
+void ManagedLibrary::DiscardProviderDownloadStagingPath(const std::filesystem::path& path) noexcept
+{
+  std::lock_guard<std::mutex> guard(mMutex);
+  std::error_code error;
+  const auto stagingRoot = mRoot / "staging";
+  const auto taskDirectory = path.parent_path();
+  if (path.filename() != "payload.part" && path.filename() != "verified.nam" && path.filename() != "verified.wav") return;
+  if (taskDirectory.parent_path() != stagingRoot || !IsPathWithin(stagingRoot, taskDirectory)) return;
+  RemoveManagedTree(taskDirectory, error);
+}
+
+ContentHash ManagedLibrary::PromoteProviderFile(const std::filesystem::path& verifiedFile,
+                                                ProviderAssociation association,
+                                                const CancelCheck& cancelled,
+                                                const ProgressCallback& progress)
+{
+  const auto validText = [](const std::string& value, std::size_t maximum) {
+    return !value.empty() && value.size() <= maximum &&
+           std::none_of(value.begin(), value.end(), [](unsigned char c) { return c < 0x20 || c == 0x7f; });
+  };
+  if (association.providerKind != "tone3000" || !validText(association.providerToneId, 128) ||
+      !validText(association.providerModelId, 128) || !validText(association.toneTitle, 1024) ||
+      !validText(association.modelTitle, 1024) || !validText(association.creatorId, 128) ||
+      !validText(association.creatorUsername, 256) ||
+      (association.sourcePageUrl && (association.sourcePageUrl->find('?') != std::string::npos ||
+                                     association.sourcePageUrl->find('#') != std::string::npos)))
+    throw ImportException(ImportErrorCode::MetadataFailure, "Provider provenance was invalid");
+
+  std::lock_guard<std::mutex> guard(mMutex);
+  ProcessWriteLock processLock(mRoot / "metadata");
+  LoadLocked();
+  auto next = mSnapshot;
+  auto promoted = Promote(verifiedFile, association.modelTitle, LocalContentSource::RemoteProviderDownload,
+                          cancelled, progress);
+  const auto hashText = ToHex(promoted.object.hash);
+  if (!next.objects.contains(hashText)) next.objects.emplace(hashText, promoted.object);
+
+  association.objectHash = promoted.object.hash;
+  if (association.downloadedAt == 0) association.downloadedAt = UnixTimeNow();
+  if (association.lastVerifiedAt == 0) association.lastVerifiedAt = association.downloadedAt;
+  if (!association.originalProviderAssociation)
+    association.originalProviderAssociation = association.providerKind + ":" + association.providerToneId + ":" +
+                                               association.providerModelId;
+  const auto existing = std::find_if(next.providerAssociations.begin(), next.providerAssociations.end(),
+    [&](const ProviderAssociation& item) {
+      return item.providerKind == association.providerKind && item.providerToneId == association.providerToneId &&
+             item.providerModelId == association.providerModelId && item.objectHash == association.objectHash;
+    });
+  if (existing == next.providerAssociations.end()) next.providerAssociations.push_back(association);
+  else existing->lastVerifiedAt = (std::max)(existing->lastVerifiedAt, association.lastVerifiedAt);
+
+  const auto packKey = "provider:" + association.providerKind + ":tone:" + association.providerToneId;
+  if (!next.packs.contains(packKey))
+  {
+    PackRecord pack;
+    pack.packKey = packKey; pack.source = LocalContentSource::RemoteProviderDownload;
+    pack.displayName = association.toneTitle; pack.creator = association.creatorUsername;
+    pack.license = association.licenseName ? association.licenseName : association.licenseId;
+    pack.importedAt = association.downloadedAt;
+    next.packs.emplace(packKey, std::move(pack));
+  }
+  const auto entry = std::find_if(next.packEntries.begin(), next.packEntries.end(), [&](const PackEntryRecord& item) {
+    return item.packKey == packKey && item.objectHash == association.objectHash && item.displayName == association.modelTitle;
+  });
+  if (entry == next.packEntries.end())
+  {
+    PackEntryRecord record;
+    record.packKey = packKey; record.objectHash = association.objectHash; record.displayName = association.modelTitle;
+    record.type = promoted.object.type;
+    record.relativePath = "model-" + hashText.substr(0, 16) + TypeExtension(record.type);
+    record.sortKey = CaseCollisionKey(record.relativePath);
+    next.packEntries.push_back(std::move(record));
+  }
+  ++next.revision;
+  mIndex.Commit(next);
+  mSnapshot = std::move(next);
+  return promoted.object.hash;
+}
+
 ManagedLibrary::PromotedObject ManagedLibrary::Promote(const std::filesystem::path& source,
                                                        const std::string& displayName,
                                                        LocalContentSource sourceKind,
