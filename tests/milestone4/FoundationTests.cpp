@@ -3,6 +3,7 @@
 #include "../../NeuralAmpModeler/Network/HttpPolicy.h"
 #include "../../NeuralAmpModeler/Network/RequestPolicy.h"
 #include "../../NeuralAmpModeler/Network/PlatformHttpTransport.h"
+#include "../../NeuralAmpModeler/Loading/FileInspection.h"
 #include "../../NeuralAmpModeler/Platform/SystemBrowser.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/OAuthController.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Pkce.h"
@@ -54,6 +55,8 @@ providers::tone3000::Tone3000Configuration TestConfiguration()
   result.redirectUri = "http://127.0.0.1:43821/oauth/callback";
   result.kind = providers::tone3000::Tone3000ConfigurationKind::Test;
   result.allowTestHttp = true;
+  result.credentialServiceNamespace = "org.amphibiaaudio.Amphibia.TONE3000.test";
+  result.credentialAccount = "milestone4-provider";
   return result;
 }
 
@@ -119,6 +122,24 @@ network::HttpResponse JsonResponse(const std::string& text, int status = 200)
   response.body.assign(text.begin(), text.end());
   response.finalUrl = "https://provider.test/api";
   return response;
+}
+
+std::vector<std::uint8_t> WaveBytes()
+{
+  std::vector<std::uint8_t> bytes;
+  const auto u16 = [&](std::uint16_t value) {
+    bytes.push_back(static_cast<std::uint8_t>(value)); bytes.push_back(static_cast<std::uint8_t>(value >> 8));
+  };
+  const auto u32 = [&](std::uint32_t value) {
+    for (int index = 0; index < 4; ++index) bytes.push_back(static_cast<std::uint8_t>(value >> (index * 8)));
+  };
+  const std::array<std::int16_t, 8> samples{0, 100, -100, 200, -200, 50, -50, 0};
+  bytes.insert(bytes.end(), {'R','I','F','F'}); u32(36 + static_cast<std::uint32_t>(samples.size() * 2));
+  bytes.insert(bytes.end(), {'W','A','V','E','f','m','t',' '});
+  u32(16); u16(1); u16(1); u32(48000); u32(96000); u16(2); u16(16);
+  bytes.insert(bytes.end(), {'d','a','t','a'}); u32(static_cast<std::uint32_t>(samples.size() * 2));
+  for (const auto sample : samples) u16(static_cast<std::uint16_t>(sample));
+  return bytes;
 }
 
 #if defined(_WIN32)
@@ -217,6 +238,15 @@ int main()
     Require(!providers::tone3000::ParseOAuthCallback(
       "http://127.0.0.1:43821/oauth/callback?code=%GG&state=x",
       "http://127.0.0.1:43821/oauth/callback"), "malformed encoding accepted");
+    Require(!providers::tone3000::ParseOAuthCallback(
+      "http://127.0.0.1:43821/oauth/callback?code=a",
+      "http://127.0.0.1:43821/oauth/callback"), "missing state accepted");
+    Require(!providers::tone3000::ParseOAuthCallback(
+      "http://127.0.0.1:43821/oauth/callback?state=x",
+      "http://127.0.0.1:43821/oauth/callback"), "missing result accepted");
+    Require(!providers::tone3000::ParseOAuthCallback(
+      "http://127.0.0.1:43821/oauth/callback?code=" + std::string(4096, 'a') + "&state=x",
+      "http://127.0.0.1:43821/oauth/callback"), "oversized callback accepted");
   });
   Test("OAuth state is single use", [] {
     providers::tone3000::OAuthController controller(TestConfiguration());
@@ -295,6 +325,9 @@ int main()
     Require(!network::ParseAndValidateUrl("https://127.0.0.1/model.nam"), "loopback accepted");
     Require(!network::ParseAndValidateUrl("https://169.254.169.254/latest/meta-data"), "metadata IP accepted");
     Require(!network::ParseAndValidateUrl("https://10.0.0.1/model.nam"), "private IP accepted");
+    Require(!network::ParseAndValidateUrl("https://provider.test:0/model.nam"), "invalid port accepted");
+    Require(!network::ParseAndValidateUrl("https://provider.test/model.nam#secret"), "fragment accepted");
+    Require(!network::ParseAndValidateUrl("https://[::1]/model.nam"), "IPv6 loopback accepted");
     Require(static_cast<bool>(network::ParseAndValidateUrl("http://127.0.0.1:5123/test", true)), "test loopback rejected");
     Require(!network::ParseAndValidateUrl("http://10.0.0.1/test", true), "test policy allowed LAN");
     std::vector<network::HttpHeader> headers{{"Authorization", "Bearer canary"}, {"Accept", "application/json"}};
@@ -346,6 +379,31 @@ int main()
             models.value->front().architecture == providers::RemoteNamArchitecture::A2, "models parse");
     Require(!providers::tone3000::ParseCurrentUser(R"({"username":"missing-id"})"), "missing user id accepted");
   });
+  Test("adversarial API parsing bounds", [] {
+    const auto now = std::chrono::system_clock::now();
+    Require(!providers::tone3000::ParseTokenResponse("not-json", now), "invalid token JSON accepted");
+    Require(!providers::tone3000::ParseTokenResponse(
+      R"({"access_token":"x","token_type":"Bearer","expires_in":3600})", now), "invalid token type accepted");
+    Require(!providers::tone3000::ParseTokenResponse(
+      R"({"access_token":"x","token_type":"bearer","expires_in":0})", now), "invalid expiry accepted");
+    providers::tone3000::JsonLimits shallow; shallow.maximumDepth = 2;
+    Require(!providers::tone3000::ParseCurrentUser(R"({"id":"u","username":"x","future":{"a":{"b":1}}})", shallow),
+            "deep JSON accepted");
+    providers::tone3000::JsonLimits tiny; tiny.maximumStringBytes = 4;
+    Require(!providers::tone3000::ParseCurrentUser(R"({"id":"user","username":"long-name"})", tiny),
+            "oversized string accepted");
+    providers::tone3000::JsonLimits tags; tags.maximumTags = 1;
+    Require(!providers::tone3000::ParseTone(
+      R"({"id":"1","title":"x","user":{"id":"u","username":"n"},"tags":["a","b"]})", tags),
+      "excessive tags accepted");
+    providers::tone3000::JsonLimits models; models.maximumModels = 1;
+    Require(!providers::tone3000::ParseModelList(
+      R"({"data":[{"id":"1","tone_id":"t","name":"a","model_url":"https://provider.test/a.nam"},{"id":"2","tone_id":"t","name":"b","model_url":"https://provider.test/b.nam"}]})",
+      providers::RemoteContentFormat::Nam, models), "excessive model count accepted");
+    Require(!providers::tone3000::ParseModel(
+      R"({"id":"1","tone_id":"t","name":"a","model_url":"http://provider.test/a.nam"})",
+      providers::RemoteContentFormat::Nam), "insecure model URL accepted");
+  });
   Test("typed API request boundary", [] {
     FakeTransport transport;
     transport.next = JsonResponse(R"({"id":"u-1","username":"tester","avatar_url":null,"url":"https://provider.test/u/u-1"})");
@@ -363,6 +421,25 @@ int main()
     const std::string body(transport.last.body.begin(), transport.last.body.end());
     Require(body.find("code=code%20value") != std::string::npos && body.find("client_secret") == std::string::npos,
             "token form or secret policy");
+  });
+  Test("typed API status mapping", [] {
+    FakeTransport transport; providers::tone3000::Tone3000ApiClient client(TestConfiguration(), transport);
+    const std::array<std::pair<int, providers::ProviderErrorCode>, 6> cases{{
+      {401, providers::ProviderErrorCode::AuthenticationRequired}, {403, providers::ProviderErrorCode::Forbidden},
+      {404, providers::ProviderErrorCode::NotFound}, {429, providers::ProviderErrorCode::RateLimited},
+      {500, providers::ProviderErrorCode::ServerError}, {503, providers::ProviderErrorCode::ServerError}}};
+    for (const auto& [status, expected] : cases)
+    {
+      transport.next = JsonResponse(R"({"error":"test"})", status);
+      transport.next.headers = {{"Retry-After", "1"}};
+      providers::ProviderErrorCode actual = providers::ProviderErrorCode::None;
+      client.FetchCurrentUser("status-canary", [&](auto result) { if (!result) actual = result.error.code; });
+      Require(actual == expected, "HTTP status mapping mismatch");
+    }
+    transport.next = JsonResponse("not-json");
+    providers::ProviderErrorCode invalid = providers::ProviderErrorCode::None;
+    client.FetchCurrentUser("status-canary", [&](auto result) { if (!result) invalid = result.error.code; });
+    Require(invalid == providers::ProviderErrorCode::InvalidJson, "invalid API JSON mapping");
   });
   Test("download validation promotion and provenance", [] {
     const auto root = std::filesystem::temp_directory_path() /
@@ -393,6 +470,7 @@ int main()
     }), "download authorization absent");
     const auto metadata = root / "metadata" / "index-v2.json";
     std::ifstream input(metadata, std::ios::binary); const std::string stored((std::istreambuf_iterator<char>(input)), {});
+    input.close();
     Require(stored.find("signature=redacted") == std::string::npos && stored.find("access-canary") == std::string::npos,
             "signed URL or token persisted");
 
@@ -403,6 +481,21 @@ int main()
     Require(!rejected && rejected.error.code == providers::ProviderErrorCode::IntegrityFailed,
             "invalid NAM download was promoted");
     Require(std::filesystem::is_empty(root / "staging"), "failed download part was not cleaned");
+
+    transport.downloadBody = WaveBytes();
+    const auto waveProbe = root / "wave-probe.wav";
+    { std::ofstream output(waveProbe, std::ios::binary); output.write(
+        reinterpret_cast<const char*>(transport.downloadBody.data()),
+        static_cast<std::streamsize>(transport.downloadBody.size())); }
+    loading::InspectWaveFile(waveProbe); std::filesystem::remove(waveProbe);
+    model.providerModelId = "9"; model.name = "Room IR";
+    model.format = providers::RemoteContentFormat::ImpulseResponse; model.architecture = providers::RemoteNamArchitecture::Unknown;
+    model.downloadUrl = "https://provider.test/models/9.wav";
+    providers::ProviderResult<providers::DownloadResult> irCompleted;
+    coordinator.Begin(tone, model, "access-canary", [&](auto result) { irCompleted = std::move(result); });
+    Require(static_cast<bool>(irCompleted), "valid WAV download was rejected");
+    const auto afterIr = library.Snapshot();
+    Require(afterIr.objects.size() == 2 && afterIr.providerAssociations.size() == 2, "IR provenance missing");
   });
   Test("provider lifecycle is explicit and unconfigured-safe", [] {
     const auto root = std::filesystem::temp_directory_path() /
@@ -419,10 +512,18 @@ int main()
     unconfigured.Shutdown();
 
     providers::tone3000::Tone3000Provider configured(TestConfiguration(), browser, credentials, transport, library);
+    const credentials::CredentialKey providerKey{"org.amphibiaaudio.Amphibia.TONE3000.test", "milestone4-provider"};
+    credentials.Remove(providerKey);
+    Require(static_cast<bool>(credentials.Store(providerKey, Credential("disconnect-access", "disconnect-refresh", 1))),
+            "provider credential setup failed");
     bool cancelled = false; providers::AuthorizationRequest request; request.purpose = providers::AuthorizationPurpose::SelectTone;
     configured.BeginAuthorization(request, [&](auto result) { cancelled = !result && result.error.code == providers::ProviderErrorCode::Cancelled; });
     Require(browser.calls == 1 && browser.opened.starts_with("https://provider.test/"), "explicit browser launch missing");
-    configured.CancelAuthorization(); Require(cancelled, "authorization cancellation missing"); configured.Shutdown();
+    configured.CancelAuthorization(); Require(cancelled, "authorization cancellation missing");
+    configured.Disconnect(); credentials::SecureCredential disconnected;
+    Require(credentials.Load(providerKey, disconnected).error == credentials::CredentialError::NotFound,
+            "disconnect retained credential");
+    configured.Shutdown();
   });
   Test("cross-process refresh lock is bounded", [] {
     credentials::CredentialKey key{"org.amphibiaaudio.Amphibia.TONE3000.test", "refresh-lock"};

@@ -16,13 +16,16 @@ struct Tone3000Configuration
   std::string requestedScopes;
   std::string userAgent{"Amphibia/0.1.0"};
   std::string knownTonePrompt;
+  std::string credentialServiceNamespace{"org.amphibiaaudio.Amphibia.TONE3000"};
+  std::string credentialAccount{"oauth-v1"};
   Tone3000ConfigurationKind kind{Tone3000ConfigurationKind::Unconfigured};
   bool allowTestHttp{};
 
   bool HasPublishableConfiguration() const noexcept
   {
     return !clientId.empty() && !authorizationEndpoint.empty() && !tokenEndpoint.empty() &&
-           !apiBaseUrl.empty() && !redirectUri.empty();
+           !apiBaseUrl.empty() && !redirectUri.empty() && !credentialServiceNamespace.empty() &&
+           !credentialAccount.empty();
   }
 
   bool IsProductionUsable() const noexcept

@@ -43,7 +43,7 @@ Current shared resource, settings, library, and cache name: `Amphibia`. The iPlu
 
 - Canonical Amphibia repository, website, support email, and owner are unknown; URL/email fields remain empty rather than fictitious.
 - `amphibia-project` is a documented GitHub-owner placeholder only and is not emitted as a working product link.
-- OAuth client ID, redirect URI, credential service/account, User-Agent, provider cache locks, and network identifiers are not allocated because provider integration is outside Milestone 1.
+- OAuth client ID and redirect URI remain unallocated external registration values. Milestone 4 allocates the development credential service `org.amphibiaaudio.Amphibia.TONE3000`, account `oauth-v1`, and derives its bounded refresh lock from that pair. Tests override both with a `.test` service/account. The service uses the temporary technical root and must follow the same pre-release namespace-owner review as the bundle IDs. The User-Agent is `Amphibia/0.1.0`; no client secret, API key, or production callback identifier is allocated.
 - No global `.nam` file association is claimed.
 
 ## Allowed inherited names

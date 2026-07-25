@@ -26,6 +26,7 @@ TestResults/
 artifacts/
 tests/milestone2/build/
 tests/milestone3/build/
+tests/milestone4/build/
 
 NeuralAmpModeler/*.wav
 NeuralAmpModeler/peaks/

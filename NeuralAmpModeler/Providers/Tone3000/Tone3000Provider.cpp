@@ -99,6 +99,8 @@ Tone3000Provider::Tone3000Provider(Tone3000Configuration configuration, platform
   : mState(std::make_shared<State>())
 {
   mState->configuration = std::move(configuration); mState->browser = &browser; mState->credentialStore = &credentials;
+  mState->credentialKey = {mState->configuration.credentialServiceNamespace,
+                           mState->configuration.credentialAccount};
   mState->connection = mState->configuration.HasPublishableConfiguration() ? ProviderConnectionState::Disconnected
                                                                             : ProviderConnectionState::Unconfigured;
   mState->oauth = std::make_unique<OAuthController>(mState->configuration);
