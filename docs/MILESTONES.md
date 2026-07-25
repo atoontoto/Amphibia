@@ -1,127 +1,97 @@
 # Amphibia milestone checklist
 
-Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented or not yet verified. A milestone closes only when all required evidence is committed.
+Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented or not yet verified. A milestone closes only when its required evidence is committed. Open release-gate items from an earlier milestone remain visible without invalidating the implemented engineering slice.
 
 ## Milestone 0 — upstream investigation and architecture
 
-- [x] Clone official repository with recursive submodules.
-- [x] Pin and record upstream plugin/Core/framework/DSP commits.
-- [x] Inspect history, releases, remotes, and existing tags.
-- [x] Trace local model/IR selection and previous/next behavior.
-- [x] Trace DSP load/prewarm/staging and real-time hazards.
-- [x] Trace plugin state compatibility and standalone persistence.
-- [x] Trace Windows/macOS projects, packaging, installer, and CI.
-- [x] Verify current A1/A2 implementation path and tests.
-- [x] Review TONE3000 OAuth, Select, model-resolution, terms, branding, and rate-limit documentation.
-- [x] Produce architecture plan, upstream modification map, threat model, dependency/license table, proposed tree, identifier inventory, Git plan, A1/A2 plan, and provider limitations.
-- [x] Commit the reviewed Milestone 0 document set. A public tag waits for an Amphibia `origin` and maintainer review.
-
-Exit evidence: this documentation set, clean submodules, validation report, and a single scoped documentation commit. No product-code or build claim is part of this milestone.
+- [x] Pin and inspect the official plugin, Core, framework, DSP, history, releases, remotes, and submodules.
+- [x] Trace local model/IR behavior, loading, state, packaging, CI, A1/A2, and provider constraints.
+- [x] Produce the architecture, threat, dependency, identifier, Git, upstream-sync, DSP, and provider plans.
 
 ## Milestone 1 — independent identity and renamed baseline
 
-- [ ] Confirm repository owner and verified reverse-DNS namespace.
-- [x] Generate/freeze new product, VST3 processor/controller, AU/AAX, IDE project, installer, development bundle, mutex, and data identifiers.
-- [x] Keep future credentials/OAuth/network identifiers explicitly unallocated until their owning milestone.
-- [x] Rename installed product/class/targets/output metadata/scripts/installer placeholder to Amphibia while documenting retained technical filenames.
-- [x] Quarantine inherited application icons and classify unresolved artwork/fonts as public-release blockers.
-- [ ] Establish license/provenance or original replacements for every packaged visual/font asset.
-- [x] Build the Windows standalone application and VST3 with the available newer local toolset override.
-- [ ] Build macOS app + VST3 from a clean supported environment.
-- [x] Smoke-test Windows standalone process launch.
-- [ ] Validate plug-in discovery and side-by-side NAM coexistence in a host.
-- [x] Run and automate the source/configuration residual-identity audit.
-- [ ] Complete built-binary metadata and installed-path audits on all supported formats.
+- [x] Freeze independent product, VST3, IDE, bundle, installer, mutex, and data identifiers at version `0.1.0`.
+- [x] Rename selected targets/outputs and preserve legacy state reading.
+- [x] Quarantine inherited brand assets and add identity validation and non-publishing CI.
+- [x] Build Windows standalone and VST3 with the available v145 override.
+- [ ] Confirm the final reverse-DNS owner namespace and clear all packaged visual/font provenance.
+- [ ] Validate macOS, host discovery, side-by-side installation, and complete binary metadata.
 
 ## Milestone 2 — DSP safety and A1/A2 validation
 
-- [x] Add characterization tests for parameters, DSP ordering, resampling, navigation, and legacy state.
-- [x] Implement bounded `NamInspector`/`IrInspector` and async preparation.
-- [x] Implement generation cancellation, real-time exchange, and non-RT reclamation.
-- [x] Eliminate model/IR parsing, preparation, allocation-heavy reset, and destruction from the audio callback.
-- [ ] Validate redistributable real A1 and released A2 fixtures over sample-rate/block-size matrix.
-- [x] Harden hosted-facing NAM/WAV bounds and malformed-file behavior.
+- [x] Characterize parameters, DSP order, resampling, navigation, and legacy state.
+- [x] Add bounded NAM/IR inspection, asynchronous preparation, generations, audio-boundary activation, and off-audio reclamation.
+- [x] Preserve active DSP on failed, stale, or cancelled work and harden malformed input/state behavior.
+- [ ] Validate redistributable released third-party A1/A2 fixtures over the full platform/sample-rate/block-size matrix.
 
-The remaining fixture item is intentionally open. The tracked NAM Core A1 and
-A2-shaped fixtures load successfully, and generated WAV/error cases pass, but
-no redistributable released third-party A1/A2 captures were supplied for the
-declared local matrix. Their absence is reported as a skip, not converted into
-a pass.
+## Milestone 3 — local import, managed library, and state
 
-## Milestone 3 — local provider, library, and state
+- [x] Preserve characterized referenced-file navigation and add reviewed individual/folder/multi-file import.
+- [x] Add reader-only secure ZIP import, streaming SHA-256, content-addressed deduplication, atomic metadata, verification, recovery, and cleanup.
+- [x] Add backward-compatible state 1.1 managed SHA-256 references and retain all legacy readers.
+- [x] Add compact Settings statistics/actions and native security/migration tests.
+- [ ] Add standalone plugin-session persistence beside iPlug device settings.
+- [ ] Add the final missing/corrupt-content recovery UI.
 
-- [ ] Introduce provider-neutral domain types and `IContentProvider`.
-- [ ] Implement Local provider with characterized non-recursive directory navigation and wraparound.
-- [ ] Add managed content-addressed library, atomic index, cleanup, and collision policy.
-- [ ] Add Amphibia state schema and tested legacy NAM import.
-- [ ] Add atomic standalone session persistence beside iPlug device settings.
-- [ ] Add missing/corrupt content recovery UI.
+## Milestone 4 — TONE3000 authentication, transport, and provider foundation
 
-## Milestone 4 — content browser UI
+- [x] Re-review current API documentation/terms and record the `get_tone`/`load_tone` contradiction without guessing.
+- [x] Add provider-neutral remote types and isolate TONE3000 wire/OAuth behavior.
+- [x] Add explicit external-browser Authorization Code with PKCE S256 and bounded single-use callback handling.
+- [x] Add Windows Credential Manager and macOS Keychain source storage with no plaintext fallback.
+- [x] Add Windows WinHTTP transport, typed exact API boundaries, bounded rate/retry policy, and streamed individual download promotion.
+- [x] Extend the library to schema 2 provider/creator/license associations while preserving schema 1 and state 1.1.
+- [x] Add deterministic mock/loopback tests and provider-disabled CI gates; no live credentials or API are required.
+- [x] Keep provider controls inert when unconfigured and preserve all local/DSP behavior.
+- [ ] Implement and validate the macOS `NSURLSession` transport and Xcode product integration.
+- [ ] Obtain a production client registration, exact approved desktop redirect, support/privacy URLs, and approved brand assets.
 
-- [ ] Preserve compact local controls and all current DSP controls.
-- [ ] Add Local/Online content surface, responsive layout, accessibility, keyboard focus, and progress/error states.
-- [ ] Add exact variant selection and architecture/source/creator metadata.
-- [ ] Validate common host window sizes and HiDPI/Retina scaling.
+## Milestone 5 — hosted TONE3000 selection experience
 
-## Milestone 5 — secure TONE3000 provider
-
-- [ ] Re-verify current API/terms and resolve all documented ambiguities.
-- [ ] Obtain publishable client registration and exact desktop redirect.
-- [ ] Implement external-browser PKCE, loopback/custom callback, cancellation, refresh rotation, and OS credential storage.
-- [ ] Implement hosted `select_tone` flows for A1/Custom, A2, and IR per confirmed contract.
-- [ ] Implement post-selection detail pagination and explicit individual model download.
-- [ ] Add provider brand/creator attribution and independent-integration disclosure.
-- [ ] Pass fake-server and provider sandbox integration tests without secrets in artifacts/logs.
+- [ ] Re-verify terms and resolve the prompt/redirect registration blockers.
+- [ ] Complete the provider-approved loopback or custom-scheme callback receiver and live authorization validation.
+- [ ] Add explicit hosted `select_tone` entry points for NAM and IR without native unrestricted search.
+- [ ] Resolve the returned tone ID, page exact variants, and require an exact user selection.
+- [ ] Add final provider brand, creator, license, source-link, and independent-integration presentation.
+- [ ] Download/promote only after user action and submit the chosen local object through `_RequestModel()` or `_RequestIR()`.
 
 ## Milestone 6 — download/import hardening
 
-- [ ] Enforce TLS/redirect/host policies, timeouts, concurrency, rate limits, byte caps, hashes, and atomic promotion.
-- [ ] Add secure ZIP inventory/extraction only if a scoped feature requires it.
-- [ ] Add malicious archive/NAM/WAV corpus, fuzz/property tests, disk-full/interruption/restart coverage.
-- [ ] Add clear cache/remove item/disconnect behavior without destructive uninstall defaults.
+- [x] Enforce Windows transport HTTPS/redirect/host policy, timeouts, rate limits, byte caps, streamed validation, hashes, and atomic promotion for the Milestone 4 foundation.
+- [ ] Complete equivalent macOS transport coverage and broader malicious HTTP/download corpus, disk-full, interruption, restart, and sanitizer coverage.
+- [ ] Add clear-cache/remove-item UX with explicit scope and current provider-term handling.
 
 ## Milestone 7 — standalone reliability
 
-- [ ] Persist/restore plugin state, audio device, sample rate, buffer, channels, and MIDI independently.
-- [ ] Recover from missing/changed devices and invalid saved formats.
-- [ ] Verify cold start offline, no credentials, corrupt state, and cache migration.
-- [ ] Run long-duration audio, repeated device-reset, and rapid content-switch stress tests.
+- [ ] Persist/restore plugin state and device configuration independently.
+- [ ] Recover from missing devices/formats and validate cold-start/offline/cache migration.
+- [ ] Run long-duration audio, device-reset, and rapid-switch stress tests.
 
 ## Milestone 8 — installers and side-by-side safety
 
-- [ ] Build signed/notarized Windows and macOS packages with app and VST3.
-- [ ] Install to platform-standard product/plugin locations with unique identities.
-- [ ] Include license/notices/SBOM and exact artifact manifest.
-- [ ] Test install, upgrade, repair, uninstall, and user-data retention in clean VMs.
-- [ ] Prove NeuralAmpModeler remains installed, discoverable, and unaffected.
+- [ ] Build signed/notarized Windows and macOS packages with exact manifests/notices.
+- [ ] Test install, upgrade, repair, uninstall, user-data retention, and NAM coexistence in clean VMs.
 
 ## Milestone 9 — CI and release security
 
-- [ ] Pin maintained CI actions and dependencies by immutable version/hash.
-- [ ] Build/test Windows and macOS, run plugin validation, sanitizers where available, secret scan, dependency/license audit, and artifact inventory.
-- [ ] Publish checksums/provenance and gate signing secrets behind protected environments.
-- [ ] Create draft prereleases only after all required jobs pass.
+- [ ] Pin CI actions/dependencies immutably and add macOS, plugin validation, sanitizers, secret scans, SBOM, and artifact integrity.
+- [ ] Gate signing/release publication behind protected environments.
 
 ## Milestone 10 — documentation and usability
 
-- [ ] Complete README, BUILDING, INSTALL, USER_GUIDE, PRIVACY, SECURITY, THIRD_PARTY_NOTICES, TONE3000 integration, architecture notes, and upstream-sync guide.
-- [ ] Verify every command/link/screenshot against release candidates.
-- [ ] Document limitations, exact supported formats/architectures, cache paths, data deletion, and provider-offline behavior.
+- [ ] Complete and verify release-user documentation, screenshots, commands, limitations, data deletion, and offline behavior.
 
 ## Milestone 11 — release candidate and handoff
 
-- [ ] Complete cross-host/plugin validation and standalone matrix on clean supported OS versions.
-- [ ] Resolve or explicitly waive every security/license/provider/realtime release blocker with named owner and rationale.
-- [ ] Tag a signed release candidate from a clean, reproducible commit.
-- [ ] Publish artifact hashes, provenance, notices, known limitations, and upstream attribution.
-- [ ] Perform post-release installation/download/auth smoke tests from public artifacts.
+- [ ] Complete cross-host/platform validation and resolve or explicitly waive every release blocker.
+- [ ] Sign/tag a reproducible release candidate and publish checksums/provenance/notices.
+
+## Milestone 4 evidence record
+
+Milestone 4 implements the provider foundation only: external-browser PKCE/state handling, secure credential storage, bounded WinHTTP transport, typed exact API calls, refresh/session behavior, streamed explicit individual downloads, and schema-2 creator/license provenance. It adds no final catalog/search UI, automatic download/activation, whole-tone ZIP, upload, telemetry, proxy, installer, or DSP behavior.
+
+Windows native test and standalone/VST3 evidence is recorded in `MILESTONE_4_REPORT.md`. Provider tests are mock/loopback-only; no live-provider pass is claimed. macOS Keychain source exists, but macOS HTTP transport/product integration and platform validation remain open. The next milestone is Milestone 5, the user-facing hosted selection experience.
 
 ## Global non-claims
 
-Until the relevant boxes are evidenced, do not claim that Amphibia is buildable, release-ready, fully real-time safe, production-authorized for TONE3000, signed/notarized, or fully A1/A2 validated. Milestone completion is recorded by commit hash and verification output, not by prose alone.
-# Milestone 3 evidence record
-
-Milestone 3 implements the optional local managed-library slice: individual reference drops, multi-file/folder/ZIP review, recursive scanning, reader-only secure ZIP extraction, streamed SHA-256, content-addressed deduplication, pack associations, schema-1 transactional metadata, verification/recovery/cleanup, hash-based state restoration, and Settings statistics/actions. It adds no network, OAuth, provider, telemetry, installer, or DSP behavior.
-
-Windows native unit/security tests and standalone/VST3 build evidence are recorded in `MILESTONE_3_REPORT.md`. macOS project inputs are updated but validation remains platform-dependent and must not be inferred from Windows. The next milestone remains Milestone 4, TONE3000 foundation; no Milestone 4 work is complete.
+Amphibia is not release-ready, production-authorized for TONE3000, signed/notarized, fully macOS-validated, or fully A1/A2 fixture-validated. Completion is evidenced by committed code and test output, not by prose alone.

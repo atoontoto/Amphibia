@@ -1,11 +1,34 @@
 # Privacy
 
-The current Milestone 3 code does not implement Amphibia telemetry, analytics, accounts, OAuth, online catalog access, HTTP, or TONE3000 networking. It loads model and impulse-response files selected locally by the user. The inherited standalone host may store local audio/MIDI device preferences under the Amphibia application namespace.
+TONE3000 access is optional and inactive unless the user explicitly starts an
+account action. Amphibia remains a fully local NAM/IR player when provider
+registration is absent, the account is disconnected, or the service is
+offline. No browser opens automatically during construction, plugin scan,
+project restoration, or audio processing.
 
-Audio is processed locally. Amphibia does not intentionally transmit audio, model files, impulse responses, filenames, or usage data.
+Local NAM/IR files and guitar/audio samples are never uploaded. Amphibia sends
+only the fields needed for an explicit OAuth authorization, requested current
+account/tone/model metadata, and an explicitly requested individual model
+download. It adds no analytics, telemetry, advertising identifier, background
+catalog synchronization, scraping, or whole-catalog cache.
 
-When the user explicitly imports local content, Amphibia stores managed copies, lowercase SHA-256 identifiers, normalized pack-relative paths, display names, file/format properties, pack associations, import/last-use times, and optional manual classifications under the platform application-data directory. Referenced-file mode does not copy the source. Source folders and ZIPs are read-only and are never deleted by library cleanup.
+OAuth access and refresh tokens are stored only in Windows Credential Manager
+or macOS Keychain under Amphibia's isolated TONE3000 namespace. There is no
+plaintext fallback. Tokens, authorization codes, PKCE material, complete
+signed URLs, and credential payloads are excluded from settings, DAW state,
+library metadata, diagnostics, and filenames. The user can disconnect; that
+removes stored credentials and cached account identity.
 
-Local diagnostics are limited to standard development output in the current implementation; no persistent task log is emitted. Code is structured to avoid recording model weights, audio samples, file contents, credentials, or unrelated directory listings. The managed `logs/` directory is reserved and empty. Users can clear safe staging remnants and remove unassociated managed objects from Settings; unknown or corrupt data is reported rather than uploaded or silently repaired.
+An explicitly downloaded model remains local in Amphibia's managed library
+until the user separately removes it. Its provider tone/model IDs, creator
+identity, provider license fields, source page, format, and local SHA-256 are
+retained for attribution and restoration even after disconnect or byte
+deduplication. Amphibia does not redistribute those bytes or infer a more
+permissive license. TONE3000 and the operating-system credential/network
+services have their own privacy terms.
 
-This policy describes the current source baseline, not planned features. Before any online provider is enabled, this document must be updated with exact endpoints, data fields, credential storage, retention/deletion behavior, and third-party policies. Operating systems, DAWs, audio drivers, and separately obtained content providers have their own practices.
+Local managed imports continue to store content-addressed copies, normalized
+pack associations, display/file properties, timestamps, and optional manual
+classifications under the platform application-data directory. Referenced
+sources remain read-only. Staging cleanup is confined to Amphibia's verified
+managed staging root. No persistent provider request/body log is emitted.

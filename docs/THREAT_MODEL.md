@@ -1,6 +1,6 @@
 # Amphibia threat model
 
-Status: Milestone 0 baseline, reviewed for Milestone 2 local loading
+Status: Milestone 4 provider-foundation review (2026-07-26)
 
 Review trigger: any new provider, network/archive library, state-schema change, installer change, or credential flow change
 
@@ -121,8 +121,8 @@ On any failure, the active DSP is unchanged. Temporary data is removed by a best
 ## Release blockers from this review
 
 - Production OAuth client registration and exact redirect rules are unknown.
-- HTTP/TLS and optional ZIP implementations are not selected or audited.
-- Hosted downloads still require streaming byte caps and promotion rules before they may feed the local bounded preflight.
+- Production desktop redirect approval and a publishable client registration remain unavailable.
+- WinHTTP is implemented and tested on Windows; the macOS HTTP adapter remains a platform-validation gap.
 - The inherited DSP path outside the Milestone 2 loading bridge still needs allocator instrumentation across the supported host matrix before a product-wide real-time-safety claim.
 - Platform signing/notarization and CI provenance are not yet implemented.
 # Milestone 3 local import additions
@@ -132,3 +132,29 @@ Local files, recursive folders, archives, metadata, and the managed index are un
 Source files and archives are opened read-only and never cleaned up by Amphibia. Randomized staging is confined to the managed root and removed on cancellation/failure. Unknown data, corrupt metadata, and orphan objects are reported rather than automatically repaired or uploaded. Remaining native-parser and filesystem time-of-check/time-of-use risk is reduced by generated destination names, secure create flags, root reparse rejection, same-filesystem rename, and revalidation, but sandboxed archive parsing is not present.
 
 No network, provider, OAuth, TLS, telemetry, scripting, executable loading, or trusted HTML surface was added.
+
+## Milestone 4 provider threat register
+
+| Threat | Asset | Boundary / attack | Mitigation and test | Remaining risk |
+| --- | --- | --- | --- | --- |
+| OAuth CSRF | account authorization | browser callback supplies attacker state | 32-byte CSPRNG state, constant-time compare, single use; wrong/replayed-state tests | compromised host process can observe its own memory |
+| code interception | authorization code | another process receives callback | PKCE S256 and exact callback; RFC vector/callback-route tests | production redirect strategy awaits approval |
+| verifier theft | PKCE verifier | memory/log/state disclosure | move-only pending value, secure clear, never serialize/log; repository/state canary checks | crash dumps may capture live process memory |
+| callback hijack | authorization result | wrong route/duplicate/malformed query | exact bounded parser, mutually exclusive result, one pending flow; adversarial parser tests | no production listener is enabled yet |
+| custom URI hijack | authorization result | another application registers scheme | custom schemes disabled without approval | future platform registration requires new review |
+| loopback abuse | authorization result | non-loopback or multiple requests | production listener disabled; test bypass is explicit loopback-only | approved listener implementation remains work |
+| token leakage/replay | access/refresh tokens | logs, state, URLs, metadata | platform credential store, central redaction, no plaintext fallback; canary scans/tests | malicious local debugger can inspect memory |
+| refresh race/rotation | refresh token | two host processes refresh old token | five-second named/file lock, reload after lock, generation and atomic replace; contention test | crash between provider rotation and local replace can require login |
+| malicious redirect | bearer token | redirect exfiltrates Authorization | automatic redirects off, every hop validated, cross-origin secret stripping; redirect tests | native resolver/connect DNS-rebinding visibility is limited |
+| SSRF/private host | host filesystem/network | provider supplies local/model URL | public HTTPS parser plus resolved-address rejection; private/metadata/loopback tests | DNS answer can change after pre-resolution |
+| signed URL leakage | download capability | query enters log/library/state | URL redaction and source-page-only provenance; serialized canary test | OS networking diagnostics are outside Amphibia |
+| malicious/oversized JSON | memory and metadata | deep/large/missing identities | byte/depth/node/string/count limits and required IDs; parser adversarial tests | nlohmann allocates within the bounded response before tree walk |
+| API downgrade/TLS interception | token/content | HTTP or invalid certificate | HTTPS production gate, Schannel trust/hostname checks, no ignore flags; URL policy tests | enterprise trust roots can intentionally intercept TLS |
+| rate abuse | provider account | burst/retry storm | 100/min sliding window, bounded queue/attempts, Retry-After; deterministic policy tests | provider limits may change |
+| malicious download | model/library | invalid or mislabeled bytes | exclusive `.part`, actual-byte cap, Milestone 2 inspection, Milestone 3 hash/revalidation; valid/invalid tests | NAM parser remains native in-process |
+| disk exhaustion | local storage | huge or false Content-Length | free-space reserve, declared and actual caps, cleanup; size tests | space may be consumed concurrently |
+| partial confusion | model integrity | truncated file treated complete | Content-Length agreement, flush/close, validation, no resume; truncation test | abrupt power loss after object publication can leave reported orphan |
+| provider ID collision | provenance | ID used as physical identity | SHA-256 physical identity, provider/tone/model association tuple; dedup tests | malicious provider metadata can still be misleading UI text |
+| creator/license stripping | attribution | dedup/disconnect loses terms | schema-2 independent associations preserve unknown values; migration/provenance tests | provider may omit license metadata |
+| stale OAuth/HTTP/download | UI/state | late completion overwrites newer task | generations, weak lifetime, single-use flow and cancellation; supersede/lifecycle tests | native call returns only at timeout in worst case |
+| UI/host shutdown race | process stability | callback targets destroyed editor/plugin | UI polling only, weak shared state, suppress callbacks, joined workers; immediate-shutdown tests | abrupt host termination prevents cleanup guarantees |

@@ -1,6 +1,6 @@
 # Dependency and license inventory
 
-Status: Milestone 1 preliminary inventory and release gate; not legal advice
+Status: Milestone 4 inventory and release gate; not legal advice
 
 Release rule: no dependency or inherited asset ships without a recorded version, source, license text, notice treatment, and redistribution decision.
 
@@ -48,12 +48,24 @@ No new library is approved in Milestone 1.
 
 | Capability | Current decision | Evaluation criteria |
 |---|---|---|
-| HTTP/TLS | Not selected | Native desktop support, TLS via maintained platform/OpenSSL backend, redirects, cancellation, streaming limits, proxy behavior, license, CVE maintenance, reproducible build. Candidate must not require a server-side client secret. |
+| HTTP/TLS | Windows WinHTTP selected and implemented; macOS `NSURLSession` target deferred | Native system trust/proxy integration, explicit redirect control, cancellation, streaming limits, and no vendored TLS. The non-Windows source currently fails closed; macOS transport and build integration remain required before macOS provider support is claimed. |
 | Loopback HTTP | Prefer a minimal Amphibia-owned single-request parser or a small audited component | Bind-address control, header/request caps, deadline/cancel, no general server surface, license. |
 | ZIP | **Selected for Milestone 3 local import:** minizip-ng 4.2.2 plus zlib 1.3.2, vendored exact release source | Reader-only stored/deflate and ZIP64 support. Encryption/crypto, writers, OpenSSL, bzip2, LZMA, zstd, and iconv disabled. Amphibia owns cancellation, path/link checks, declared/actual limits, randomized safe writes, CRC handling, and staging transactions. |
 | Hashing / CSPRNG | Prefer audited OS crypto APIs or an already linked maintained library | SHA-256 correctness, cryptographic randomness, FIPS concerns if claimed (none planned), no custom crypto. |
 | Persistent index | Start with schema-versioned JSON and atomic replace | Measure startup/write scale first. SQLite is allowed only if justified and then its public-domain status/build provenance must be recorded. |
 | Credential storage | Platform APIs | Windows Credential Manager and macOS Keychain; no plaintext fallback. |
+
+## Milestone 4 platform APIs
+
+| API | Version/source | License | Purpose and remaining risk |
+| --- | --- | --- | --- |
+| WinHTTP / Schannel | Supported Windows runtime; verified with Windows SDK 10.0.26100.0 | Microsoft SDK/runtime terms | HTTPS GET/POST, streamed downloads, system trust/proxy, timeout and native-handle cancellation. Redirects are disabled natively and reevaluated by Amphibia. DNS/TLS cancellation can take until a finite timeout. |
+| Windows Credential Manager | Supported Windows runtime (`advapi32`) | Microsoft SDK/runtime terms | Per-user access/refresh token storage and atomic replacement; no plaintext fallback. Local processes running as the same user remain inside the OS trust boundary. |
+| Windows CNG | Supported Windows runtime (`bcrypt`) | Microsoft SDK/runtime terms | PKCE/state randomness, SHA-256, and retry jitter. |
+| Security.framework Keychain | Supported macOS SDK/runtime | Apple SDK/runtime terms | Source implementation for per-user credential storage and replacement. macOS compile/runtime tests were not available. |
+| AppKit/Foundation browser APIs | Supported macOS SDK/runtime | Apple SDK/runtime terms | Explicit default-browser launch. macOS validation was not available. |
+
+No new third-party library was added for Milestone 4. `libcurl` was evaluated and deferred because it would add a pinned binary/TLS-backend matrix; the inherited WDL/WinINet facilities were rejected as the provider policy boundary. Details are in `HTTP_TRANSPORT.md`.
 
 ## Milestone 3 pinned local-import dependencies
 
@@ -70,7 +82,7 @@ The dependency evaluation considered minizip-ng maintenance/release cadence, zli
 
 | Service | Governing material | Product implication |
 |---|---|---|
-| TONE3000 API | <https://www.tone3000.com/api> and <https://www.tone3000.com/api/terms> (reviewed 2026-07-21) | Free native integration is conditioned on open-source/non-commercial use and brand/attribution/access rules; terms are revocable and must be rechecked before release. No scraping, bulk synchronization, catalog mirroring, or model redistribution. |
+| TONE3000 API | <https://www.tone3000.com/api> and <https://www.tone3000.com/api/terms> (reviewed 2026-07-26; terms effective 2026-07-07) | Free native integration is conditioned on open-source/non-commercial use and brand/attribution/access rules; terms are revocable and must be rechecked before release. No scraping, bulk synchronization, catalog mirroring, or model redistribution. The `get_tone`/`load_tone` discrepancy blocks that prompt until clarified. |
 | NAM project name/branding | Upstream project and repository | Amphibia must accurately attribute its derivative basis without presenting itself as the official NAM plugin or reusing product identity. |
 
 ## Release checklist for notices

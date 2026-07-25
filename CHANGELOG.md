@@ -2,6 +2,16 @@
 
 All notable Amphibia changes are recorded here. The project has no public release yet.
 
+## Unreleased - Milestone 4
+
+- Added provider-neutral remote tone/model/user/download types and a TONE3000 adapter boundary without adding a native catalog browser.
+- Added external-system-browser OAuth Authorization Code with PKCE S256, strict single-use callback state, bounded token exchange/refresh, cancellation, and shutdown handling.
+- Added Windows Credential Manager and macOS Keychain source implementations with no plaintext fallback, plus bounded cross-process refresh coordination.
+- Added WinHTTP HTTPS transport with explicit timeouts, response limits, redirect revalidation, authorization stripping, cancellation, rate limiting, and bounded retries.
+- Added typed current-user, exact-tone, exact-model/list parsing and streamed individual-model downloads.
+- Extended the managed-library index to schema 2 for provider/creator/license provenance while preserving schema-1 libraries and state 1.1 compatibility.
+- Added deterministic mock/loopback OAuth, credential, HTTP, parser, download, promotion, lifecycle, and migration coverage. Live-provider and macOS transport validation remain unclaimed.
+
 ## Unreleased - Milestone 3
 
 - Added optional referenced-versus-managed local content modes and platform application-data library paths.

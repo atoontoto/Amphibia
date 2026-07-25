@@ -15,6 +15,13 @@ The root stores `schema_version`, monotonically increasing `revision`, `objects`
   gear, architecture, verification times, metadata version, and the Amphibia
   object SHA-256. These are associations, not physical object identities.
 
+Source pages must be canonical public HTTPS pages without query or fragment.
+Complete download/signed URLs, authorization headers, OAuth values, credential
+records, callback URIs, request bodies, and cached account credentials are
+forbidden. Unknown provider values are retained as bounded metadata; they do
+not relax format validation or become filesystem paths. See
+`REMOTE_PROVENANCE.md` for the lifecycle contract.
+
 JSON objects are serialized with nlohmann/json. Metadata strings are plain text; HTML is neither stored as trusted markup nor rendered.
 
 ## Transactions

@@ -1,8 +1,8 @@
 # Amphibia architecture plan
 
-Status: Milestone 0 design baseline with Milestone 2 implementation addendum
+Status: Milestone 0 design baseline with Milestone 2-4 implementation addenda
 
-Evidence date: 2026-07-21
+Evidence date: 2026-07-26
 
 Upstream baseline: `sdatkinson/NeuralAmpModelerPlugin` `v0.7.15` at `96337e9ab6e3beb619459779bbb5c47e1b04d8c4`
 
@@ -265,6 +265,40 @@ Selection is two-step for hosted content: select a tone/IR, then select one exac
 - TONE3000 API: <https://www.tone3000.com/api>
 - TONE3000 API terms: <https://www.tone3000.com/api/terms>
 - iPlug2 documentation: <https://iplug2.github.io/docs/>
+
+## Milestone 4 implementation addendum
+
+The concrete remote boundary is now `IRemoteToneProvider` plus provider-neutral
+`RemoteTone`, `RemoteModel`, `RemoteCreator`, authorization, connection, and
+download result types under `NeuralAmpModeler/Providers`. TONE3000 endpoint,
+OAuth, and JSON knowledge remains under `Providers/Tone3000`; it does not enter
+DSP, state parsing, generic library objects, or local browsing.
+
+`Tone3000Provider` composes `OAuthController`, `Tone3000ApiClient`, the
+platform browser, platform credential store, bounded cross-process refresh
+lock, injected `IHttpTransport`, `Tone3000DownloadCoordinator`, and the
+Milestone 3 `ManagedLibrary`. The shipped configuration is empty, so product
+construction is inert and Settings reports the registration blocker. No
+browser, credential access, or request starts until an explicit action.
+
+Windows uses WinHTTP with native redirects disabled; shared policy validates
+each URL/hop, strips authorization cross-origin, caps metadata/tokens/bytes,
+and applies a 100-request/minute bounded limiter with retry policy. The macOS
+Keychain source exists, but the planned `NSURLSession` adapter and Xcode
+provider source integration remain open; macOS provider operation is not
+claimed.
+
+Downloaded individual NAM/IR content uses randomized `.part` staging, the
+existing Milestone 2 file inspection, Milestone 3 SHA-256/object promotion,
+and schema-2 provider associations. The provider cannot activate DSP. A later
+explicit Milestone 5 action must resolve the promoted local object and submit
+it through `_RequestModel()` or `_RequestIR()`.
+
+The final hosted selection experience, registered callback listener or custom
+scheme, live-provider validation, approved branding/attribution UI, and exact
+variant chooser remain Milestone 5. Native unrestricted search, whole-tone
+ZIP, bulk/background sync, uploads, proxy accounts, and automatic activation
+remain outside the architecture.
 # Milestone 3 local content slice
 
 Milestone 3 adds a provider-neutral local content boundary under `NeuralAmpModeler/Library/`: source/plan/result types, path policy, recursive scanner, ZIP inventory/extractor, OS SHA-256, schema-1 JSON index, managed object transactions, and a joined import/maintenance worker. UI drag/drop and Settings actions are adapters; they do not own archive or database policy. `ManagedLibrary` is the only publisher of permanent objects/metadata, and `_RequestModel()` / `_RequestIR()` remain the only product loading gateways.

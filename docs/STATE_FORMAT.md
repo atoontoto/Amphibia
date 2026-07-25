@@ -73,3 +73,17 @@ Version 1.1 writes the complete 1.0 payload first, in the same order: header, la
 Each slot is `managed`, `referenced`, or `clear`. Managed values contain only a lowercase SHA-256 identity; referenced paths remain in the inherited prefix. The JSON tail is limited to 64 KiB and unknown fields are ignored under schema 1. Readers that stop after parameters can ignore the tail. Existing Amphibia 1.0 and legacy NAM state has no tail and follows the existing path restoration route.
 
 On 1.1 restore, parameters and inherited paths are decoded first. A managed hash, when present, is resolved under the managed root and submitted asynchronously through `_RequestModel()` or `_RequestIR()`, superseding the provisional path request. A `clear` kind submits the matching asynchronous clear request. A missing hash/object produces no synchronous mutation; normal async failure behavior preserves active DSP. Because the extension is optional, an invalid, oversized, or truncated tail is ignored after the valid 1.0 compatibility prefix has restored; corruption in the required prefix still returns `-1`.
+
+# Milestone 4 provider foundation
+
+Milestone 4 does not change the DAW state layout or version. Provider account
+connection is machine/user credential state, never project state. Access and
+refresh tokens, authorization codes, PKCE state/verifiers, complete signed
+URLs, credential keys/payloads, and cached user identity are not serialized.
+
+Schema-2 library provenance can associate the existing managed SHA-256 in a
+1.1 state with a provider tone/model, creator, and license, but restoration
+continues to resolve only the managed hash and submit through `_RequestModel()`
+or `_RequestIR()`. It performs no HTTP, credential access, browser launch, or
+provider JSON parsing. A later Milestone 5 state extension may add non-secret
+provider IDs for explicit missing-object recovery without changing this rule.

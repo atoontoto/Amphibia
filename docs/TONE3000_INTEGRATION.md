@@ -1,12 +1,31 @@
 # TONE3000 integration plan and current limitations
 
-Status: Milestone 0 provider contract review
+Status: Milestone 4 foundation implemented; final user-facing selection workflow in progress
 
-Reviewed: 2026-07-21
+Reviewed: 2026-07-26; API Terms effective 2026-07-07
 
 Sources: [API documentation](https://www.tone3000.com/api), [API terms](https://www.tone3000.com/api/terms), [official example](https://github.com/tone-3000/api)
 
 This is an independent integration plan. It does not assert endorsement or a partnership with TONE3000.
+
+## Implemented Milestone 4 boundary
+
+The repository now contains provider-neutral interfaces, a TONE3000 adapter,
+external-browser PKCE/state handling, bounded token refresh, platform secure
+credentials, WinHTTP transport, typed current-user/exact-tone/model endpoints,
+streamed individual `model_url` download, schema-2 creator/license provenance,
+and deterministic mocks. The default API policy is 100 requests/minute with a
+bounded queue/retries and `Retry-After` support.
+
+The Settings page reports the integration and secure-storage status. Because
+no publishable client ID or approved desktop redirect is present, it reports
+Not configured and keeps Connect/Test/Disconnect/Cancel disabled. It performs
+no automatic login, browser launch, request, download, or activation.
+
+Not implemented: `/tones/search`, native catalog browsing, whole-tone ZIP,
+bulk/background download, automatic model choice, upload/training, account
+proxying, local file upload, final provider cards/attribution UX, or automatic
+DSP activation. Those boundaries are deliberately reserved for Milestone 5.
 
 ## Permitted initial experience
 
@@ -104,13 +123,25 @@ These are release gates, not implementation guesses:
 6. API and terms can change or access can be revoked. Re-verify the contract immediately before implementation and release, and isolate it behind `Tone3000Provider`.
 7. Official brand assets and their permissible packaging form must be obtained/confirmed; do not scrape the website logo.
 
-## Provider tests (Milestone 5)
+## Validation status
 
-- PKCE known vectors, state mismatch/replay/cancel/timeout, listener bind rules.
-- Token success/refresh/rotation/`invalid_grant` using a fake provider server.
-- Paginated exact-model resolution and explicit choice.
-- A1/default, A2, and IR authorization URL construction.
-- Rate-limit/backoff and offline behavior with deterministic clocks.
-- Redirect/certificate/host policy in the chosen HTTP layer.
-- No secrets in serialized state, cache index, filenames, or captured logs.
-- Contract fixtures scrubbed of real tokens and permitted for repository use.
+Milestone 4 provides 20 native foundation tests covering PKCE vectors/random
+contracts, strict/single-use OAuth callbacks and lifecycle endings, disabled
+ambiguous prompts, URL/redirect/redaction/retry/rate policy, typed parsing/API
+requests, secure download/promotion/provenance, unconfigured/explicit provider
+lifecycle, bounded cross-process refresh locking, real WinHTTP loopback
+GET/POST/redirect/limit/truncation/cancellation/streaming, browser validation,
+and an isolated Windows Credential Manager store/load/replace/remove cycle.
+Schema-1 migration and provider association preservation also run in the
+Milestone 3 suite.
+
+These are deterministic mocks and a `127.0.0.1`-only local test server. They
+do not establish real provider authorization, production callback approval,
+live token refresh/download behavior, certificate failure behavior against a
+real service, process-crash recovery, or macOS operation. No registered client
+configuration was available, so live-provider validation was not run.
+
+Milestone 5 must add the approved callback receiver, final hosted selection
+UI, explicit variant/attribution presentation, live development procedure,
+and missing platform/process/adversarial matrix coverage without committing
+credentials, signed URLs, user metadata, or downloaded content.

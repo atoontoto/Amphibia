@@ -12,4 +12,8 @@ For non-sensitive hardening reports, open an issue with affected commit, platfor
 
 ## Scope
 
-Important areas include malformed `.nam`/WAV handling, real-time safety, state deserialization, installer paths, dependency provenance, future HTTP/OAuth boundaries, credential storage, archive handling, and downloaded-content validation. See `docs/THREAT_MODEL.md` for the current design review.
+Important areas include malformed `.nam`/WAV handling, real-time safety, state deserialization, installer paths, dependency provenance, OAuth callback/state handling, credential storage, HTTP/TLS/redirect policy, archive handling, and downloaded-content validation. See `docs/THREAT_MODEL.md` for the current design review.
+
+Never attach an authorization code, access/refresh token, complete signed model URL, credential-store export, or real provider user metadata to a report. Milestone 4 diagnostics are deliberately redacted and persistent request/body logging is disabled. If the platform credential backend is unavailable, provider authorization must fail closed; plaintext settings, DAW state, environment files, and library metadata are not fallback stores.
+
+The TONE3000 production flow is intentionally unconfigured in this repository. A publishable client ID and approved redirect are required before live testing. Reports that bypass HTTPS, certificate validation, redirect checks, response bounds, or the Milestone 3 promotion boundary are security regressions, not configuration workarounds.

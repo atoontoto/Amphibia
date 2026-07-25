@@ -141,7 +141,7 @@ permitted bounded lists:
 | selected tone | `GET /api/v1/tones/{id}` | typed exact-ID metadata resolution |
 | selected models | `GET /api/v1/models?tone_id=...` | typed bounded pagination, max documented page size 300 |
 | exact model | `GET /api/v1/models/{id}` | typed exact-ID resolution when needed |
-| free lists | created/favorited/downloaded/trending/latest | typed enum boundary; no arbitrary UI endpoint |
+| free lists | created/favorited/downloaded/trending/latest | documented permission boundary only; no Milestone 4 client method or UI |
 | individual bytes | returned `model_url` | explicit selected-file streaming with Bearer auth as currently documented |
 
 The individual `model_url` is pre-built and requires the user's Bearer token

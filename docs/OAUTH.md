@@ -27,7 +27,7 @@ replace the prior platform credential and increment a generation. A terminal
 
 Windows uses Credential Manager generic credentials. macOS source uses a
 generic-password Keychain item. The namespace is
-`org.amphibiaaudio.Amphibia.TONE3000/default`; test coverage uses a separate
+`org.amphibiaaudio.Amphibia.TONE3000/oauth-v1`; test coverage uses a separate
 `.test` namespace and removes it. Backend failure disables connection rather
 than writing plaintext.
 

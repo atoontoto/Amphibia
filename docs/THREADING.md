@@ -91,3 +91,25 @@ Each plugin instance may own one `ImportWorker`, separate from the model and IR 
 Folder traversal, ZIP enumeration/extraction, SHA-256, validation, copying, JSON index access, free-space checks, verification, and cleanup run only on this worker (startup initialization is a constructor-time non-audio exception). UI callbacks submit immutable sources/selections and poll copied progress/results from `OnIdle()`. No import worker calls `ProcessBlock()` or accesses an audio processor.
 
 Managed activation resolves a path and submits it through the existing Milestone 2 request gateway. Object `last_used_at` and active managed state change only after the DSP worker reports Active. Model/IR preparation, block-boundary pointer exchange, and old-processor reclamation retain the Milestone 2 ownership model.
+
+# Milestone 4 provider workers
+
+OAuth/controller state, platform HTTP request workers, credential operations,
+and model downloads are independent of the NAM, IR, and local-import workers.
+WinHTTP owns one joined worker per live request; a long download therefore does
+not serialize token refresh or local import. Download completion performs
+bounded inspection, SHA-256, and `ManagedLibrary` promotion on that request
+worker. Provider task generations and weak shared state prevent stale or late
+callbacks from mutating a destroyed adapter or a newer operation.
+
+The provider is inert at plugin construction and state restoration. Browser
+launch, OAuth, credential access, DNS, TLS, HTTP, retry waits, JSON parsing,
+downloads, hashing, library promotion, refresh, and provider diagnostics are
+not referenced by `ProcessBlock()`. Controls poll immutable/copy status from
+the message thread; provider workers never touch iPlug controls.
+
+Shutdown order is: reject new provider work, invalidate OAuth, cancel the
+current download and native requests, suppress callbacks, join transport
+workers, release provider/transport, then release the managed library and DSP
+workers. Native DNS/TLS can take until its finite configured timeout; no worker
+is detached and shutdown is not described as instantaneous.

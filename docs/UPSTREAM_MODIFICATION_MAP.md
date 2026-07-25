@@ -1,6 +1,6 @@
 # Upstream modification map
 
-Status: Milestone 2 implementation record built on the Milestone 0 investigation
+Status: Milestone 4 implementation record built on the Milestone 0 investigation
 
 Baseline: upstream `v0.7.15`, commit `96337e9ab6e3beb619459779bbb5c47e1b04d8c4`
 
@@ -149,3 +149,21 @@ See `NAM_ARCHITECTURES.md` for exact labeling and validation policy.
 | Windows/macOS project/config files | Reader-only archive sources, include paths, feature disables, OS crypto link | Reconcile generated upstream projects; do not copy old GUIDs or enable AAX. |
 | `ThirdParty/minizip-ng`, `ThirdParty/zlib` | Exact vendored reader subset and licenses | Amphibia pin; update only through reviewed dependency change. |
 | `tests/milestone3`, local-library docs | Generated security/transaction fixtures and design record | Amphibia-owned. |
+
+# Milestone 4 overlay
+
+| Area | Amphibia change | Upstream-sync treatment |
+| --- | --- | --- |
+| `NeuralAmpModeler/Providers/**` | Provider-neutral domain/interface plus isolated TONE3000 configuration, OAuth, wire parsing, API client, provider session, and download coordinator | Amphibia-owned. Never merge provider JSON or bearer tokens into inherited DSP/UI/state types. |
+| `NeuralAmpModeler/Network/**` | Injected HTTP contract, URL/redirect/redaction policy, rate/retry policy, and Windows WinHTTP implementation | Amphibia-owned. Reconcile only platform/project link changes; retain certificate verification and bounds. |
+| `NeuralAmpModeler/Credentials/**` | Windows Credential Manager/macOS Keychain source and cross-process refresh lock | Amphibia-owned. Never replace with inherited settings persistence or plaintext. |
+| `NeuralAmpModeler/Platform/SystemBrowser.*` | Strict explicit external authorization URL launch | Amphibia-owned platform seam; do not call from inherited state/load/audio paths. |
+| `LibraryIndex.*`, `ManagedLibrary.*` | Schema-2 provider associations and randomized provider staging/promotion | Sensitive extension of the Milestone 3 transaction seam; preserve schema-1 migration and object paths. |
+| `NeuralAmpModeler.cpp`, `NeuralAmpModelerControls.h` | Minimal disabled/unconfigured Settings diagnostics; no final catalog flow | Reapply around upstream layout changes without turning construction/restoration into provider work. |
+| Windows props/projects | Adds WinHTTP/Winsock/Credential/Shell links and Milestone 4 sources | Reconcile generated projects explicitly; v143 remains the project default. |
+| `tests/milestone4`, provider documentation | Deterministic mock/loopback security and lifecycle evidence | Amphibia-owned; no live credentials/content in fixtures. |
+
+The macOS product project does not yet compile the new provider/network source
+set or an `NSURLSession` adapter. Keychain/browser source is present but is not
+a platform build claim. This is an explicit Milestone 5/platform integration
+handoff, not an upstream omission to paper over.

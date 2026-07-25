@@ -9,7 +9,8 @@ Decision date: 2026-07-26
 Amphibia uses platform HTTP/TLS clients behind `IHttpTransport`:
 
 - Windows: WinHTTP from the Windows SDK (`winhttp.dll`/`winhttp.lib`).
-- macOS: `NSURLSession` from Foundation in a small Objective-C++ adapter.
+- macOS target: `NSURLSession` from Foundation, not yet implemented or added
+  to the product project. The current non-Windows transport stub fails closed.
 - Tests: deterministic injected mock transports; local HTTP is accepted only
   by an explicit test policy and never by production provider configuration.
 
@@ -22,7 +23,7 @@ used.
 | Candidate | Finding | Decision |
 | --- | --- | --- |
 | Existing iPlug/WDL jnetlib and inherited WinINet link | General legacy socket/HTTP facilities are present, but there is no maintained cross-platform product TLS policy, bounded response API, consistent cancellation, or controlled redirect seam. WinINet is aimed at interactive applications and is not paired with a macOS implementation here. | Rejected for provider transport. |
-| WinHTTP + `NSURLSession` | Maintained with the supported OS, system trust/proxy integration, HTTPS, headers, redirects, streamed bodies, cancellation, and no vendored TLS binary. Both can disable automatic redirects so Amphibia reevaluates every hop. | Selected. |
+| WinHTTP + `NSURLSession` | Maintained with the supported OS, system trust/proxy integration, HTTPS, headers, redirects, streamed bodies, cancellation, and no vendored TLS binary. Both can disable automatic redirects so Amphibia reevaluates every hop. | Selected architecture. WinHTTP is implemented; the `NSURLSession` half is deferred and not counted as working. |
 | libcurl | Mature, MIT/X-style licensed, portable, cancellable, streaming, and well understood. It would add a pinned source/binary, TLS-backend selection, CA/proxy build matrix, notices, and more project inputs. | Deferred; reconsider only if native parity becomes unmaintainable. |
 
 ## Platform API record
@@ -48,21 +49,23 @@ used.
   configured timeout; shutdown is bounded by those timeouts rather than
   claimed instantaneous.
 
-### `NSURLSession`
+### Planned `NSURLSession` adapter (not implemented)
 
-- Version/pin: Foundation supplied by the supported macOS SDK/runtime.
+- Intended version/pin: Foundation supplied by the supported macOS SDK/runtime.
 - License: Apple SDK/runtime terms; no redistributed implementation.
 - TLS backend/trust: Network/CFNetwork trust evaluation and macOS system trust
   store. Default server-trust validation is retained.
-- Cancellation: task cancellation plus session invalidation; completion is
-  generation-checked before delivery.
-- Redirects: delegate declines automatic redirects and returns the bounded
-  response/Location to the shared redirect policy.
+- Intended cancellation: task cancellation plus session invalidation;
+  completion must be generation-checked before delivery.
+- Intended redirects: a delegate must decline automatic redirects and return
+  the bounded response/Location to the shared redirect policy.
 - Proxy: system networking policy.
 - Disabled behavior: custom trust acceptance, embedded credentials, cookies,
   background sessions, cache persistence, and unbounded response buffering.
-- Remaining risk: macOS compilation/runtime verification is deferred until a
-  macOS environment is available; this gap is not counted as a pass.
+- Remaining risk: no Objective-C++ adapter or Xcode product integration exists
+  yet, and macOS compilation/runtime verification is unavailable. Provider
+  networking therefore remains disabled on macOS and this gap is not counted
+  as a pass.
 
 ## Shared request contract
 
@@ -115,7 +118,9 @@ and local storage failures are never blindly retried.
 
 ## Build and reproducibility
 
-Windows links `winhttp.lib`; macOS links Foundation. These are supported SDK
-inputs, not new vendored dependencies. Test builds inject mocks and need no
-network or credentials. Production builds accept no HTTP endpoint override;
-the override exists only behind a test/development configuration flag.
+Windows links `winhttp.lib`. The future macOS adapter will link Foundation;
+the current macOS project does not yet include that transport. These are
+supported SDK inputs, not new vendored dependencies. Test builds inject mocks
+and need no network or credentials. Production builds accept no HTTP endpoint
+override; the override exists only behind a test/development configuration
+flag.
