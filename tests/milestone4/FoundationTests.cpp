@@ -4,6 +4,7 @@
 #include "../../NeuralAmpModeler/Network/RequestPolicy.h"
 #include "../../NeuralAmpModeler/Network/PlatformHttpTransport.h"
 #include "../../NeuralAmpModeler/Loading/FileInspection.h"
+#include "../../NeuralAmpModeler/Library/ContentHash.h"
 #include "../../NeuralAmpModeler/Platform/SystemBrowser.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/OAuthController.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Pkce.h"
@@ -55,6 +56,7 @@ providers::tone3000::Tone3000Configuration TestConfiguration()
   result.apiBaseUrl = "https://provider.test";
   result.redirectUri = "http://127.0.0.1:43821/oauth/callback";
   result.kind = providers::tone3000::Tone3000ConfigurationKind::Test;
+  result.callbackStrategy = providers::tone3000::Tone3000CallbackStrategy::DevelopmentMock;
   result.allowTestHttp = true;
   result.credentialServiceNamespace = "org.amphibiaaudio.Amphibia.TONE3000.test";
   result.credentialAccount = "milestone4-provider";
@@ -497,6 +499,18 @@ int main()
     Require(static_cast<bool>(irCompleted), "valid WAV download was rejected");
     const auto afterIr = library.Snapshot();
     Require(afterIr.objects.size() == 2 && afterIr.providerAssociations.size() == 2, "IR provenance missing");
+    const auto cached = library.FindProviderAssociation("tone3000", "42", "7");
+    Require(cached && library.Resolve(cached->objectHash, library::ManagedObjectType::NamModel),
+            "exact provider cache lookup failed");
+    Require(library.RemoveProviderCopy("tone3000", "42", "7", {library::ToHex(cached->objectHash)}) ==
+              library::ProviderCopyRemoval::ActiveProtected,
+            "active provider copy was removable");
+    Require(library.RemoveProviderCopy("tone3000", "42", "7") == library::ProviderCopyRemoval::ObjectRemoved,
+            "unused exact provider copy was not removed");
+    const auto afterRemoval = library.Snapshot();
+    Require(afterRemoval.objects.size() == 1 && afterRemoval.providerAssociations.size() == 1 &&
+            !library.FindProviderAssociation("tone3000", "42", "7"),
+            "provider removal damaged or retained exact association");
   });
   Test("provider lifecycle is explicit and unconfigured-safe", [] {
     const auto root = std::filesystem::temp_directory_path() /

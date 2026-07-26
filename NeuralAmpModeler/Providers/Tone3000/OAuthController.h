@@ -33,6 +33,7 @@ struct ConsumedAuthorization
   std::string authorizationCode;
   std::string verifier;
   std::optional<std::string> selectedToneId;
+  bool cancelled{};
 
   ConsumedAuthorization() = default;
   ConsumedAuthorization(const ConsumedAuthorization&) = delete;

@@ -29,6 +29,7 @@
     <ClCompile Include="..\..\NeuralAmpModeler\Providers\Tone3000\Pkce.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Providers\Tone3000\OAuthCallback.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Providers\Tone3000\OAuthController.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Providers\Tone3000\Tone3000Configuration.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Credentials\PlatformSecureCredentialStore.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Credentials\CredentialRefreshLock.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Network\HttpPolicy.cpp" />

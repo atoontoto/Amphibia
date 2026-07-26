@@ -196,10 +196,12 @@ Amphibia::Amphibia(const InstanceInfo& info)
     const auto modelArea =
       contentArea.GetFromBottom((2.0f * fileHeight)).GetFromTop(fileHeight).GetMidHPadded(fileWidth).GetVShifted(-1);
     const auto slimIconArea =
-      IRECT(modelArea.R + 6.f, modelArea.MH() - 14.f, modelArea.R + 6.f + 2.f * 28.f, modelArea.MH() + 14.f);
+      IRECT(modelArea.R + 6.f, modelArea.T - 29.f, modelArea.R + 6.f + 2.f * 28.f, modelArea.T - 1.f);
     const auto modelIconArea = modelArea.GetFromLeft(30).GetTranslated(-40, 10);
     const auto irArea = modelArea.GetVShifted(irYOffset);
     const auto irSwitchArea = irArea.GetFromLeft(30.0f).GetHShifted(-40.0f).GetScaledAboutCentre(0.6f);
+    const auto tone3000ModelArea = IRECT(modelArea.R + 7.f, modelArea.T, contentArea.R, modelArea.B);
+    const auto tone3000IrArea = IRECT(irArea.R + 7.f, irArea.T, contentArea.R, irArea.B);
 
     // Areas for meters
     const auto inputMeterArea = contentArea.GetFromLeft(30).GetHShifted(-20).GetMidVPadded(100).GetVShifted(-25);
@@ -209,13 +211,18 @@ Amphibia::Amphibia(const InstanceInfo& info)
     const auto settingsButtonArea = CornerButtonArea(b);
 
     RemoteProviderUIActions providerActions;
-    providerActions.information = [] {
+    providerActions.information = [this] {
 #if defined(OS_WIN) || defined(OS_MAC)
       constexpr const char* storage = "Available";
 #else
       constexpr const char* storage = "Unavailable";
 #endif
-      return std::string("TONE3000 integration | Configuration: Not configured | Connection: Disconnected | API: Offline | Secure storage: ") + storage;
+      const auto state = mTone3000Registration.state == amphibia::providers::tone3000::Tone3000RegistrationState::ProductionConfigured ?
+        "Production configured" : mTone3000Registration.state == amphibia::providers::tone3000::Tone3000RegistrationState::DevelopmentConfigured ?
+        "Development configured" : "Not configured";
+      return std::string("TONE3000 integration | Configuration: ") + state +
+        " | Connection: Disconnected | API: Offline | Secure storage: " + storage +
+        "\n" + mTone3000Registration.userMessage;
     };
 
     LibraryUIActions libraryActions;
@@ -370,6 +377,21 @@ Amphibia::Amphibia(const InstanceInfo& info)
                                 "Get IRs", getUrl,
                                 [this](const std::vector<std::string>& paths) { _HandleDroppedPaths(paths, false); }),
       kCtrlTagIRFileBrowser);
+    const auto providerButtonStyle = style.WithShowLabel(false).WithDrawFrame(true)
+      .WithValueText(IText(9.f, PluginColors::NAM_THEMEFONTCOLOR, "Roboto-Regular"));
+    auto* searchTone3000 = pGraphics->AttachControl(new IVButtonControl(
+      tone3000ModelArea, [](IControl* caller) {
+        if (auto* panel = caller->GetUI()->GetControlWithTag(kCtrlTagTone3000Panel))
+          panel->As<Tone3000SelectionPanelControl>()->ShowArchitectureChoice();
+      }, "Search TONE3000", providerButtonStyle), kCtrlTagTone3000Search);
+    searchTone3000->SetDisabled(!mTone3000Registration.providerUsable);
+    searchTone3000->SetTooltip(mTone3000Registration.providerUsable ?
+      "Open TONE3000 hosted selection" : "TONE3000 integration is not configured in this build.");
+    auto* findTone3000Ir = pGraphics->AttachControl(new IVButtonControl(
+      tone3000IrArea, [](IControl*) {}, "Find IR on TONE3000", providerButtonStyle), kCtrlTagTone3000FindIR);
+    findTone3000Ir->SetDisabled(!mTone3000Registration.providerUsable);
+    findTone3000Ir->SetTooltip(mTone3000Registration.providerUsable ?
+      "Open TONE3000 hosted cabinet/IR selection" : "TONE3000 integration is not configured in this build.");
     pGraphics->AttachControl(
       new NAMSwitchControl(ngToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap));
     pGraphics->AttachControl(new NAMSwitchControl(eqToggleArea, kEQActive, "EQ", style, switchHandleBitmap));
@@ -406,6 +428,15 @@ Amphibia::Amphibia(const InstanceInfo& info)
                                                  std::move(providerActions)),
                       kCtrlTagSettingsBox)
       ->Hide(true);
+
+    Tone3000PanelActions tone3000PanelActions;
+    tone3000PanelActions.openSource = [](const std::string& url) {
+      // The panel accepts only the exact HTTPS source URL preserved by the provider task.
+      // Live provider construction remains disabled until registration and callback approval exist.
+      (void)url;
+    };
+    pGraphics->AttachControl(new Tone3000SelectionPanelControl(b, std::move(tone3000PanelActions)),
+                             kCtrlTagTone3000Panel)->Hide(true);
 
     const auto slimKnobArea = b.GetCentredInside(100.f, NAM_KNOB_HEIGHT + 24.f);
     pGraphics->AttachControl(new NAMSlimOverlayBackdropControl(b, hideSlimOverlay), kCtrlTagSlimOverlayBackdrop)

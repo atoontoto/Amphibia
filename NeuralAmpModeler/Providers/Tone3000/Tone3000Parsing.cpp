@@ -84,10 +84,12 @@ RemoteContentFormat ParseFormat(const std::string& value)
 RemoteGearRole ParseGear(const std::string& value)
 {
   if (value == "amp") return RemoteGearRole::AmpHead;
-  if (value == "full-rig") return RemoteGearRole::AmpAndCab;
+  if (value == "amp-cab" || value == "full-rig") return RemoteGearRole::AmpAndCab;
   if (value == "pedal") return RemoteGearRole::Pedal;
-  if (value == "ir") return RemoteGearRole::Cabinet;
+  if (value == "cab" || value == "ir") return RemoteGearRole::Cabinet;
+  if (value == "space") return RemoteGearRole::Space;
   if (value == "outboard") return RemoteGearRole::Outboard;
+  if (value == "experimental") return RemoteGearRole::Experimental;
   return RemoteGearRole::Unknown;
 }
 
@@ -253,21 +255,47 @@ ProviderResult<std::vector<RemoteModel>> ParseModelList(std::string_view body,
                                                         RemoteContentFormat expectedFormat,
                                                         const JsonLimits& limits)
 {
+  auto page = ParseModelPage(body, expectedFormat, limits);
+  if (!page) return Failure<std::vector<RemoteModel>>(page.error.code, page.error.userMessage.c_str());
+  return {std::move(page.value->models), {}};
+}
+
+ProviderResult<RemoteModelPage> ParseModelPage(std::string_view body,
+                                               RemoteContentFormat expectedFormat,
+                                               const JsonLimits& limits)
+{
   Json root;
   if (!ParseDocument(body, limits, root))
-    return Failure<std::vector<RemoteModel>>(ProviderErrorCode::InvalidJson, "Model list response was invalid");
+    return Failure<RemoteModelPage>(ProviderErrorCode::InvalidJson, "Model list response was invalid");
   const auto data = root.find("data");
   if (data == root.end() || !data->is_array() || data->size() > limits.maximumModels)
-    return Failure<std::vector<RemoteModel>>(ProviderErrorCode::InvalidResponse, "Model list exceeded limits");
-  std::vector<RemoteModel> models;
-  models.reserve(data->size());
+    return Failure<RemoteModelPage>(ProviderErrorCode::InvalidResponse, "Model list exceeded limits");
+  const auto pageValue = root.find("page");
+  const auto pageSizeValue = root.find("page_size");
+  const auto totalValue = root.find("total");
+  const auto totalPagesValue = root.find("total_pages");
+  if (pageValue == root.end() || pageSizeValue == root.end() || totalValue == root.end() ||
+      totalPagesValue == root.end() || !pageValue->is_number_unsigned() ||
+      !pageSizeValue->is_number_unsigned() || !totalValue->is_number_unsigned() ||
+      !totalPagesValue->is_number_unsigned())
+    return Failure<RemoteModelPage>(ProviderErrorCode::InvalidResponse, "Model pagination metadata was missing");
+  RemoteModelPage page;
+  page.page = pageValue->get<std::size_t>();
+  page.pageSize = pageSizeValue->get<std::size_t>();
+  page.total = totalValue->get<std::size_t>();
+  page.totalPages = totalPagesValue->get<std::size_t>();
+  if (page.page == 0 || page.pageSize == 0 || page.pageSize > 300 || page.totalPages > 16 ||
+      page.total > 4800 || (page.total == 0) != (page.totalPages == 0) ||
+      (page.totalPages != 0 && page.page > page.totalPages) || data->size() > page.pageSize)
+    return Failure<RemoteModelPage>(ProviderErrorCode::InvalidResponse, "Model pagination metadata was impossible");
+  page.models.reserve(data->size());
   for (const auto& item : *data)
   {
     auto parsed = ParseModelValue(item, expectedFormat);
-    if (!parsed) return Failure<std::vector<RemoteModel>>(parsed.error.code, parsed.error.userMessage.c_str());
-    models.push_back(std::move(*parsed.value));
+    if (!parsed) return Failure<RemoteModelPage>(parsed.error.code, parsed.error.userMessage.c_str());
+    page.models.push_back(std::move(*parsed.value));
   }
-  return {std::move(models), {}};
+  return {std::move(page), {}};
 }
 
 } // namespace amphibia::providers::tone3000

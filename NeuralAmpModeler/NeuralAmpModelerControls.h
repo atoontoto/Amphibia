@@ -7,6 +7,8 @@
 #include <unordered_map> // std::unordered_map
 #include "IControls.h"
 #include "IPlugPaths.h"
+#include "Providers/ProviderTypes.h"
+#include "Providers/Tone3000/Tone3000HostedSelectionCoordinator.h"
 
 #ifdef OS_WIN
   #include <Windows.h>
@@ -20,6 +22,221 @@
 using namespace iplug;
 using namespace igraphics;
 using NAMDropHandler = std::function<void(const std::vector<std::string>&)>;
+
+struct Tone3000PanelActions
+{
+  std::function<void(amphibia::providers::HostedSelectionKind)> begin;
+  std::function<void()> reopenBrowser;
+  std::function<void()> cancel;
+  std::function<void(std::size_t)> selectVariant;
+  std::function<void(bool)> download;
+  std::function<void(int)> adjacentDownloaded;
+  std::function<void()> removeLocalCopy;
+  std::function<void(const std::string&)> openSource;
+};
+
+class Tone3000SelectionPanelControl final : public IControl
+{
+public:
+  Tone3000SelectionPanelControl(const IRECT& bounds, Tone3000PanelActions actions)
+  : IControl(bounds), mActions(std::move(actions))
+  {
+    mIgnoreMouse = false;
+    SetTooltip("Hosted TONE3000 selection and exact variants");
+  }
+
+  void ShowArchitectureChoice()
+  {
+    mArchitectureChoice = true;
+    mSnapshot = {};
+    Hide(false);
+    SetDirty(false);
+  }
+
+  void Update(amphibia::providers::HostedSelectionSnapshot snapshot)
+  {
+    mArchitectureChoice = false;
+    mSnapshot = std::move(snapshot);
+    Hide(false);
+    SetDirty(false);
+  }
+
+  bool OnKeyDown(float, float, const IKeyPress& key) override
+  {
+    if (key.VK != kVK_ESCAPE) return false;
+    if (mActions.cancel) mActions.cancel();
+    Hide(true);
+    return true;
+  }
+
+  void OnTextEntryCompletion(const char* str, int) override
+  {
+    mFilter = str ? str : "";
+    if (mFilter.size() > 256) mFilter.resize(256);
+    mFirstVisible = 0;
+    SetDirty(false);
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    g.FillRect(IColor(205, 0, 0, 0), mRECT);
+    const auto panel = mRECT.GetPadded(-24.f);
+    g.FillRect(IColor(255, 23, 25, 29), panel);
+    g.DrawRect(PluginColors::NAM_THEMECOLOR, panel, nullptr, 1.5f);
+    const IText titleText(17.f, COLOR_WHITE, "Michroma-Regular", EAlign::Near);
+    const IText text(11.f, PluginColors::HELP_TEXT, "Roboto-Regular", EAlign::Near);
+    const IText smallText(9.f, PluginColors::HELP_TEXT, "Roboto-Regular", EAlign::Near);
+    auto content = panel.GetPadded(-14.f);
+    g.DrawText(titleText, "TONE3000", content.GetFromTop(23.f));
+    if (mArchitectureChoice)
+    {
+      g.DrawText(text, "Choose the hosted NAM architecture filter. TONE3000 cannot combine A2 with the default A1/custom view.",
+                 content.GetFromTop(42.f).GetVShifted(30.f));
+      DrawButton(g, ChoiceA1(content), "A1 / Custom");
+      DrawButton(g, ChoiceA2(content), "A2");
+      DrawButton(g, ChoiceCancel(content), "Cancel");
+      return;
+    }
+
+    const auto toneTitle = mSnapshot.tone ? Bounded(mSnapshot.tone->title, 70) : std::string("Hosted selection");
+    g.DrawText(titleText, toneTitle.c_str(), content.GetFromTop(23.f).GetVShifted(25.f));
+    std::string attribution;
+    if (mSnapshot.tone)
+    {
+      attribution = "by " + Bounded(mSnapshot.tone->creator.username, 32) + "  |  " +
+        FormatName(mSnapshot.tone->format) + "  |  " + GearName(mSnapshot.tone->gearRole);
+      if (mSnapshot.tone->licenseName) attribution += "  |  " + Bounded(*mSnapshot.tone->licenseName, 36);
+    }
+    g.DrawText(text, attribution.c_str(), content.GetFromTop(18.f).GetVShifted(51.f));
+    if (mSnapshot.tone && mSnapshot.tone->description)
+      g.DrawText(smallText, Bounded(*mSnapshot.tone->description, 150).c_str(), content.GetFromTop(25.f).GetVShifted(70.f));
+    g.DrawText(text, Bounded(mSnapshot.statusText, 120).c_str(), content.GetFromTop(20.f).GetVShifted(96.f));
+
+    if (mSnapshot.stage == amphibia::providers::HostedSelectionStage::WaitingForBrowser)
+    {
+      g.DrawText(text, "Complete the selection in your browser. This panel does not block audio.",
+                 content.GetFromTop(24.f).GetVShifted(123.f));
+      DrawButton(g, WaitingReopen(content), "Open Browser Again");
+      DrawButton(g, WaitingCancel(content), "Cancel");
+      return;
+    }
+
+    if (!mSnapshot.tone || mSnapshot.stage == amphibia::providers::HostedSelectionStage::Failed ||
+        mSnapshot.stage == amphibia::providers::HostedSelectionStage::Cancelled)
+    {
+      DrawButton(g, WaitingCancel(content), "Close");
+      return;
+    }
+
+    const auto filter = FilterRect(content);
+    g.DrawRect(PluginColors::NAM_THEMECOLOR.WithOpacity(0.55f), filter);
+    const auto filterLabel = mFilter.empty() ? "Filter variants in this pack" : mFilter;
+    g.DrawText(text, filterLabel.c_str(), filter.GetPadded(-5.f));
+    const auto visible = amphibia::providers::tone3000::Tone3000HostedSelectionCoordinator::FilteredVariantIndices(
+      mSnapshot, mFilter, mFirstVisible, kVisibleRows);
+    mVisible = visible;
+    for (std::size_t row = 0; row < visible.size(); ++row)
+    {
+      const auto index = visible[row];
+      const auto& variant = mSnapshot.variants[index];
+      const auto bounds = RowRect(content, row);
+      if (mSnapshot.selectedVariant && *mSnapshot.selectedVariant == index)
+        g.FillRect(PluginColors::NAM_THEMECOLOR.WithOpacity(0.18f), bounds);
+      g.DrawRect(PluginColors::NAM_THEMECOLOR.WithOpacity(0.25f), bounds);
+      std::string label = Bounded(variant.model.name, 58) + "  |  " + ArchitectureName(variant.model.architecture) +
+        "  |  " + FormatName(variant.model.format);
+      if (variant.model.declaredSize) label += "  |  " + std::to_string(*variant.model.declaredSize) + " bytes";
+      if (variant.downloaded) label += variant.active ? "  |  Active" : "  |  Downloaded";
+      if (variant.compatibility != amphibia::providers::VariantCompatibility::Compatible)
+        label += "  |  " + Bounded(variant.compatibilityMessage, 42);
+      g.DrawText(smallText, label.c_str(), bounds.GetPadded(-4.f));
+    }
+    DrawButton(g, ActionRect(content, 0), "Download and Audition");
+    DrawButton(g, ActionRect(content, 1), "Download Only");
+    DrawButton(g, ActionRect(content, 2), "Open on TONE3000");
+    DrawButton(g, ActionRect(content, 3), "Cancel");
+    DrawButton(g, SecondaryRect(content, 0), "Previous downloaded variant");
+    DrawButton(g, SecondaryRect(content, 1), "Next downloaded variant");
+    DrawButton(g, SecondaryRect(content, 2), "Remove Local Copy");
+  }
+
+  void OnMouseDown(float x, float y, const IMouseMod&) override
+  {
+    const auto content = mRECT.GetPadded(-38.f);
+    if (mArchitectureChoice)
+    {
+      if (ChoiceA1(content).Contains(x, y) && mActions.begin)
+        mActions.begin(amphibia::providers::HostedSelectionKind::NamA1AndCustom);
+      else if (ChoiceA2(content).Contains(x, y) && mActions.begin)
+        mActions.begin(amphibia::providers::HostedSelectionKind::NamA2);
+      else if (ChoiceCancel(content).Contains(x, y)) Hide(true);
+      return;
+    }
+    if (mSnapshot.stage == amphibia::providers::HostedSelectionStage::WaitingForBrowser)
+    {
+      if (WaitingReopen(content).Contains(x, y) && mActions.reopenBrowser) mActions.reopenBrowser();
+      else if (WaitingCancel(content).Contains(x, y) && mActions.cancel) mActions.cancel();
+      return;
+    }
+    if (FilterRect(content).Contains(x, y))
+    {
+      const IText edit(11.f, COLOR_BLACK, "Roboto-Regular", EAlign::Near);
+      GetUI()->CreateTextEntry(*this, edit, FilterRect(content), mFilter.c_str());
+      return;
+    }
+    for (std::size_t row = 0; row < mVisible.size(); ++row)
+      if (RowRect(content, row).Contains(x, y) && mActions.selectVariant)
+      { mActions.selectVariant(mVisible[row]); return; }
+    if (ActionRect(content, 0).Contains(x, y) && mActions.download) mActions.download(true);
+    else if (ActionRect(content, 1).Contains(x, y) && mActions.download) mActions.download(false);
+    else if (ActionRect(content, 2).Contains(x, y) && mActions.openSource && mSnapshot.tone && mSnapshot.tone->sourcePageUrl)
+      mActions.openSource(*mSnapshot.tone->sourcePageUrl);
+    else if (ActionRect(content, 3).Contains(x, y) && mActions.cancel) mActions.cancel();
+    else if (SecondaryRect(content, 0).Contains(x, y) && mActions.adjacentDownloaded) mActions.adjacentDownloaded(-1);
+    else if (SecondaryRect(content, 1).Contains(x, y) && mActions.adjacentDownloaded) mActions.adjacentDownloaded(1);
+    else if (SecondaryRect(content, 2).Contains(x, y) && mActions.removeLocalCopy) mActions.removeLocalCopy();
+  }
+
+private:
+  static constexpr std::size_t kVisibleRows = 6;
+  static std::string Bounded(const std::string& value, std::size_t maximum)
+  { return value.size() <= maximum ? value : value.substr(0, maximum - 3) + "..."; }
+  static const char* FormatName(amphibia::providers::RemoteContentFormat format)
+  { return format == amphibia::providers::RemoteContentFormat::Nam ? "NAM" :
+           format == amphibia::providers::RemoteContentFormat::ImpulseResponse ? "IR" : "Unknown format"; }
+  static const char* ArchitectureName(amphibia::providers::RemoteNamArchitecture architecture)
+  { return architecture == amphibia::providers::RemoteNamArchitecture::A1 ? "A1" :
+           architecture == amphibia::providers::RemoteNamArchitecture::A2 ? "A2" : "Unknown architecture"; }
+  static const char* GearName(amphibia::providers::RemoteGearRole gear)
+  { return gear == amphibia::providers::RemoteGearRole::AmpHead ? "Amp" :
+           gear == amphibia::providers::RemoteGearRole::AmpAndCab ? "Amp + cab" :
+           gear == amphibia::providers::RemoteGearRole::Cabinet ? "Cabinet" : "Other"; }
+  static void DrawButton(IGraphics& g, const IRECT& bounds, const char* label)
+  {
+    g.FillRect(PluginColors::NAM_THEMECOLOR.WithOpacity(0.12f), bounds);
+    g.DrawRect(PluginColors::NAM_THEMECOLOR.WithOpacity(0.65f), bounds);
+    g.DrawText(IText(9.f, PluginColors::HELP_TEXT, "Roboto-Regular"), label, bounds.GetPadded(-2.f));
+  }
+  static IRECT ChoiceA1(const IRECT& r) { return r.GetCentredInside(145.f, 30.f).GetHShifted(-82.f); }
+  static IRECT ChoiceA2(const IRECT& r) { return r.GetCentredInside(145.f, 30.f).GetHShifted(82.f); }
+  static IRECT ChoiceCancel(const IRECT& r) { return r.GetFromBottom(26.f).GetMidHPadded(70.f); }
+  static IRECT WaitingReopen(const IRECT& r) { return r.GetFromBottom(32.f).GetFromLeft(190.f); }
+  static IRECT WaitingCancel(const IRECT& r) { return r.GetFromBottom(32.f).GetFromRight(90.f); }
+  static IRECT FilterRect(const IRECT& r) { return IRECT(r.L, r.T + 121.f, r.R, r.T + 143.f); }
+  static IRECT RowRect(const IRECT& r, std::size_t row)
+  { return IRECT(r.L, r.T + 147.f + 21.f * row, r.R, r.T + 167.f + 21.f * row); }
+  static IRECT ActionRect(const IRECT& r, int index)
+  { return r.GetFromBottom(47.f).GetFromTop(21.f).GetGridCell(0, index, 1, 4).GetPadded(-2.f); }
+  static IRECT SecondaryRect(const IRECT& r, int index)
+  { return r.GetFromBottom(22.f).GetGridCell(0, index, 1, 3).GetPadded(-2.f); }
+
+  Tone3000PanelActions mActions;
+  amphibia::providers::HostedSelectionSnapshot mSnapshot;
+  std::vector<std::size_t> mVisible;
+  std::string mFilter;
+  std::size_t mFirstVisible{};
+  bool mArchitectureChoice{};
+};
 
 enum class NAMBrowserState
 {

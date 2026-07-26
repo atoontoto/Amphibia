@@ -55,8 +55,9 @@ OAuthController::~OAuthController() { Shutdown(); }
 
 ProviderError OAuthController::ValidateConfigurationAndRequest(const AuthorizationRequest& request) const
 {
-  if (!mConfiguration.HasPublishableConfiguration())
-    return Failure(ProviderErrorCode::Unconfigured, "TONE3000 provider registration is not configured");
+  const auto validation = ValidateTone3000Configuration(mConfiguration);
+  if (!validation.providerUsable)
+    return Failure(ProviderErrorCode::Unconfigured, validation.userMessage.c_str());
   const bool testHttp = mConfiguration.kind == Tone3000ConfigurationKind::Test && mConfiguration.allowTestHttp;
   if (!testHttp && !mConfiguration.authorizationEndpoint.starts_with("https://"))
     return Failure(ProviderErrorCode::InvalidRedirect, "Provider authorization must use HTTPS");
@@ -195,6 +196,7 @@ ProviderResult<ConsumedAuthorization> OAuthController::HandleCallback(const std:
   consumed.authorizationCode = std::move(*parsed.value->code);
   consumed.verifier = std::move(pending.verifier);
   consumed.selectedToneId = std::move(parsed.value->toneId);
+  consumed.cancelled = parsed.value->cancelled;
   result.value.emplace(std::move(consumed));
   return result;
 }

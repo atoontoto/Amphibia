@@ -176,20 +176,23 @@ network::RequestHandle Tone3000ApiClient::FetchTone(std::string accessToken, std
 }
 
 network::RequestHandle Tone3000ApiClient::FetchModels(std::string accessToken, std::string toneId,
-                                                       RemoteContentFormat format, ModelListCallback callback,
-                                                       std::size_t page, std::size_t pageSize)
+                                                       RemoteContentFormat format, ModelPageCallback callback,
+                                                       std::size_t page, std::size_t pageSize,
+                                                       std::optional<RemoteNamArchitecture> architecture)
 {
   page = (std::max)(std::size_t{1}, page); pageSize = (std::clamp)(pageSize, std::size_t{1}, std::size_t{300});
   auto state = mState; std::weak_ptr<State> weak = state;
-  const auto path = "/api/v1/models?tone_id=" + Encode(toneId) + "&page=" + std::to_string(page) +
-                    "&page_size=" + std::to_string(pageSize);
+  auto path = "/api/v1/models?tone_id=" + Encode(toneId) + "&page=" + std::to_string(page) +
+              "&page_size=" + std::to_string(pageSize);
+  if (architecture == RemoteNamArchitecture::A1) path += "&architecture=1";
+  else if (architecture == RemoteNamArchitecture::A2) path += "&architecture=2";
   return state->transport->Begin(ApiGet(state->configuration, path, std::move(accessToken)),
     [weak, format, callback = std::move(callback)](auto, auto result) mutable {
       const auto alive = weak.lock(); if (!alive || !alive->alive.load()) return;
-      if (!result) { callback(Failed<std::vector<RemoteModel>>(MapFailure(*result.failure))); return; }
+      if (!result) { callback(Failed<RemoteModelPage>(MapFailure(*result.failure))); return; }
       if (result.value->statusCode < 200 || result.value->statusCode >= 300)
-      { callback(Failed<std::vector<RemoteModel>>(StatusError(*result.value, false))); return; }
-      callback(ParseModelList(BodyText(*result.value), format));
+      { callback(Failed<RemoteModelPage>(StatusError(*result.value, false))); return; }
+      callback(ParseModelPage(BodyText(*result.value), format));
     });
 }
 

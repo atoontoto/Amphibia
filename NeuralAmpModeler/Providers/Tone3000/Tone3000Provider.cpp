@@ -1,6 +1,8 @@
 #include "Tone3000Provider.h"
 
+#include <functional>
 #include <mutex>
+#include <unordered_set>
 
 namespace amphibia::providers::tone3000 {
 namespace {
@@ -25,6 +27,7 @@ struct Tone3000Provider::State : public std::enable_shared_from_this<State>
   ProviderConnectionState connection{ProviderConnectionState::Unconfigured};
   ProviderTaskStatus status;
   AuthorizationCallback authorizationCallback;
+  std::string authorizationUrl;
   std::atomic<bool> alive{true};
   std::uint64_t nextTask{};
 
@@ -101,8 +104,8 @@ Tone3000Provider::Tone3000Provider(Tone3000Configuration configuration, platform
   mState->configuration = std::move(configuration); mState->browser = &browser; mState->credentialStore = &credentials;
   mState->credentialKey = {mState->configuration.credentialServiceNamespace,
                            mState->configuration.credentialAccount};
-  mState->connection = mState->configuration.HasPublishableConfiguration() ? ProviderConnectionState::Disconnected
-                                                                            : ProviderConnectionState::Unconfigured;
+  mState->connection = ValidateTone3000Configuration(mState->configuration).providerUsable ?
+    ProviderConnectionState::Disconnected : ProviderConnectionState::Unconfigured;
   mState->oauth = std::make_unique<OAuthController>(mState->configuration);
   mState->api = std::make_unique<Tone3000ApiClient>(mState->configuration, transport);
   mState->downloads = std::make_unique<Tone3000DownloadCoordinator>(transport, library);
@@ -123,12 +126,14 @@ ProviderTaskStatus Tone3000Provider::GetTaskStatus() const
 void Tone3000Provider::BeginAuthorization(const AuthorizationRequest& request, AuthorizationCallback callback)
 {
   auto state = mState;
-  if (!state->configuration.HasPublishableConfiguration())
-  { callback(Failed<AuthorizationResult>(ProviderErrorCode::Unconfigured, "TONE3000 provider registration is not configured")); return; }
+  const auto validation = ValidateTone3000Configuration(state->configuration);
+  if (!validation.providerUsable)
+  { callback(Failed<AuthorizationResult>(ProviderErrorCode::Unconfigured, validation.userMessage.c_str())); return; }
   auto start = state->oauth->Begin(request);
   if (!start) { callback(Failed<AuthorizationResult>(start.error.code, start.error.userMessage.c_str())); return; }
   {
     std::lock_guard lock(state->mutex); state->authorizationCallback = std::move(callback);
+    state->authorizationUrl = start.value->authorizationUrl;
     state->connection = ProviderConnectionState::Authorizing;
     state->status = {start.value->flowId, ProviderTaskState::LaunchingBrowser};
   }
@@ -150,9 +155,11 @@ void Tone3000Provider::CompleteAuthorizationCallback(const std::string& callback
     if (callback) callback(Failed<AuthorizationResult>(consumed.error.code, consumed.error.userMessage.c_str())); return;
   }
   { std::lock_guard lock(state->mutex); state->status.state = ProviderTaskState::ExchangingCode; }
-  auto selected = consumed.value->selectedToneId; std::weak_ptr<State> weak = state;
+  auto selected = consumed.value->selectedToneId;
+  const bool cancelled = consumed.value->cancelled;
+  std::weak_ptr<State> weak = state;
   state->api->ExchangeAuthorizationCode(std::move(consumed.value->authorizationCode), std::move(consumed.value->verifier),
-    [weak, selected = std::move(selected)](auto tokens) mutable {
+    [weak, selected = std::move(selected), cancelled](auto tokens) mutable {
       const auto state = weak.lock(); if (!state || !state->alive.load()) return;
       AuthorizationCallback callback; { std::lock_guard lock(state->mutex); callback = std::move(state->authorizationCallback); }
       if (!tokens || !tokens.value->refreshToken)
@@ -166,7 +173,7 @@ void Tone3000Provider::CompleteAuthorizationCallback(const std::string& callback
       if (!state->credentialStore->Store(state->credentialKey, credential))
       { if (callback) callback(Failed<AuthorizationResult>(ProviderErrorCode::StorageFailed, "TONE3000 credential could not be stored")); return; }
       { std::lock_guard lock(state->mutex); state->connection = ProviderConnectionState::Connected; state->status.state = ProviderTaskState::Completed; }
-      if (callback) callback({AuthorizationResult{std::move(selected), false}, {}});
+      if (callback) callback({AuthorizationResult{std::move(selected), cancelled}, {}});
     });
 }
 
@@ -180,7 +187,9 @@ void Tone3000Provider::CancelAuthorization()
 void Tone3000Provider::Disconnect()
 {
   CancelAuthorization(); mState->downloads->Cancel(); mState->credentialStore->Remove(mState->credentialKey);
-  std::lock_guard lock(mState->mutex); mState->connection = mState->configuration.HasPublishableConfiguration() ? ProviderConnectionState::Disconnected : ProviderConnectionState::Unconfigured;
+  std::lock_guard lock(mState->mutex);
+  mState->connection = ValidateTone3000Configuration(mState->configuration).providerUsable ?
+    ProviderConnectionState::Disconnected : ProviderConnectionState::Unconfigured;
 }
 
 void Tone3000Provider::FetchCurrentUser(ProviderUserCallback callback)
@@ -212,13 +221,112 @@ void Tone3000Provider::FetchTone(const std::string& toneId, ToneCallback callbac
   });
 }
 
-void Tone3000Provider::FetchModelsForTone(const std::string& toneId, ModelListCallback callback)
+void Tone3000Provider::FetchModelsForTone(const std::string& toneId, RemoteContentFormat format,
+                                          std::optional<RemoteNamArchitecture> architecture,
+                                          ModelListCallback callback)
 {
   std::weak_ptr<State> weak = mState;
-  mState->AccessToken([weak, toneId, callback = std::move(callback)](auto token) mutable {
+  mState->AccessToken([weak, toneId, format, architecture, callback = std::move(callback)](auto token) mutable {
     const auto state = weak.lock(); if (!state || !state->alive.load()) return;
     if (!token) { callback(Failed<std::vector<RemoteModel>>(token.error.code, token.error.userMessage.c_str())); return; }
-    state->api->FetchModels(std::move(*token.value), toneId, RemoteContentFormat::Nam, std::move(callback));
+    struct Paging
+    {
+      std::string token;
+      std::vector<RemoteModel> models;
+      std::unordered_set<std::string> modelIds;
+      std::unordered_set<std::string> pageSignatures;
+      std::size_t nextPage{1};
+      std::optional<std::size_t> total;
+      std::optional<std::size_t> totalPages;
+    };
+    auto paging = std::make_shared<Paging>();
+    paging->token = std::move(*token.value);
+    auto next = std::make_shared<std::function<void()>>();
+    *next = [weak, paging, next, toneId, format, architecture, callback = std::move(callback)]() mutable {
+      const auto state = weak.lock();
+      if (!state || !state->alive.load()) { *next = {}; return; }
+      const auto requestedPage = paging->nextPage;
+      state->api->FetchModels(paging->token, toneId, format,
+        [weak, paging, next, requestedPage, callback](ProviderResult<RemoteModelPage> page) mutable {
+          const auto state = weak.lock();
+          if (!state || !state->alive.load()) { *next = {}; return; }
+          if (!page)
+          {
+            callback(Failed<std::vector<RemoteModel>>(page.error.code, page.error.userMessage.c_str()));
+            *next = {};
+            return;
+          }
+          if (page.value->page != requestedPage ||
+              (paging->total && (*paging->total != page.value->total ||
+                                 *paging->totalPages != page.value->totalPages)))
+          {
+            callback(Failed<std::vector<RemoteModel>>(ProviderErrorCode::InvalidResponse,
+                                                       "TONE3000 pagination metadata changed during listing"));
+            *next = {};
+            return;
+          }
+          paging->total = page.value->total;
+          paging->totalPages = page.value->totalPages;
+          std::string signature;
+          for (auto& model : page.value->models)
+          {
+            signature += model.providerModelId;
+            signature.push_back('\n');
+            if (!paging->modelIds.insert(model.providerModelId).second)
+            {
+              callback(Failed<std::vector<RemoteModel>>(ProviderErrorCode::InvalidResponse,
+                                                         "TONE3000 returned duplicate model IDs"));
+              *next = {};
+              return;
+            }
+            paging->models.push_back(std::move(model));
+          }
+          if (!paging->pageSignatures.insert(signature).second && !signature.empty())
+          {
+            callback(Failed<std::vector<RemoteModel>>(ProviderErrorCode::InvalidResponse,
+                                                       "TONE3000 repeated a model page"));
+            *next = {};
+            return;
+          }
+          if (paging->models.size() > 4800 || paging->models.size() > page.value->total)
+          {
+            callback(Failed<std::vector<RemoteModel>>(ProviderErrorCode::ContentTooLarge,
+                                                       "TONE3000 returned too many variants"));
+            *next = {};
+            return;
+          }
+          if (requestedPage >= page.value->totalPages)
+          {
+            if (paging->models.size() != page.value->total)
+              callback(Failed<std::vector<RemoteModel>>(ProviderErrorCode::InvalidResponse,
+                                                         "TONE3000 model total did not match its pages"));
+            else callback({std::move(paging->models), {}});
+            *next = {};
+            return;
+          }
+          if (page.value->models.empty() || requestedPage >= 16)
+          {
+            callback(Failed<std::vector<RemoteModel>>(ProviderErrorCode::InvalidResponse,
+                                                       "TONE3000 pagination ended unexpectedly"));
+            *next = {};
+            return;
+          }
+          paging->nextPage = requestedPage + 1;
+          (*next)();
+        }, requestedPage, 300, architecture);
+    };
+    (*next)();
+  });
+}
+
+void Tone3000Provider::FetchExactModel(const std::string& modelId, RemoteContentFormat format,
+                                       ModelCallback callback)
+{
+  std::weak_ptr<State> weak = mState;
+  mState->AccessToken([weak, modelId, format, callback = std::move(callback)](auto token) mutable {
+    const auto state = weak.lock(); if (!state || !state->alive.load()) return;
+    if (!token) { callback(Failed<RemoteModel>(token.error.code, token.error.userMessage.c_str())); return; }
+    state->api->FetchModel(std::move(*token.value), modelId, format, std::move(callback));
   });
 }
 
@@ -240,6 +348,26 @@ void Tone3000Provider::Shutdown()
 {
   if (!mState || !mState->alive.exchange(false)) return;
   mState->oauth->Shutdown(); mState->downloads->Shutdown(); mState->api->Shutdown();
+}
+
+ProviderError Tone3000Provider::ReopenAuthorizationBrowser()
+{
+  if (!mState->oauth->IsPending())
+    return {ProviderErrorCode::InvalidResponse, "No TONE3000 browser selection is active"};
+  std::string url;
+  {
+    std::lock_guard lock(mState->mutex);
+    if (mState->authorizationUrl.empty())
+      return {ProviderErrorCode::InvalidResponse, "No TONE3000 browser selection is active"};
+    url = mState->authorizationUrl;
+  }
+  return mState->browser->OpenExplicit(url);
+}
+
+void Tone3000Provider::CancelCurrentOperation()
+{
+  CancelAuthorization();
+  mState->downloads->Cancel();
 }
 
 } // namespace amphibia::providers::tone3000

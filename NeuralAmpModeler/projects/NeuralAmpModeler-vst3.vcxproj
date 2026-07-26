@@ -435,10 +435,14 @@
     <ClCompile Include="..\Providers\Tone3000\Pkce.cpp" />
     <ClCompile Include="..\Providers\Tone3000\OAuthCallback.cpp" />
     <ClCompile Include="..\Providers\Tone3000\OAuthController.cpp" />
+    <ClCompile Include="..\Providers\Tone3000\Tone3000Configuration.cpp" />
     <ClCompile Include="..\Providers\Tone3000\Tone3000Parsing.cpp" />
     <ClCompile Include="..\Providers\Tone3000\Tone3000ApiClient.cpp" />
     <ClCompile Include="..\Providers\Tone3000\Tone3000DownloadCoordinator.cpp" />
     <ClCompile Include="..\Providers\Tone3000\Tone3000Provider.cpp" />
+    <ClCompile Include="..\Providers\Tone3000\Tone3000HostedSelectionCoordinator.cpp" />
+    <ClCompile Include="..\Providers\Tone3000\HostedSelectionLease.cpp" />
+    <ClCompile Include="..\Platform\UnavailableHostedSelectionCallbackReceiver.cpp" />
     <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_crypt.c" />
     <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_os.c" />
     <ClCompile Include="..\\..\\ThirdParty\\minizip-ng\\mz_os_win32.c" />

@@ -32,5 +32,8 @@ ProviderResult<RemoteModel> ParseModel(std::string_view body, RemoteContentForma
 ProviderResult<std::vector<RemoteModel>> ParseModelList(
   std::string_view body, RemoteContentFormat expectedFormat,
   const JsonLimits& limits = JsonLimits{});
+ProviderResult<RemoteModelPage> ParseModelPage(
+  std::string_view body, RemoteContentFormat expectedFormat,
+  const JsonLimits& limits = JsonLimits{});
 
 } // namespace amphibia::providers::tone3000

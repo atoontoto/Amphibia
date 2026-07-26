@@ -10,8 +10,6 @@
 namespace amphibia::providers::tone3000 {
 
 using TokenCallback = std::function<void(ProviderResult<credentials::OAuthTokenSet>)>;
-using ModelCallback = std::function<void(ProviderResult<RemoteModel>)>;
-
 class Tone3000ApiClient final
 {
 public:
@@ -27,8 +25,9 @@ public:
   network::RequestHandle FetchCurrentUser(std::string accessToken, ProviderUserCallback callback);
   network::RequestHandle FetchTone(std::string accessToken, std::string toneId, ToneCallback callback);
   network::RequestHandle FetchModels(std::string accessToken, std::string toneId,
-                                     RemoteContentFormat format, ModelListCallback callback,
-                                     std::size_t page = 1, std::size_t pageSize = 300);
+                                     RemoteContentFormat format, ModelPageCallback callback,
+                                     std::size_t page = 1, std::size_t pageSize = 300,
+                                     std::optional<RemoteNamArchitecture> architecture = std::nullopt);
   network::RequestHandle FetchModel(std::string accessToken, std::string modelId,
                                     RemoteContentFormat format, ModelCallback callback);
   void Shutdown();

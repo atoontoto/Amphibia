@@ -24,6 +24,8 @@ struct VerificationIssue
   std::string message;
 };
 
+enum class ProviderCopyRemoval { NotFound, ActiveProtected, AssociationRemoved, ObjectRemoved };
+
 struct VerificationReport
 {
   std::size_t checkedObjects{};
@@ -56,6 +58,13 @@ public:
                                   ProviderAssociation association,
                                   const CancelCheck& cancelled = {},
                                   const ProgressCallback& progress = {});
+  std::optional<ProviderAssociation> FindProviderAssociation(const std::string& providerKind,
+                                                             const std::string& toneId,
+                                                             const std::string& modelId) const;
+  ProviderCopyRemoval RemoveProviderCopy(const std::string& providerKind,
+                                         const std::string& toneId,
+                                         const std::string& modelId,
+                                         const std::unordered_set<std::string>& protectedHashes = {});
 
   void MarkUsed(const ContentHash& hash);
   void RemovePack(const std::string& packKey);

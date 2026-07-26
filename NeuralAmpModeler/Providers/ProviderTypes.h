@@ -53,6 +53,15 @@ struct RemoteModel
   std::optional<std::string> downloadUrl;
 };
 
+struct RemoteModelPage
+{
+  std::vector<RemoteModel> models;
+  std::size_t page{};
+  std::size_t pageSize{};
+  std::size_t total{};
+  std::size_t totalPages{};
+};
+
 struct ProviderUser
 {
   RemoteProviderKind provider{RemoteProviderKind::Tone3000};
@@ -141,6 +150,32 @@ enum class ProviderTaskState
   Superseded
 };
 
+enum class HostedSelectionKind { NamA1AndCustom, NamA2, ImpulseResponse };
+enum class VariantCompatibility
+{
+  Compatible,
+  WrongTone,
+  WrongFormat,
+  UnsupportedArchitecture,
+  InvalidIdentity
+};
+enum class HostedSelectionStage
+{
+  Idle,
+  WaitingForBrowser,
+  ExchangingAuthorization,
+  FetchingTone,
+  FetchingVariants,
+  Ready,
+  RefreshingVariant,
+  Downloading,
+  Downloaded,
+  Preparing,
+  Active,
+  Failed,
+  Cancelled
+};
+
 struct ProviderTaskStatus
 {
   std::uint64_t taskId{};
@@ -171,6 +206,29 @@ struct DownloadResult
   std::string managedObjectSha256;
 };
 
+struct HostedVariant
+{
+  RemoteModel model;
+  VariantCompatibility compatibility{VariantCompatibility::InvalidIdentity};
+  std::string compatibilityMessage;
+  std::optional<std::string> managedObjectSha256;
+  bool downloaded{};
+  bool active{};
+};
+
+struct HostedSelectionSnapshot
+{
+  std::uint64_t taskId{};
+  HostedSelectionKind kind{HostedSelectionKind::NamA1AndCustom};
+  HostedSelectionStage stage{HostedSelectionStage::Idle};
+  std::optional<RemoteTone> tone;
+  std::vector<HostedVariant> variants;
+  std::optional<std::size_t> selectedVariant;
+  std::optional<std::chrono::system_clock::time_point> expiresAt;
+  std::optional<ProviderError> error;
+  std::string statusText;
+};
+
 template <typename T> struct ProviderResult
 {
   std::optional<T> value;
@@ -182,6 +240,8 @@ using AuthorizationCallback = std::function<void(ProviderResult<AuthorizationRes
 using ProviderUserCallback = std::function<void(ProviderResult<ProviderUser>)>;
 using ToneCallback = std::function<void(ProviderResult<RemoteTone>)>;
 using ModelListCallback = std::function<void(ProviderResult<std::vector<RemoteModel>>) >;
+using ModelCallback = std::function<void(ProviderResult<RemoteModel>)>;
+using ModelPageCallback = std::function<void(ProviderResult<RemoteModelPage>)>;
 using DownloadCallback = std::function<void(ProviderResult<DownloadResult>)>;
 
 } // namespace amphibia::providers

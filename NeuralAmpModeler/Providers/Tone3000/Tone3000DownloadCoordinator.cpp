@@ -151,11 +151,21 @@ void Tone3000DownloadCoordinator::Begin(RemoteTone tone, RemoteModel model, std:
         { std::lock_guard lock(state->mutex); state->status.state = ProviderTaskState::Completed; state->status.completedBytes = completed.bytes; }
         callback({std::move(completed), {}});
       }
+      catch (const std::exception& error)
+      {
+        state->library->DiscardProviderDownloadStagingPath(part);
+        { std::lock_guard lock(state->mutex); state->status.state = ProviderTaskState::Failed; state->status.error = ProviderErrorCode::IntegrityFailed; }
+        auto failure = Failed<DownloadResult>(ProviderErrorCode::IntegrityFailed,
+                                              "Downloaded model failed validation or promotion");
+        failure.error.redactedDiagnostic = error.what();
+        callback(std::move(failure));
+      }
       catch (...)
       {
         state->library->DiscardProviderDownloadStagingPath(part);
         { std::lock_guard lock(state->mutex); state->status.state = ProviderTaskState::Failed; state->status.error = ProviderErrorCode::IntegrityFailed; }
-        callback(Failed<DownloadResult>(ProviderErrorCode::IntegrityFailed, "Downloaded model failed validation or promotion"));
+        callback(Failed<DownloadResult>(ProviderErrorCode::IntegrityFailed,
+                                        "Downloaded model failed validation or promotion"));
       }
     });
   { std::lock_guard lock(state->mutex); if (state->generation == generation) state->request = handle; }

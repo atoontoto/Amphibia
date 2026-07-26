@@ -1,10 +1,20 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 namespace amphibia::providers::tone3000 {
 
 enum class Tone3000ConfigurationKind { Unconfigured, Development, Production, Test };
+enum class Tone3000RegistrationState { Unconfigured, DevelopmentConfigured, ProductionConfigured };
+enum class Tone3000CallbackStrategy
+{
+  Unavailable,
+  DevelopmentMock,
+  FixedLoopback,
+  RandomLoopback,
+  CustomUri
+};
 
 struct Tone3000Configuration
 {
@@ -18,7 +28,13 @@ struct Tone3000Configuration
   std::string knownTonePrompt;
   std::string credentialServiceNamespace{"org.amphibiaaudio.Amphibia.TONE3000"};
   std::string credentialAccount{"oauth-v1"};
+  std::string approvedApplicationName;
+  std::string privacyUrl;
+  std::string repositoryUrl;
+  std::string supportContact;
   Tone3000ConfigurationKind kind{Tone3000ConfigurationKind::Unconfigured};
+  Tone3000CallbackStrategy callbackStrategy{Tone3000CallbackStrategy::Unavailable};
+  bool approvedBrandAssets{};
   bool allowTestHttp{};
 
   bool HasPublishableConfiguration() const noexcept
@@ -28,12 +44,19 @@ struct Tone3000Configuration
            !credentialAccount.empty();
   }
 
-  bool IsProductionUsable() const noexcept
-  {
-    return kind == Tone3000ConfigurationKind::Production && HasPublishableConfiguration() &&
-           knownTonePrompt.empty();
-  }
+  bool IsProductionUsable() const noexcept;
 };
+
+struct Tone3000ConfigurationValidation
+{
+  Tone3000RegistrationState state{Tone3000RegistrationState::Unconfigured};
+  bool valid{};
+  bool providerUsable{};
+  std::string userMessage;
+};
+
+Tone3000ConfigurationValidation ValidateTone3000Configuration(const Tone3000Configuration&) noexcept;
+Tone3000Configuration ConfiguredTone3000();
 
 inline Tone3000Configuration UnconfiguredTone3000()
 {

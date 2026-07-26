@@ -418,6 +418,81 @@ ContentHash ManagedLibrary::PromoteProviderFile(const std::filesystem::path& ver
   return promoted.object.hash;
 }
 
+std::optional<ProviderAssociation> ManagedLibrary::FindProviderAssociation(
+  const std::string& providerKind, const std::string& toneId, const std::string& modelId) const
+{
+  std::lock_guard<std::mutex> guard(mMutex);
+  const auto found = std::find_if(mSnapshot.providerAssociations.begin(), mSnapshot.providerAssociations.end(),
+    [&](const ProviderAssociation& association) {
+      return association.providerKind == providerKind && association.providerToneId == toneId &&
+             association.providerModelId == modelId;
+    });
+  return found == mSnapshot.providerAssociations.end() ? std::nullopt : std::optional<ProviderAssociation>(*found);
+}
+
+ProviderCopyRemoval ManagedLibrary::RemoveProviderCopy(
+  const std::string& providerKind, const std::string& toneId, const std::string& modelId,
+  const std::unordered_set<std::string>& protectedHashes)
+{
+  std::lock_guard<std::mutex> guard(mMutex);
+  ProcessWriteLock processLock(mRoot / "metadata");
+  LoadLocked();
+  const auto found = std::find_if(mSnapshot.providerAssociations.begin(), mSnapshot.providerAssociations.end(),
+    [&](const ProviderAssociation& association) {
+      return association.providerKind == providerKind && association.providerToneId == toneId &&
+             association.providerModelId == modelId;
+    });
+  if (found == mSnapshot.providerAssociations.end()) return ProviderCopyRemoval::NotFound;
+  const auto hash = found->objectHash;
+  const auto hashText = ToHex(hash);
+  if (protectedHashes.contains(hashText)) return ProviderCopyRemoval::ActiveProtected;
+
+  auto next = mSnapshot;
+  std::erase_if(next.providerAssociations, [&](const ProviderAssociation& association) {
+    return association.providerKind == providerKind && association.providerToneId == toneId &&
+           association.providerModelId == modelId;
+  });
+  const auto packKey = "provider:" + providerKind + ":tone:" + toneId;
+  const auto samePackObjectRemains = std::any_of(next.providerAssociations.begin(), next.providerAssociations.end(),
+    [&](const ProviderAssociation& association) {
+      return association.providerKind == providerKind && association.providerToneId == toneId &&
+             association.objectHash == hash;
+    });
+  if (!samePackObjectRemains)
+    std::erase_if(next.packEntries, [&](const PackEntryRecord& entry) {
+      return entry.packKey == packKey && entry.objectHash == hash;
+    });
+  if (std::none_of(next.packEntries.begin(), next.packEntries.end(),
+                   [&](const PackEntryRecord& entry) { return entry.packKey == packKey; }))
+    next.packs.erase(packKey);
+
+  const auto shared = std::any_of(next.providerAssociations.begin(), next.providerAssociations.end(),
+    [&](const ProviderAssociation& association) { return association.objectHash == hash; }) ||
+    std::any_of(next.packEntries.begin(), next.packEntries.end(),
+      [&](const PackEntryRecord& entry) { return entry.objectHash == hash; });
+  std::optional<std::filesystem::path> objectPath;
+  if (!shared)
+  {
+    const auto object = next.objects.find(hashText);
+    if (object != next.objects.end() && !object->second.pinned)
+    {
+      const auto candidate = mRoot / std::filesystem::u8path(object->second.libraryRelativePath);
+      if (IsPathWithin(mRoot, candidate)) objectPath = candidate;
+      next.objects.erase(object);
+    }
+  }
+  ++next.revision;
+  mIndex.Commit(next);
+  mSnapshot = std::move(next);
+  if (objectPath)
+  {
+    std::error_code error;
+    std::filesystem::remove(*objectPath, error);
+    return ProviderCopyRemoval::ObjectRemoved;
+  }
+  return ProviderCopyRemoval::AssociationRemoved;
+}
+
 ManagedLibrary::PromotedObject ManagedLibrary::Promote(const std::filesystem::path& source,
                                                        const std::string& displayName,
                                                        LocalContentSource sourceKind,

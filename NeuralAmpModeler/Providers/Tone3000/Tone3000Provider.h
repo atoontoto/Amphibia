@@ -25,12 +25,14 @@ public:
   void Disconnect() override;
   void FetchCurrentUser(ProviderUserCallback) override;
   void FetchTone(const std::string& toneId, ToneCallback) override;
-  void FetchModelsForTone(const std::string& toneId, ModelListCallback) override;
+  void FetchModelsForTone(const std::string& toneId, RemoteContentFormat,
+                          std::optional<RemoteNamArchitecture>, ModelListCallback) override;
+  void FetchExactModel(const std::string& modelId, RemoteContentFormat, ModelCallback) override;
   void BeginModelDownload(const RemoteModel&, const DownloadDestination&, DownloadCallback) override;
+  void CompleteAuthorizationCallback(const std::string& callbackUri) override;
+  ProviderError ReopenAuthorizationBrowser() override;
+  void CancelCurrentOperation() override;
   void Shutdown() override;
-
-  // Called only by an approved platform callback strategy or deterministic test harness.
-  void CompleteAuthorizationCallback(const std::string& callbackUri);
 
 private:
   struct State;

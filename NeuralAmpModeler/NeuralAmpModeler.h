@@ -17,6 +17,7 @@
 #include "Library/ImportWorker.h"
 #include "Library/ContentHash.h"
 #include "ToneStack.h"
+#include "Providers/Tone3000/Tone3000Configuration.h"
 
 #include "IPlug_include_in_plug_hdr.h"
 #include "ISender.h"
@@ -74,6 +75,9 @@ enum ECtrlTags
   kCtrlTagSlimmableIcon,
   kCtrlTagSlimOverlayBackdrop,
   kCtrlTagSlimKnob,
+  kCtrlTagTone3000Search,
+  kCtrlTagTone3000FindIR,
+  kCtrlTagTone3000Panel,
   kNumCtrlTags
 };
 
@@ -382,6 +386,10 @@ private:
   std::optional<amphibia::library::ContentHash> mPendingManagedIR;
   std::optional<amphibia::library::ContentHash> mActiveManagedModel;
   std::optional<amphibia::library::ContentHash> mActiveManagedIR;
+  amphibia::providers::tone3000::Tone3000Configuration mTone3000Configuration{
+    amphibia::providers::tone3000::ConfiguredTone3000()};
+  amphibia::providers::tone3000::Tone3000ConfigurationValidation mTone3000Registration{
+    amphibia::providers::tone3000::ValidateTone3000Configuration(mTone3000Configuration)};
 
   // Declared last so their threads are stopped first during member teardown.
   amphibia::loading::AsyncDSPWorker<ResamplingNAM, ModelLoadMetadata> mModelLoader;
