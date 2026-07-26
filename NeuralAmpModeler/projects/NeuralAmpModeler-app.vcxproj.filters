@@ -125,6 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\NeuralAmpModeler.h" />
+    <ClInclude Include="..\ConfigurationServices.h" />
     <ClInclude Include="..\SharedSettings.h" />
     <ClInclude Include="..\resources\resource.h">
       <Filter>resources</Filter>

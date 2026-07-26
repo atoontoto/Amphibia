@@ -30,6 +30,7 @@ std::uint64_t ImportWorker::Scan(std::vector<std::filesystem::path> sources)
   mPending = Work{WorkKind::Scan, taskId, std::move(sources), {}};
   mPlan.reset();
   mSummary.reset();
+  mVerification.reset();
   mProgress = {taskId, ImportTaskState::Scanning};
   mCondition.notify_one();
   return taskId;
@@ -43,6 +44,7 @@ std::uint64_t ImportWorker::ImportSelected(const std::vector<std::size_t>& selec
   mCurrentTaskId = taskId;
   mPending = Work{WorkKind::Import, taskId, {}, selectedIndices};
   mSummary.reset();
+  mVerification.reset();
   mProgress = {taskId, ImportTaskState::Extracting, 0, mPlan->declaredUncompressedBytes, 0,
                selectedIndices.size()};
   mCondition.notify_one();

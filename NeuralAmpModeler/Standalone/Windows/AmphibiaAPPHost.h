@@ -29,6 +29,7 @@
  */
 
 #include <cstdlib>
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <limits>
@@ -44,6 +45,7 @@
 
 #include "../AudioConfiguration.h"
 #include "../SettingsStore.h"
+#include "../../ConfigurationServices.h"
 
 #include "config.h"
 
@@ -236,6 +238,11 @@ public:
   std::string AudioDiagnostics() const;
   amphibia::setup::SettingsStore& SetupSettings() { return *mSetupSettings; }
   bool HasSetupSettings() const { return mSetupSettings != nullptr; }
+  ManagedLibraryConfigurationStatus ManagedLibraryConfiguration() const;
+  void VerifyManagedLibrary();
+  void ClearManagedLibraryStaging();
+  void ScanManagedLibrarySources(std::vector<std::filesystem::path> sources);
+  void CancelManagedLibraryTask();
 private:
   std::unique_ptr<IPlugAPP> mIPlug = nullptr;
   std::unique_ptr<RtAudio> mDAC = nullptr;

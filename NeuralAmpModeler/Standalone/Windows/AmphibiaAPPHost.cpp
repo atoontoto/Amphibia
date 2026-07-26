@@ -945,6 +945,31 @@ std::string IPlugAPPHost::AudioDiagnostics() const
   return stream.str();
 }
 
+ManagedLibraryConfigurationStatus IPlugAPPHost::ManagedLibraryConfiguration() const
+{
+  return amphibia::configuration::ManagedLibrary(*mIPlug);
+}
+
+void IPlugAPPHost::VerifyManagedLibrary()
+{
+  amphibia::configuration::VerifyManagedLibrary(*mIPlug);
+}
+
+void IPlugAPPHost::ClearManagedLibraryStaging()
+{
+  amphibia::configuration::ClearManagedLibraryStaging(*mIPlug);
+}
+
+void IPlugAPPHost::ScanManagedLibrarySources(std::vector<std::filesystem::path> sources)
+{
+  amphibia::configuration::ScanManagedLibrarySources(*mIPlug, std::move(sources));
+}
+
+void IPlugAPPHost::CancelManagedLibraryTask()
+{
+  amphibia::configuration::CancelManagedLibraryTask(*mIPlug);
+}
+
 // static
 void IPlugAPPHost::MIDICallback(double deltatime, std::vector<uint8_t>* pMsg, void* pUserData)
 {

@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <utility>
 
 #include "Colors.h"
@@ -27,6 +28,34 @@ using namespace iplug;
 using namespace igraphics;
 
 const double kDCBlockerFrequency = 5.0;
+
+namespace
+{
+bool IsLibraryTaskActive(amphibia::library::ImportTaskState state)
+{
+  using State = amphibia::library::ImportTaskState;
+  return state != State::Idle && state != State::Completed && state != State::Failed && state != State::Cancelled;
+}
+
+const char* LibraryTaskName(amphibia::library::ImportTaskState state)
+{
+  using State = amphibia::library::ImportTaskState;
+  switch (state)
+  {
+    case State::Idle: return "Idle";
+    case State::Scanning: return "Scanning";
+    case State::AwaitingSelection: return "Waiting for import review";
+    case State::Extracting: return "Extracting";
+    case State::Validating: return "Validating";
+    case State::Hashing: return "Hashing";
+    case State::Committing: return "Committing";
+    case State::Completed: return "Completed";
+    case State::Failed: return "Failed";
+    case State::Cancelled: return "Cancelled";
+  }
+  return "Unknown";
+}
+} // namespace
 
 int _GetStateString(const iplug::IByteChunk& chunk, int startPos, WDL_String& value);
 
@@ -227,49 +256,14 @@ Amphibia::Amphibia(const InstanceInfo& info)
     };
 
     LibraryUIActions libraryActions;
-    libraryActions.information = [this] {
-      if (!mLibrary) return std::string("Managed library unavailable");
-      try
-      {
-        const auto stats = mLibrary->Statistics();
-        auto snapshot = mLibrary->Snapshot();
-        std::vector<amphibia::library::LibraryObject> recent;
-        recent.reserve(snapshot.objects.size());
-        for (const auto& [hash, object] : snapshot.objects) recent.push_back(object);
-        std::sort(recent.begin(), recent.end(), [](const auto& left, const auto& right) {
-          const auto leftTime = std::max(left.lastUsedAt, left.importedAt);
-          const auto rightTime = std::max(right.lastUsedAt, right.importedAt);
-          return leftTime > rightTime;
-        });
-        std::string text = amphibia::library::PathToUtf8(mLibrary->Root()) + "\n" +
-               std::to_string(stats.managedBytes) + " bytes | " +
-               std::to_string(stats.namObjects) + " NAM | " + std::to_string(stats.irObjects) + " IR | " +
-               std::to_string(stats.packs) + " packs";
-        if (!recent.empty())
-        {
-          text += "\nRecent: ";
-          const auto count = std::min<std::size_t>(3, recent.size());
-          for (std::size_t index = 0; index < count; ++index)
-          {
-            if (index != 0) text += " | ";
-            text += recent[index].originalDisplayName;
-          }
-        }
-        return text;
-      }
-      catch (const std::exception& exception) { return std::string("Library error: ") + exception.what(); }
-    };
+    libraryActions.information = [this] { return ManagedLibraryConfiguration().information; };
     libraryActions.openFolder = [this](IControl* caller) {
       if (!mLibrary) return;
       WDL_String path(amphibia::library::PathToUtf8(mLibrary->Root()).c_str());
       caller->GetUI()->RevealPathInExplorerOrFinder(path, false);
     };
-    libraryActions.verify = [this](IControl*) {
-      if (mImportWorker) { mImportTarget = ImportTarget::None; mCompletedImportTask = 0; mImportWorker->VerifyLibrary(); }
-    };
-    libraryActions.clearStaging = [this](IControl*) {
-      if (mImportWorker) { mImportTarget = ImportTarget::None; mCompletedImportTask = 0; mImportWorker->ClearStaging(); }
-    };
+    libraryActions.verify = [this](IControl*) { VerifyManagedLibrary(); };
+    libraryActions.clearStaging = [this](IControl*) { ClearManagedLibraryStaging(); };
     libraryActions.removeUnused = [this](IControl*) {
       if (!mImportWorker) return;
       std::vector<std::string> protectedHashes;
@@ -283,11 +277,7 @@ Amphibia::Amphibia(const InstanceInfo& info)
       mImportWorker->RemoveUnused(std::move(protectedHashes));
     };
     const auto startManagedImport = [this](std::vector<std::filesystem::path> sources) {
-      if (!mImportWorker || sources.empty()) return;
-      mImportTarget = ImportTarget::None;
-      mReviewedImportTask = 0;
-      mCompletedImportTask = 0;
-      mImportWorker->Scan(std::move(sources));
+      ScanManagedLibrarySources(std::move(sources));
     };
     libraryActions.importFiles = [startManagedImport](IControl* caller) {
       WDL_String file, directory;
@@ -766,6 +756,108 @@ int Amphibia::UnserializeState(const IByteChunk& chunk, int startPos)
     return -1;
   }
 }
+
+ManagedLibraryConfigurationStatus Amphibia::ManagedLibraryConfiguration() const
+{
+  ManagedLibraryConfigurationStatus result;
+  if (!mLibrary)
+  {
+    result.information = "Managed library unavailable; referenced local files remain available.";
+    return result;
+  }
+
+  try
+  {
+    const auto snapshot = mLibrary->Snapshot();
+    const auto statistics = mLibrary->Statistics();
+    const auto progress = mImportWorker ? mImportWorker->Progress() : amphibia::library::ImportProgress{};
+    const auto verification = mImportWorker ? mImportWorker->Verification() : std::nullopt;
+    result.available = true;
+    result.rootPath = amphibia::library::PathToUtf8(mLibrary->Root());
+    result.taskActive = IsLibraryTaskActive(progress.state);
+    result.verificationComplete = verification.has_value();
+    result.healthy = verification && verification->issues.empty() && verification->orphanedFiles == 0;
+
+    std::ostringstream stream;
+    stream << "Path: " << result.rootPath << "\nSchema: " << snapshot.schemaVersion
+           << " | Objects: " << snapshot.objects.size() << " (" << statistics.namObjects << " NAM, "
+           << statistics.irObjects << " IR) | Packs: " << statistics.packs
+           << " | Size: " << statistics.managedBytes << " bytes\n"
+           << "Write access: initialized | Safe staging: available | Task: " << LibraryTaskName(progress.state);
+    if (progress.message) stream << " - " << *progress.message;
+    if (verification)
+      stream << "\nVerification: " << verification->checkedObjects << " checked, "
+             << verification->issues.size() << " issue(s), " << verification->orphanedFiles << " orphan(s)";
+    else
+      stream << "\nVerification: not run in this session";
+    stream << "\nRelocation is not supported in Milestone 6. Cleanup is always explicit.";
+    result.information = stream.str();
+  }
+  catch (const std::exception& exception)
+  {
+    result.information = std::string("Managed library error: ") + exception.what() +
+                         ". Referenced local files remain available.";
+  }
+  return result;
+}
+
+void Amphibia::VerifyManagedLibrary()
+{
+  if (!mImportWorker) return;
+  mImportTarget = ImportTarget::None;
+  mCompletedImportTask = 0;
+  mImportWorker->VerifyLibrary();
+}
+
+void Amphibia::ClearManagedLibraryStaging()
+{
+  if (!mImportWorker) return;
+  mImportTarget = ImportTarget::None;
+  mCompletedImportTask = 0;
+  mImportWorker->ClearStaging();
+}
+
+void Amphibia::ScanManagedLibrarySources(std::vector<std::filesystem::path> sources)
+{
+  if (!mImportWorker || sources.empty()) return;
+  mImportTarget = ImportTarget::None;
+  mReviewedImportTask = 0;
+  mCompletedImportTask = 0;
+  mImportWorker->Scan(std::move(sources));
+}
+
+void Amphibia::CancelManagedLibraryTask()
+{
+  if (mImportWorker) mImportWorker->Cancel();
+}
+
+#ifdef APP_API
+ManagedLibraryConfigurationStatus amphibia::configuration::ManagedLibrary(iplug::IPlugAPP& plug)
+{
+  return static_cast<Amphibia&>(plug).ManagedLibraryConfiguration();
+}
+
+void amphibia::configuration::VerifyManagedLibrary(iplug::IPlugAPP& plug)
+{
+  static_cast<Amphibia&>(plug).VerifyManagedLibrary();
+}
+
+void amphibia::configuration::ClearManagedLibraryStaging(iplug::IPlugAPP& plug)
+{
+  static_cast<Amphibia&>(plug).ClearManagedLibraryStaging();
+}
+
+void amphibia::configuration::ScanManagedLibrarySources(iplug::IPlugAPP& plug,
+                                                        std::vector<std::filesystem::path> sources)
+{
+  static_cast<Amphibia&>(plug).ScanManagedLibrarySources(std::move(sources));
+}
+
+void amphibia::configuration::CancelManagedLibraryTask(iplug::IPlugAPP& plug)
+{
+  static_cast<Amphibia&>(plug).CancelManagedLibraryTask();
+}
+#endif
 
 void Amphibia::OnUIOpen()
 {

@@ -41,6 +41,12 @@ constexpr int kBody = 51021;
 constexpr int kStatus = 51022;
 constexpr int kInputMeter = 51023;
 constexpr int kOutputMeter = 51024;
+constexpr int kLibraryOpen = 51030;
+constexpr int kLibraryVerify = 51031;
+constexpr int kLibraryClean = 51032;
+constexpr int kLibraryFiles = 51033;
+constexpr int kLibraryFolder = 51034;
+constexpr int kLibraryZip = 51035;
 
 std::wstring Wide(const std::string& value)
 {
@@ -98,6 +104,45 @@ std::wstring ChooseFolder(HWND owner)
   }
   dialog->Release();
   return path;
+}
+
+std::vector<std::filesystem::path> ChooseFiles(HWND owner, const wchar_t* label, const wchar_t* pattern,
+                                               bool multiple)
+{
+  IFileOpenDialog* dialog{};
+  if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog)))) return {};
+  DWORD options{};
+  dialog->GetOptions(&options);
+  dialog->SetOptions(options | FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST | FOS_PATHMUSTEXIST |
+                     FOS_DONTADDTORECENT | (multiple ? FOS_ALLOWMULTISELECT : 0));
+  const COMDLG_FILTERSPEC filter{label, pattern};
+  dialog->SetFileTypes(1, &filter);
+  std::vector<std::filesystem::path> paths;
+  if (SUCCEEDED(dialog->Show(owner)))
+  {
+    IShellItemArray* items{};
+    if (SUCCEEDED(dialog->GetResults(&items)))
+    {
+      DWORD count{};
+      items->GetCount(&count);
+      paths.reserve(count);
+      for (DWORD index = 0; index < count; ++index)
+      {
+        IShellItem* item{};
+        if (FAILED(items->GetItemAt(index, &item))) continue;
+        PWSTR display{};
+        if (SUCCEEDED(item->GetDisplayName(SIGDN_FILESYSPATH, &display)))
+        {
+          paths.emplace_back(display);
+          CoTaskMemFree(display);
+        }
+        item->Release();
+      }
+      items->Release();
+    }
+  }
+  dialog->Release();
+  return paths;
 }
 
 class SetupWizard
@@ -196,6 +241,13 @@ private:
     mBufferSize = Child(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL, 500, 395, 220, 220, kBufferSize);
     mInputMeter = Child(L"STATIC", L"Input: no activity", 0, 28, 285, 710, 28, kInputMeter);
     mOutputMeter = Child(L"STATIC", L"Output: stopped", 0, 28, 320, 710, 28, kOutputMeter);
+    constexpr const wchar_t* libraryLabels[6]{L"Open Library Folder", L"Verify Library", L"Clean Staging",
+                                               L"Import Files", L"Import Folder", L"Import ZIP"};
+    constexpr int libraryIds[6]{kLibraryOpen, kLibraryVerify, kLibraryClean, kLibraryFiles, kLibraryFolder, kLibraryZip};
+    for (int index = 0; index < 6; ++index)
+      mLibraryActions[index] = Child(L"BUTTON", libraryLabels[index], WS_TABSTOP,
+                                     28 + (index % 3) * 235, 280 + (index / 3) * 42, 220, 34,
+                                     libraryIds[index]);
     RefreshDevices();
     SetTimer(mWindow, 1, 100, nullptr);
     Render();
@@ -277,14 +329,23 @@ private:
     ShowControl(mRefresh, audioPage);
     ShowControl(mInputMeter, page == WizardPage::InputOutputTest);
     ShowControl(mOutputMeter, page == WizardPage::InputOutputTest);
+    for (auto control : mLibraryActions) ShowControl(control, page == WizardPage::ManagedLibrary);
     const bool action = page == WizardPage::InputOutputTest || page == WizardPage::NamFolder ||
-                        page == WizardPage::IrFolder || page == WizardPage::ManagedLibrary || page == WizardPage::Finish;
+                        page == WizardPage::IrFolder || page == WizardPage::Finish;
     ShowControl(mAction, action);
     if (page == WizardPage::InputOutputTest) SetText(mAction, mHost.CallbackActive() ? L"Start safe output test" : L"Audio unavailable");
     else if (page == WizardPage::NamFolder) SetText(mAction, L"Choose Existing NAM Folder");
     else if (page == WizardPage::IrFolder) SetText(mAction, L"Choose Existing IR Folder");
-    else if (page == WizardPage::ManagedLibrary) SetText(mAction, L"Open Library Folder");
     else if (page == WizardPage::Finish) SetText(mAction, L"Open Audio Settings");
+    if (page == WizardPage::ManagedLibrary)
+    {
+      const auto library = mHost.ManagedLibraryConfiguration();
+      mController.Draft().libraryAvailable = library.available;
+      mController.Draft().libraryValidated = library.verificationComplete && library.healthy;
+      SetText(mLibraryActions[1], library.taskActive ? L"Cancel Library Task" : L"Verify Library");
+      for (std::size_t index = 0; index < 6; ++index)
+        EnableWindow(mLibraryActions[index], !library.taskActive || index == 1);
+    }
     EnableWindow(mBack, page != WizardPage::Welcome && page != WizardPage::Finish);
     ShowControl(mSkip, page == WizardPage::NamFolder || page == WizardPage::IrFolder ||
                        page == WizardPage::ManagedLibrary || page == WizardPage::Tone3000);
@@ -295,16 +356,19 @@ private:
 
   std::string LibraryStatus() const
   {
-    wchar_t local[MAX_PATH]{};
-    SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, local);
-    const auto root = std::filesystem::path(local) / L"Amphibia" / L"Library";
-    std::error_code code;
-    const bool exists = std::filesystem::is_directory(root, code);
-    std::ostringstream stream;
-    stream << "Path: %LOCALAPPDATA%\\Amphibia\\Library\r\nSchema: 2\r\nStatus: "
-           << (exists && !code ? "Available" : "Unavailable; referenced-file mode remains available")
-           << "\r\nRelocation: not supported in Milestone 6\r\nNo content is deleted automatically.";
-    return stream.str();
+    return mHost.ManagedLibraryConfiguration().information;
+  }
+
+  void RefreshLibraryPage()
+  {
+    const auto library = mHost.ManagedLibraryConfiguration();
+    mController.Draft().libraryAvailable = library.available;
+    mController.Draft().libraryValidated = library.verificationComplete && library.healthy;
+    SetText(mBody, L"TONE3000 downloads and imported ZIP contents are stored in Amphibia's managed library. "
+                   L"Referenced local folders remain separate.\r\n\r\n" + Wide(library.information));
+    SetText(mLibraryActions[1], library.taskActive ? L"Cancel Library Task" : L"Verify Library");
+    for (std::size_t index = 0; index < 6; ++index)
+      EnableWindow(mLibraryActions[index], !library.taskActive || index == 1);
   }
 
   std::string Summary() const
@@ -512,6 +576,7 @@ private:
   void Cancel(bool explicitButton)
   {
     mHost.StopTestTone();
+    if (mHost.ManagedLibraryConfiguration().taskActive) mHost.CancelManagedLibraryTask();
     mController.Cancel(explicitButton);
     if (mHost.HasSetupSettings())
     {
@@ -557,20 +622,55 @@ private:
         break;
       case WizardPage::NamFolder: ChooseLocalFolder(true); break;
       case WizardPage::IrFolder: ChooseLocalFolder(false); break;
-      case WizardPage::ManagedLibrary:
-      {
-        wchar_t local[MAX_PATH]{};
-        SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, local);
-        const auto root = std::filesystem::path(local) / L"Amphibia" / L"Library";
-        ShellExecuteW(mWindow, L"open", root.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-        break;
-      }
       case WizardPage::Finish:
         mController.GoTo(WizardPage::AudioDevice);
         Render();
         break;
       default: break;
     }
+  }
+
+  void LibraryAction(int action)
+  {
+    const auto current = mHost.ManagedLibraryConfiguration();
+    switch (action)
+    {
+      case kLibraryOpen:
+        if (!current.rootPath.empty())
+          ShellExecuteW(mWindow, L"open", Wide(current.rootPath).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        break;
+      case kLibraryVerify:
+        if (current.taskActive) { mHost.CancelManagedLibraryTask(); SetText(mStatus, L"Library task cancelled."); }
+        else { mHost.VerifyManagedLibrary(); SetText(mStatus, L"Library verification started in the background."); }
+        break;
+      case kLibraryClean:
+        if (MessageBoxW(mWindow, L"Remove only abandoned files from Amphibia's safe staging area? Managed objects are not deleted.",
+                        L"Clean Library Staging", MB_OKCANCEL | MB_ICONQUESTION) == IDOK)
+        {
+          mHost.ClearManagedLibraryStaging();
+          SetText(mStatus, L"Safe staging cleanup started in the background.");
+        }
+        break;
+      case kLibraryFiles:
+      {
+        auto paths = ChooseFiles(mWindow, L"NAM models and WAV impulse responses", L"*.nam;*.wav", true);
+        if (!paths.empty()) { mHost.ScanManagedLibrarySources(std::move(paths)); SetText(mStatus, L"Import scan started."); }
+        break;
+      }
+      case kLibraryFolder:
+      {
+        const auto path = ChooseFolder(mWindow);
+        if (!path.empty()) { mHost.ScanManagedLibrarySources({std::filesystem::path(path)}); SetText(mStatus, L"Folder import scan started."); }
+        break;
+      }
+      case kLibraryZip:
+      {
+        auto paths = ChooseFiles(mWindow, L"ZIP tone packs", L"*.zip", false);
+        if (!paths.empty()) { mHost.ScanManagedLibrarySources(std::move(paths)); SetText(mStatus, L"ZIP safety scan started."); }
+        break;
+      }
+    }
+    RefreshLibraryPage();
   }
 
   LRESULT Handle(UINT message, WPARAM wParam, LPARAM lParam)
@@ -580,6 +680,11 @@ private:
       case WM_CREATE: CreateControls(); return 0;
       case WM_TIMER:
         CompleteFolderValidation();
+        if (mController.Page() == WizardPage::ManagedLibrary && ++mLibraryRefreshTicks >= 5)
+        {
+          mLibraryRefreshTicks = 0;
+          RefreshLibraryPage();
+        }
         if (mController.Page() == WizardPage::InputOutputTest)
         {
           std::wostringstream input, output;
@@ -605,6 +710,12 @@ private:
             case kCancel: Cancel(true); return 0;
             case kAction: Action(); return 0;
             case kRefresh: RefreshDevices(); SetText(mStatus, L"Device list refreshed."); return 0;
+            case kLibraryOpen:
+            case kLibraryVerify:
+            case kLibraryClean:
+            case kLibraryFiles:
+            case kLibraryFolder:
+            case kLibraryZip: LibraryAction(LOWORD(wParam)); return 0;
           }
         }
         break;
@@ -628,6 +739,7 @@ private:
   HWND mTitle{}, mBody{}, mStatus{}, mBack{}, mNext{}, mSkip{}, mCancel{}, mAction{}, mRefresh{};
   HWND mBackend{}, mInput{}, mOutput{}, mInputChannel{}, mOutputChannels{}, mSampleRate{}, mBufferSize{};
   HWND mInputMeter{}, mOutputMeter{};
+  HWND mLibraryActions[6]{};
   HWND mAudioLabels[7]{};
   bool mAudioLabelsCreated{};
   HFONT mFont{}, mTitleFont{};
@@ -640,6 +752,7 @@ private:
   std::future<FolderValidationResult> mFolderValidation;
   std::wstring mPendingFolder;
   bool mPendingFolderIsNam{};
+  int mLibraryRefreshTicks{};
   bool mCompleted{};
 };
 } // namespace

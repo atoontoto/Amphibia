@@ -2,7 +2,10 @@
 
 #include <atomic>
 #include <cstdint>
+#include <filesystem>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include "../AudioDSPTools/dsp/ImpulseResponse.h"
 #include "../AudioDSPTools/dsp/NoiseGate.h"
@@ -13,6 +16,7 @@
 #include "../NeuralAmpModelerCore/NAM/slimmable.h"
 
 #include "Colors.h"
+#include "ConfigurationServices.h"
 #include "Loading/AsyncDSPWorker.h"
 #include "Library/ImportWorker.h"
 #include "Library/ContentHash.h"
@@ -255,6 +259,14 @@ public:
   void OnParamChange(int paramIdx) override;
   void OnParamChangeUI(int paramIdx, iplug::EParamSource source) override;
   bool OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pData) override;
+
+  // Product configuration services used by both the in-editor panel and the
+  // standalone first-run wizard. All work is dispatched off the audio thread.
+  ManagedLibraryConfigurationStatus ManagedLibraryConfiguration() const;
+  void VerifyManagedLibrary();
+  void ClearManagedLibraryStaging();
+  void ScanManagedLibrarySources(std::vector<std::filesystem::path> sources);
+  void CancelManagedLibraryTask();
 
 private:
   // Allocates mInputPointers and mOutputPointers

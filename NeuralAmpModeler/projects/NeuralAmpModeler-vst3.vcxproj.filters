@@ -178,6 +178,7 @@
   <ItemGroup>
     <ClInclude Include="../config.h" />
     <ClInclude Include="..\NeuralAmpModeler.h" />
+    <ClInclude Include="..\ConfigurationServices.h" />
     <ClInclude Include="..\SharedSettings.h" />
     <ClInclude Include="..\Standalone\SettingsStore.h" />
     <ClInclude Include="..\Standalone\SetupTypes.h" />

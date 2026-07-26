@@ -341,6 +341,7 @@
     <ClInclude Include="..\..\AudioDSPTools\dsp\version.h" />
     <ClInclude Include="..\..\AudioDSPTools\dsp\wav.h" />
     <ClInclude Include="..\Colors.h" />
+    <ClInclude Include="..\ConfigurationServices.h" />
     <ClInclude Include="..\NeuralAmpModeler.h" />
     <ClInclude Include="..\SharedSettings.h" />
     <ClInclude Include="..\Standalone\SettingsStore.h" />
