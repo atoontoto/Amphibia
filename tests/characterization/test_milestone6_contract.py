@@ -52,6 +52,8 @@ def main() -> int:
     require("Import Files" in wizard and "Import Folder" in wizard and "Import ZIP" in wizard,
             "library import actions are incomplete")
     require("Cancel Library Task" in wizard, "library work lacks explicit cancellation")
+    require("Open NAM Folder" in wizard and "Open Documentation" in wizard,
+            "Finish page actions are incomplete")
     require("TONE3000 integration is not configured in this build" in wizard,
             "unconfigured provider state is not explained honestly")
 

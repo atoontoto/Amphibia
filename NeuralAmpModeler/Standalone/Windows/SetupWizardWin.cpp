@@ -47,6 +47,8 @@ constexpr int kLibraryClean = 51032;
 constexpr int kLibraryFiles = 51033;
 constexpr int kLibraryFolder = 51034;
 constexpr int kLibraryZip = 51035;
+constexpr int kFinishNam = 51040;
+constexpr int kFinishDocs = 51041;
 
 std::wstring Wide(const std::string& value)
 {
@@ -233,6 +235,8 @@ private:
     mCancel = Child(L"BUTTON", L"Cancel", WS_VISIBLE | WS_TABSTOP, 528, 565, 100, 34, kCancel);
     mNext = Child(L"BUTTON", L"Next", WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON, 638, 565, 100, 34, kNext);
     mAction = Child(L"BUTTON", L"", WS_TABSTOP, 28, 460, 235, 34, kAction);
+    mFinishNam = Child(L"BUTTON", L"Open NAM Folder", WS_TABSTOP, 275, 460, 210, 34, kFinishNam);
+    mFinishDocs = Child(L"BUTTON", L"Open Documentation", WS_TABSTOP, 497, 460, 241, 34, kFinishDocs);
     mRefresh = Child(L"BUTTON", L"Refresh devices", WS_TABSTOP, 275, 460, 160, 34, kRefresh);
     mBackend = Child(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL, 210, 255, 340, 200, kBackend);
     mInput = Child(L"COMBOBOX", L"", WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL, 210, 290, 510, 250, kInput);
@@ -335,10 +339,14 @@ private:
     const bool action = page == WizardPage::InputOutputTest || page == WizardPage::NamFolder ||
                         page == WizardPage::IrFolder || page == WizardPage::Finish;
     ShowControl(mAction, action);
+    ShowControl(mFinishNam, page == WizardPage::Finish);
+    ShowControl(mFinishDocs, page == WizardPage::Finish);
     if (page == WizardPage::InputOutputTest) SetText(mAction, mHost.CallbackActive() ? L"Start safe output test" : L"Audio unavailable");
     else if (page == WizardPage::NamFolder) SetText(mAction, L"Choose Existing NAM Folder");
     else if (page == WizardPage::IrFolder) SetText(mAction, L"Choose Existing IR Folder");
     else if (page == WizardPage::Finish) SetText(mAction, L"Open Audio Settings");
+    if (page == WizardPage::Finish)
+      EnableWindow(mFinishNam, mController.Draft().namFolder.has_value());
     if (page == WizardPage::ManagedLibrary)
     {
       const auto library = mHost.ManagedLibraryConfiguration();
@@ -675,6 +683,19 @@ private:
     RefreshLibraryPage();
   }
 
+  void FinishAction(int action)
+  {
+    if (action == kFinishNam)
+    {
+      if (mController.Draft().namFolder)
+        ShellExecuteW(mWindow, L"open", Wide(*mController.Draft().namFolder).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+      return;
+    }
+    if (action == kFinishDocs && !mHost.GetPlug()->OnHostRequestingProductHelp())
+      MessageBoxW(mWindow, L"See README.md and docs/FIRST_RUN_SETUP.md in the Amphibia distribution.",
+                  L"Amphibia Documentation", MB_OK | MB_ICONINFORMATION);
+  }
+
   LRESULT Handle(UINT message, WPARAM wParam, LPARAM lParam)
   {
     switch (message)
@@ -718,6 +739,8 @@ private:
             case kLibraryFiles:
             case kLibraryFolder:
             case kLibraryZip: LibraryAction(LOWORD(wParam)); return 0;
+            case kFinishNam:
+            case kFinishDocs: FinishAction(LOWORD(wParam)); return 0;
           }
         }
         break;
@@ -739,6 +762,7 @@ private:
   HWND mParent{};
   HWND mWindow{};
   HWND mTitle{}, mBody{}, mStatus{}, mBack{}, mNext{}, mSkip{}, mCancel{}, mAction{}, mRefresh{};
+  HWND mFinishNam{}, mFinishDocs{};
   HWND mBackend{}, mInput{}, mOutput{}, mInputChannel{}, mOutputChannels{}, mSampleRate{}, mBufferSize{};
   HWND mInputMeter{}, mOutputMeter{};
   HWND mLibraryActions[6]{};
