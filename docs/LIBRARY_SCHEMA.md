@@ -43,3 +43,7 @@ index exists it is preferred; future schemas are still rejected untouched.
 ## Verification
 
 Verification checks schema parsing, object path containment, existence, size, bounded NAM/WAV inspection, optional SHA-256, pack/object association integrity, and unrecorded files beneath object roots. It runs on the import worker, supports cooperative cancellation, and does not repair automatically.
+
+## Exact provider-copy removal
+
+Milestone 5 keeps schema version 2 unchanged. Exact cache lookup matches provider kind, tone ID, and model ID. Removal first rejects a protected active hash, then atomically removes the exact association and its provider-pack entry. A pack record is removed only when empty. A physical object is retained when pinned, referenced by any remaining pack entry/provider association, or explicitly protected; otherwise its index record is committed away before the managed object path is deleted. Provider disconnect never edits this schema.

@@ -40,4 +40,10 @@ State 1.1 retains the complete 1.0 prefix and appends optional managed SHA-256 r
 
 Startup removes only randomized children of Amphibia's own staging directory. Verify reports missing, invalid, hash-mismatched, outside-root, inconsistent-association, and orphaned files. Remove unused derives liveness from pack associations, honors pinned objects and hashes supplied by active plugin state, commits metadata first, and may leave a reportable orphan after a crash.
 
-The default path is read-only in Milestone 3; relocation is deliberately not partially implemented. Settings shows the three most recently imported/activated display names, but there is no searchable managed tree or one-click recent-item audition list. Imported pack grouping is metadata rather than a separate previous/next navigator. No network access, telemetry, remote images, or provider concepts are present.
+The default path is read-only in Milestone 3; relocation is deliberately not partially implemented. Settings shows the three most recently imported/activated display names, but there is no searchable managed tree or one-click recent-item audition list. Imported pack grouping is metadata rather than a separate previous/next navigator.
+
+## Hosted exact variants
+
+A TONE3000 individual download enters the same managed staging, NAM/WAV inspection, streaming SHA-256, content-addressed object, and transactional index path as Milestone 4. Exact provider association lookup lets a selected pack recognize an already-downloaded provider tone/model without redownloading it. The selected pack's Previous/Next controls consider only downloaded, compatible variants and never alter the inherited local-folder sequence.
+
+`Remove Local Copy` is exact and explicit. It refuses an active protected hash, removes only the chosen provider association/pack entry, retains shared bytes while another association references them, and deletes an unpinned, unshared object only after committing metadata. Disconnecting an account does not invoke this removal. Cached valid managed NAM/IR objects remain usable offline.

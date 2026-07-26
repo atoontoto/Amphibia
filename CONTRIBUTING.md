@@ -20,12 +20,13 @@ Follow [BUILDING.md](BUILDING.md) for native prerequisites and commands. Do not 
 - Do not modify DSP order, defaults, resampling, navigation, or state layouts without characterization tests.
 - Do not commit credentials, downloaded models/IRs, generated packages, build outputs, or proprietary SDK material.
 - Keep TONE3000-specific types out of DSP and provider-neutral domain code.
+- Do not add `/tones/search`, scraping, catalog mirroring, bulk download, automatic activation, an assumed callback route, or unapproved provider branding. Hosted selection must remain explicit and exact-variant downloads must retain the managed promotion boundary.
 - Record every new dependency and packaged asset in `docs/DEPENDENCIES.md` and the applicable notice file.
 - Retain technical upstream filenames when a rename adds merge cost without changing product identity; document exceptions in `docs/UPSTREAM_MODIFICATION_MAP.md`.
 - Treat state and plug-in identifiers as compatibility contracts. Never regenerate them casually.
 
 ## Before a pull request
 
-Run the identity validator and the native build available on your platform. In the pull request, include exact commands/results, affected formats, state compatibility impact, real-time safety impact, asset/license changes, and a focused test plan. Never include secrets or user-downloaded content in logs or fixtures.
+Run the identity validator, Milestone 4 and 5 native suites, and the product build available on your platform. In the pull request, include exact commands/results, affected formats, state compatibility impact, real-time safety impact, asset/license changes, and a focused test plan. Never include secrets or user-downloaded content in logs or fixtures.
 
 By contributing, you agree that your contribution may be distributed under this repository's MIT license.

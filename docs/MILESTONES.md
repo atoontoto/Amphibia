@@ -48,12 +48,13 @@ Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented 
 
 ## Milestone 5 — hosted TONE3000 selection experience
 
-- [ ] Re-verify terms and resolve the prompt/redirect registration blockers.
+- [x] Re-verify current terms/API behavior and retain unresolved redirect/registration blockers without guessing.
 - [ ] Complete the provider-approved loopback or custom-scheme callback receiver and live authorization validation.
-- [ ] Add explicit hosted `select_tone` entry points for NAM and IR without native unrestricted search.
-- [ ] Resolve the returned tone ID, page exact variants, and require an exact user selection.
-- [ ] Add final provider brand, creator, license, source-link, and independent-integration presentation.
-- [ ] Download/promote only after user action and submit the chosen local object through `_RequestModel()` or `_RequestIR()`.
+- [x] Add explicit hosted `select_tone` entry points for NAM and IR without native unrestricted search; shipped controls remain disabled while unconfigured.
+- [x] Resolve the returned tone ID, page exact variants, and require an exact user selection in the provider-neutral coordinator.
+- [x] Add bounded creator, license, source-link, compatibility, progress, and independent-integration presentation; approved production brand assets remain blocked.
+- [x] Download/promote only after user action and expose a separate activation request that the product must route through `_RequestModel()` or `_RequestIR()` after configuration becomes available.
+- [x] Add deterministic development/mock validation for cancellation, stale callbacks, constraints, exact download, cached audition, and multiple-instance ownership.
 
 ## Milestone 6 — download/import hardening
 
@@ -90,7 +91,13 @@ Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented 
 
 Milestone 4 implements the provider foundation only: external-browser PKCE/state handling, secure credential storage, bounded WinHTTP transport, typed exact API calls, refresh/session behavior, streamed explicit individual downloads, and schema-2 creator/license provenance. It adds no final catalog/search UI, automatic download/activation, whole-tone ZIP, upload, telemetry, proxy, installer, or DSP behavior.
 
-Windows native test and standalone/VST3 evidence is recorded in `MILESTONE_4_REPORT.md`. Provider tests are mock/loopback-only; no live-provider pass is claimed. macOS Keychain source exists, but macOS HTTP transport/product integration and platform validation remain open. The next milestone is Milestone 5, the user-facing hosted selection experience.
+Windows native test and standalone/VST3 evidence is recorded in `MILESTONE_4_REPORT.md`. Provider tests are mock/loopback-only; no live-provider pass is claimed. macOS Keychain source exists, but macOS HTTP transport/product integration and platform validation remain open.
+
+## Milestone 5 evidence record
+
+Milestone 5 adds the visible controls and native bounded selection model, plus a provider-neutral hosted-flow coordinator. It deliberately does not enable a live repository build: the exact approved production callback, publishable client registration, brand assets, and final privacy/repository/support values do not exist. The unconfigured controls do not open a browser, start a receiver, read credentials, or perform network work.
+
+Deterministic evidence is recorded in `MILESTONE_5_REPORT.md`. The exact-variant pipeline is mock-tested through promotion/activation separation, while Release VST3 compilation proves the additive UI and provider sources integrate with the product target. macOS and live-provider validation remain open.
 
 ## Global non-claims
 

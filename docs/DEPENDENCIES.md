@@ -67,6 +67,8 @@ No new library is approved in Milestone 1.
 
 No new third-party library was added for Milestone 4. `libcurl` was evaluated and deferred because it would add a pinned binary/TLS-backend matrix; the inherited WDL/WinINet facilities were rejected as the provider policy boundary. Details are in `HTTP_TRANSPORT.md`.
 
+Milestone 5 adds no third-party library or packaged provider asset. The hosted-selection lease uses a Windows named semaphore or macOS `flock`; the UI uses existing iPlug2 controls. Official TONE3000 brand assets were not scraped or copied and remain a production registration blocker.
+
 ## Milestone 3 pinned local-import dependencies
 
 | Dependency | Pin | License | Build and risk record |

@@ -113,3 +113,11 @@ current download and native requests, suppress callbacks, join transport
 workers, release provider/transport, then release the managed library and DSP
 workers. Native DNS/TLS can take until its finite configured timeout; no worker
 is detached and shutdown is not described as instantaneous.
+
+# Milestone 5 hosted selection ownership
+
+`Tone3000HostedSelectionCoordinator` is a non-audio state machine. It stores copied bounded snapshots behind its own mutex and uses task IDs plus weak shared state to reject stale callback, metadata, exact-model, download, and activation completions. It never calls iPlug controls. The message thread may copy a snapshot and update/reconstruct the native panel, including after an editor closes and reopens.
+
+The callback receiver starts before browser launch and is cancelled before exact API work. A named semaphore on Windows and `flock` lease on macOS ensure only one Amphibia instance owns a hosted browser/callback flow for the credential namespace. The semaphore is intentionally releasable from an asynchronous completion thread. Credential refresh retains its separate Milestone 4 lock.
+
+Download completion may request managed activation, but the coordinator does not construct or exchange DSP. The product-side callback must resolve the managed SHA-256 and call `_RequestModel()` or `_RequestIR()`; only a later Milestone 2 Active/Failed result may call `NotifyActivation`. Downloaded, Preparing, and Active are therefore independent states. The existing active DSP remains in place throughout failed or cancelled provider work.

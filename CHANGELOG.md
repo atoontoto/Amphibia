@@ -2,6 +2,15 @@
 
 All notable Amphibia changes are recorded here. The project has no public release yet.
 
+## Unreleased - Milestone 5
+
+- Added fail-closed Unconfigured, DevelopmentConfigured, and ProductionConfigured registration validation without embedding a client secret or inventing production registration values.
+- Added hosted `select_tone` request coordination for NAM A1/custom, NAM A2, and cabinet IR entry points using only documented filters.
+- Added exact-tone resolution, bounded all-page exact-model listing, compatibility classification, short-lived exact-model refresh, and explicit one-variant download.
+- Added a native bounded waiting/variant panel with creator/license/source attribution, pack-local filtering, downloaded-only navigation, and separate Download Only and Download and Audition actions.
+- Added a cross-process hosted-selection lease, stale callback suppression, explicit cancellation, safe shutdown, cached exact-association recognition, active-object removal protection, and SHA-256/provenance preservation.
+- Added deterministic Milestone 5 tests. Production callback, branding, macOS transport, and live-provider validation remain blocked and are not claimed.
+
 ## Unreleased - Milestone 4
 
 - Added provider-neutral remote tone/model/user/download types and a TONE3000 adapter boundary without adding a native catalog browser.

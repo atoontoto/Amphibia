@@ -1,6 +1,6 @@
 # TONE3000 integration plan and current limitations
 
-Status: Milestone 4 foundation implemented; final user-facing selection workflow in progress
+Status: Milestone 5 hosted-selection workflow implemented; live production integration blocked by registration
 
 Reviewed: 2026-07-26; API Terms effective 2026-07-07
 
@@ -8,7 +8,7 @@ Sources: [API documentation](https://www.tone3000.com/api), [API terms](https://
 
 This is an independent integration plan. It does not assert endorsement or a partnership with TONE3000.
 
-## Implemented Milestone 4 boundary
+## Implemented Milestone 5 boundary
 
 The repository now contains provider-neutral interfaces, a TONE3000 adapter,
 external-browser PKCE/state handling, bounded token refresh, platform secure
@@ -22,10 +22,17 @@ no publishable client ID or approved desktop redirect is present, it reports
 Not configured and keeps Connect/Test/Disconnect/Cancel disabled. It performs
 no automatic login, browser launch, request, download, or activation.
 
-Not implemented: `/tones/search`, native catalog browsing, whole-tone ZIP,
-bulk/background download, automatic model choice, upload/training, account
-proxying, local file upload, final provider cards/attribution UX, or automatic
-DSP activation. Those boundaries are deliberately reserved for Milestone 5.
+Milestone 5 adds visible hosted entry points, architecture pre-selection,
+waiting/cancel/reopen states, exact tone resolution, bounded all-page model
+listing, compatibility classification, a native exact-variant and attribution
+surface, pack-local filtering, explicit individual download, cached-variant
+recognition, downloaded-only navigation, removal protection, and an activation
+request boundary. Download success and DSP activation remain separate states.
+
+Still not implemented: `/tones/search`, native catalog browsing, whole-tone
+ZIP, bulk/background download, automatic model choice, upload/training,
+account proxying, local file upload, automatic DSP activation, or unapproved
+production branding/callback behavior.
 
 ## Permitted initial experience
 
@@ -141,7 +148,9 @@ live token refresh/download behavior, certificate failure behavior against a
 real service, process-crash recovery, or macOS operation. No registered client
 configuration was available, so live-provider validation was not run.
 
-Milestone 5 must add the approved callback receiver, final hosted selection
-UI, explicit variant/attribution presentation, live development procedure,
-and missing platform/process/adversarial matrix coverage without committing
-credentials, signed URLs, user metadata, or downloaded content.
+Milestone 5 adds the callback interface and a fail-closed unavailable receiver,
+the hosted selection UI/model, explicit variant/attribution presentation,
+cross-process browser-flow ownership, and deterministic development mocks.
+An actual loopback/custom-URI receiver is intentionally not selected because
+TONE3000 has not confirmed Amphibia's production registration strategy.
+Production controls remain disabled and no live-provider pass is claimed.

@@ -124,3 +124,9 @@ supported SDK inputs, not new vendored dependencies. Test builds inject mocks
 and need no network or credentials. Production builds accept no HTTP endpoint
 override; the override exists only behind a test/development configuration
 flag.
+
+## Milestone 5 exact-list and download policy
+
+Hosted selection adds no catalog-search endpoint. After one callback-selected tone ID, the provider fetches one exact tone, then pages only `/api/v1/models?tone_id=...` at at most 300 records per page. Pagination is bounded to 16 pages/4,800 variants and rejects changed totals, duplicate model IDs, repeated pages, empty intermediate pages, missing IDs, and impossible metadata. Model URLs remain only in the task snapshot.
+
+An explicit download refreshes `/api/v1/models/{model_id}` and verifies exact tone/model identity, format, and supported architecture before passing its URL to the existing streamed downloader. Listing never downloads bytes. Provider task generations suppress late metadata completions after cancel/shutdown; native transport limits and timeouts remain the Milestone 4 contract.

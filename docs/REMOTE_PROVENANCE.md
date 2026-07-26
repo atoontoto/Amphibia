@@ -41,4 +41,10 @@ Disconnect deletes the OS credential and cached account identity, not downloaded
 
 ## Presentation requirement
 
-Milestone 5 must surface the retained creator, license, provider identity, and source link wherever the downloaded item is selected or attributed, using approved provider wording/assets. Unknown or missing license metadata must be shown as unknown/missing, never rewritten as unrestricted.
+Milestone 5 surfaces the retained creator, license, provider identity, and source link in the exact-variant surface. The repository build uses neutral text because approved production brand assets are unavailable. Unknown or missing license metadata is shown as unknown/missing, never rewritten as unrestricted.
+
+## Exact cache identity
+
+Cache recognition requires the exact tuple `(tone3000, tone_id, model_id)` and returns the associated local SHA-256. Filename, title, or URL similarity never counts as a match. An explicit download refreshes exact-model metadata so a stale or substituted ID/format/architecture fails before bytes are accepted.
+
+The panel presents bounded plain-text tone title, creator username, description, gear, format, tags/license when available, source action, exact variant name, architecture, declared bytes when documented, grouping path, compatibility, download state, and active state. Provider model IDs remain a diagnostic identity rather than a marketing label. Remote image/avatar URLs are preserved but not fetched by the initial implementation.

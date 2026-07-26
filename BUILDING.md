@@ -43,4 +43,15 @@ These commands are represented in CI but must be confirmed on a macOS runner bef
 
 ## Not supported here
 
-AAX requires separately licensed Avid SDK material. Installer generation, signing, notarization, release publishing, and TONE3000 functionality are outside Milestone 1.
+AAX requires separately licensed Avid SDK material. Installer generation, signing, notarization, and release publishing are not supported here. The repository TONE3000 build is intentionally unconfigured; do not invent registration values merely to make the controls clickable.
+
+## Native provider tests
+
+Milestone 5's provider-neutral hosted-flow suite requires no network, browser, account, or credential:
+
+```text
+msbuild tests/milestone5/Milestone5Tests.vcxproj /t:Build /p:Configuration=Debug;Platform=x64
+tests/milestone5/build/x64/Debug/Milestone5Tests.exe
+```
+
+Run `tests/milestone4/Milestone4Tests.exe` as the inherited provider/transport/credential regression. Live testing is permitted only in an owner-reviewed development build using a registered development client/redirect and injected callback receiver. Never place a client secret in a desktop build.

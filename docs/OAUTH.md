@@ -41,3 +41,13 @@ handles, suppresses late callbacks, joins native transport workers, then
 releases provider ownership. DNS/TLS cancellation can last until the bounded
 native timeout. No OAuth or credential operation is reachable from
 `ProcessBlock()`.
+
+## Milestone 5 hosted selection lifecycle
+
+The hosted coordinator starts the callback receiver before it asks the provider to create/open the browser authorization. It then owns one task ID, a five-minute deadline, and a cross-process selection lease. `Open Browser Again` reuses only the already-created authorization URL; it never creates a second state/verifier. Cancel, callback failure, timeout, supersession, and shutdown stop the receiver and stale-suppress every later completion.
+
+Hosted NAM uses `prompt=select_tone`, `format=nam`, and documented `gears` values `amp_amp-cab`. Omitting `architecture` is the documented A1/custom hosted view; A2 is a separate explicit `architecture=2` choice. Hosted IR uses `format=ir&gears=cab`. No `/tones/search` request exists.
+
+The callback is not trusted as tone metadata. After exact state/code handling, only its bounded tone ID advances the flow; exact tone and exact models are then fetched from the authenticated API. A provider cancellation is a normal Cancelled terminal state, not an invalid-state warning. Code, state, verifier, callback URI, token, and browser URL never enter the UI snapshot or DAW state.
+
+The repository still has no confirmed registered callback strategy. The production receiver therefore fails closed behind `IHostedSelectionCallbackReceiver`; deterministic tests inject a development receiver. No LAN listener, permanent server, or custom URI registration is created by the shipped build.

@@ -32,3 +32,7 @@ pack associations, display/file properties, timestamps, and optional manual
 classifications under the platform application-data directory. Referenced
 sources remain read-only. Staging cleanup is confined to Amphibia's verified
 managed staging root. No persistent provider request/body log is emitted.
+
+The hosted `Search TONE3000` and `Find IR on TONE3000` controls are explicit user actions. In the unconfigured repository build they are disabled and start no listener, credential access, browser, DNS, or HTTP work. Hosted discovery occurs on TONE3000's own site; Amphibia implements no unrestricted catalog search, scraping, recommendations, mirroring, remote image fetch, or background synchronization.
+
+Within a callback-selected pack, the local filter examines only bounded in-memory model names and paths. The panel/task snapshot is transient and is not written to DAW state. Exact provider IDs and attribution enter the managed library only after an explicit successful individual download.

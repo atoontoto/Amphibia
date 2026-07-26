@@ -87,3 +87,9 @@ continues to resolve only the managed hash and submit through `_RequestModel()`
 or `_RequestIR()`. It performs no HTTP, credential access, browser launch, or
 provider JSON parsing. A later Milestone 5 state extension may add non-secret
 provider IDs for explicit missing-object recovery without changing this rule.
+
+# Milestone 5 hosted-selection state
+
+Milestone 5 does not change state version 1.1 or the parameter/payload layout. The hosted browser task, callback deadline, selected tone panel, filter text, variant list, pagination state, model URL, download progress, and account state are transient and are not serialized. Closing an editor may reconstruct a currently owned task from its in-memory snapshot; destroying the plugin cancels it.
+
+After explicit Download and Audition, state changes only through the existing managed activation contract: the SHA-256 becomes active after the Milestone 2 worker reports Active, and only then can the existing 1.1 managed reference be written. Provider attribution remains discoverable from schema-2 library metadata by that hash. Restoring a project offline never opens TONE3000.
