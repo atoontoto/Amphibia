@@ -28,6 +28,7 @@ tests/milestone2/build/
 tests/milestone3/build/
 tests/milestone4/build/
 tests/milestone5/build/
+tests/milestone6/build/
 
 NeuralAmpModeler/*.wav
 NeuralAmpModeler/peaks/
