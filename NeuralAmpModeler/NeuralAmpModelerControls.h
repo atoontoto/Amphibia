@@ -538,6 +538,16 @@ public:
 
   void Draw(IGraphics& g) override { g.DrawFittedBitmap(mBitmap, mRECT); }
 
+  // Seeds same-directory Previous/Next navigation without loading a file.
+  void SetPreferredDirectory(const char* directory)
+  {
+    if (!directory || !*directory) return;
+    ClearPathList();
+    AddPath(directory, "");
+    SetupMenu();
+    SelectFirstFile();
+  }
+
   void OnDrop(const char* path) override
   {
     if (mDropHandler && path) mDropHandler({path});
@@ -985,6 +995,106 @@ struct RemoteProviderUIActions
   bool cancelEnabled{};
 };
 
+struct LocalFolderUIActions
+{
+  std::function<std::string()> information;
+  IActionFunction chooseNamFolder;
+  IActionFunction chooseIrFolder;
+};
+
+class NAMConfigurationPanelControl : public IContainerBase
+{
+public:
+  NAMConfigurationPanelControl(const IRECT& bounds, const IBitmap& bitmap, ISVG closeSVG, const IVStyle& style,
+                               LocalFolderUIActions folderActions, LibraryUIActions libraryActions,
+                               RemoteProviderUIActions providerActions)
+  : IContainerBase(bounds), mBitmap(bitmap), mCloseSVG(closeSVG), mStyle(style),
+    mFolderActions(std::move(folderActions)), mLibraryActions(std::move(libraryActions)),
+    mProviderActions(std::move(providerActions)) { mIgnoreMouse = false; }
+
+  void ShowPanel()
+  {
+    Refresh();
+    Hide(false);
+    GetUI()->SetAllControlsDirty();
+  }
+
+  bool OnKeyDown(float, float, const IKeyPress& key) override
+  {
+    if (key.VK != kVK_ESCAPE) return false;
+    Hide(true);
+    return true;
+  }
+
+  void OnAttached() override
+  {
+    const auto bounds = GetRECT();
+    const auto padded = bounds.GetPadded(-24.f);
+    const auto text = IText(DEFAULT_TEXT_SIZE, EAlign::Near, PluginColors::HELP_TEXT);
+    const auto labelStyle = mStyle.WithDrawFrame(false).WithValueText(text);
+    const auto buttonStyle = mStyle.WithShowLabel(false).WithDrawFrame(true);
+    AddChildControl(new IBitmapControl(bounds, mBitmap))->SetIgnoreMouse(true);
+    AddChildControl(new IVLabelControl(padded.GetFromTop(42.f), "CONFIGURATION",
+      DEFAULT_STYLE.WithValueText(IText(26.f, COLOR_WHITE, "Michroma-Regular")).WithDrawFrame(false)));
+#ifdef APP_API
+    constexpr const char* audioOwnership = "Standalone audio devices, channels, sample rate, and buffer are configured in Audio Settings.";
+#else
+    constexpr const char* audioOwnership = "Audio devices, channel routing, sample rate, and buffer size are controlled by your DAW.";
+#endif
+    AddChildControl(new IVLabelControl(IRECT(28.f, 68.f, PLUG_WIDTH - 28.f, 91.f), audioOwnership, labelStyle));
+    mFolderInfo = new IVLabelControl(IRECT(28.f, 100.f, PLUG_WIDTH - 28.f, 140.f), "Local folders unavailable", labelStyle);
+    AddChildControl(mFolderInfo);
+    AddChildControl(new IVButtonControl(IRECT(28.f, 143.f, 275.f, 172.f), mFolderActions.chooseNamFolder,
+                                        "Choose NAM folder", buttonStyle));
+    AddChildControl(new IVButtonControl(IRECT(325.f, 143.f, 572.f, 172.f), mFolderActions.chooseIrFolder,
+                                        "Choose IR folder", buttonStyle));
+    mLibraryInfo = new IVLabelControl(IRECT(28.f, 184.f, PLUG_WIDTH - 28.f, 226.f), "Managed library unavailable", labelStyle);
+    AddChildControl(mLibraryInfo);
+    const std::array<std::pair<const char*, IActionFunction>, 4> libraryButtons{{
+      {"Open library", mLibraryActions.openFolder}, {"Verify", mLibraryActions.verify},
+      {"Import folder", mLibraryActions.importFolder}, {"Import ZIP", mLibraryActions.importZip}}};
+    for (std::size_t index = 0; index < libraryButtons.size(); ++index)
+      AddChildControl(new IVButtonControl(IRECT(28.f + index * 137.f, 230.f, 159.f + index * 137.f, 259.f),
+                                          libraryButtons[index].second, libraryButtons[index].first, buttonStyle));
+    mProviderInfo = new IVLabelControl(IRECT(28.f, 274.f, PLUG_WIDTH - 28.f, 318.f),
+                                       "TONE3000 is not configured", labelStyle);
+    AddChildControl(mProviderInfo);
+    const std::array<std::tuple<const char*, IActionFunction, bool>, 3> providerButtons{{
+      {"Connect", mProviderActions.connect, mProviderActions.connectEnabled},
+      {"Disconnect", mProviderActions.disconnect, mProviderActions.disconnectEnabled},
+      {"Test connection", mProviderActions.testConnection, mProviderActions.testEnabled}}};
+    for (std::size_t index = 0; index < providerButtons.size(); ++index)
+    {
+      auto action = std::get<1>(providerButtons[index]);
+      if (!action) action = [](IControl*) {};
+      auto* button = AddChildControl(new IVButtonControl(IRECT(28.f + index * 183.f, 322.f, 205.f + index * 183.f, 352.f),
+                                                        std::move(action), std::get<0>(providerButtons[index]), buttonStyle));
+      button->SetDisabled(!std::get<2>(providerButtons[index]));
+    }
+    AddChildControl(new NAMSquareButtonControl(CornerButtonArea(bounds), [](IControl* caller) {
+      caller->GetParent()->Hide(true);
+    }, mCloseSVG));
+    Refresh();
+  }
+
+private:
+  void Refresh()
+  {
+    if (mFolderInfo && mFolderActions.information) mFolderInfo->SetStr(mFolderActions.information().c_str());
+    if (mLibraryInfo && mLibraryActions.information) mLibraryInfo->SetStr(mLibraryActions.information().c_str());
+    if (mProviderInfo && mProviderActions.information) mProviderInfo->SetStr(mProviderActions.information().c_str());
+  }
+  IBitmap mBitmap;
+  ISVG mCloseSVG;
+  IVStyle mStyle;
+  LocalFolderUIActions mFolderActions;
+  LibraryUIActions mLibraryActions;
+  RemoteProviderUIActions mProviderActions;
+  IVLabelControl* mFolderInfo{};
+  IVLabelControl* mLibraryInfo{};
+  IVLabelControl* mProviderInfo{};
+};
+
 class NAMSettingsPageControl : public IContainerBaseWithNamedChildren
 {
 public:
@@ -1085,6 +1195,10 @@ public:
     AddNamedChildControl(new IBitmapControl(GetRECT(), mBitmap), mControlNames.bitmap)->SetIgnoreMouse(true);
     const auto titleArea = GetRECT().GetPadded(-(pad + 10.0f)).GetFromTop(50.0f);
     AddNamedChildControl(new IVLabelControl(titleArea, "SETTINGS", titleStyle), mControlNames.title);
+    AddChildControl(new IVButtonControl(titleArea.GetFromRight(150.f).GetPadded(-4.f), [](IControl* caller) {
+      if (auto* panel = caller->GetUI()->GetControlWithTag(kCtrlTagConfigurationPanel))
+        panel->As<NAMConfigurationPanelControl>()->ShowPanel();
+    }, "Configuration...", style.WithShowLabel(false).WithDrawFrame(true)));
 
     // Attach input/output calibration controls
     {

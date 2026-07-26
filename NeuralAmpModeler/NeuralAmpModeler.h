@@ -78,6 +78,7 @@ enum ECtrlTags
   kCtrlTagTone3000Search,
   kCtrlTagTone3000FindIR,
   kCtrlTagTone3000Panel,
+  kCtrlTagConfigurationPanel,
   kNumCtrlTags
 };
 

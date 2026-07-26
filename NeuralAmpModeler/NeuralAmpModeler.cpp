@@ -21,6 +21,7 @@
 #include "architecture.hpp"
 
 #include "NeuralAmpModelerControls.h"
+#include "SharedSettings.h"
 
 using namespace iplug;
 using namespace igraphics;
@@ -310,6 +311,48 @@ Amphibia::Amphibia(const InstanceInfo& info)
         });
     };
 
+    LocalFolderUIActions folderActions;
+    folderActions.information = [] {
+      const auto loaded = amphibia::preferences::LoadSharedSettings();
+      const auto nam = loaded.settings.namFolder ? *loaded.settings.namFolder : "Not configured";
+      const auto ir = loaded.settings.irFolder ? *loaded.settings.irFolder : "Not configured";
+      return std::string("Referenced local folders (shared by standalone and plug-in) | NAM: ") + nam + "\nIR: " + ir;
+    };
+    const auto chooseSharedFolder = [](bool nam, IControl* caller) {
+      WDL_String directory;
+      caller->GetUI()->PromptForDirectory(directory, [nam, caller](const WDL_String&, const WDL_String& selected) {
+        if (!selected.GetLength()) return;
+        std::error_code code;
+        if (!std::filesystem::is_directory(std::filesystem::u8path(selected.Get()), code) || code)
+        {
+          _ShowMessageBox(caller->GetUI(), "The selected folder is unavailable.", "Amphibia Configuration", kMB_OK);
+          return;
+        }
+        auto loaded = amphibia::preferences::LoadSharedSettings();
+        if (!loaded.available)
+        {
+          _ShowMessageBox(caller->GetUI(), loaded.message.c_str(), "Amphibia Configuration", kMB_OK);
+          return;
+        }
+        if (nam) loaded.settings.namFolder = selected.Get(); else loaded.settings.irFolder = selected.Get();
+        std::string error;
+        if (!amphibia::preferences::UpdateSharedSettings(loaded.settings, error))
+        {
+          _ShowMessageBox(caller->GetUI(), error.c_str(), "Amphibia Configuration", kMB_OK);
+          return;
+        }
+        const auto tag = nam ? kCtrlTagModelFileBrowser : kCtrlTagIRFileBrowser;
+        if (auto* browser = caller->GetUI()->GetControlWithTag(tag))
+          browser->As<NAMFileBrowserControl>()->SetPreferredDirectory(selected.Get());
+        if (auto* panel = caller->GetUI()->GetControlWithTag(kCtrlTagConfigurationPanel))
+          panel->As<NAMConfigurationPanelControl>()->ShowPanel();
+      });
+    };
+    folderActions.chooseNamFolder = [chooseSharedFolder](IControl* caller) { chooseSharedFolder(true, caller); };
+    folderActions.chooseIrFolder = [chooseSharedFolder](IControl* caller) { chooseSharedFolder(false, caller); };
+    const auto configurationLibraryActions = libraryActions;
+    const auto configurationProviderActions = providerActions;
+
     // Model loader button
     auto loadModelCompletionHandler = [&](const WDL_String& fileName, const WDL_String& path) {
       if (fileName.GetLength())
@@ -428,6 +471,11 @@ Amphibia::Amphibia(const InstanceInfo& info)
                                                  std::move(providerActions)),
                       kCtrlTagSettingsBox)
       ->Hide(true);
+
+    pGraphics->AttachControl(new NAMConfigurationPanelControl(b, backgroundBitmap, crossSVG, style,
+                                                              std::move(folderActions), configurationLibraryActions,
+                                                              configurationProviderActions),
+                             kCtrlTagConfigurationPanel)->Hide(true);
 
     Tone3000PanelActions tone3000PanelActions;
     tone3000PanelActions.openSource = [](const std::string& url) {
@@ -723,6 +771,9 @@ void Amphibia::OnUIOpen()
 {
   Plugin::OnUIOpen();
 
+  // Shared preferences are read only when the editor opens. Never touch the
+  // settings file from ProcessBlock() or the block-boundary staging path.
+  const auto shared = amphibia::preferences::LoadSharedSettings();
   std::lock_guard<std::mutex> pathLock(mPathMutex);
   if (mNAMPath.GetLength())
   {
@@ -743,6 +794,16 @@ void Amphibia::OnUIOpen()
   if (mModelLoader.HasRetainedProcessor())
   {
     _UpdateControlsFromModel();
+  }
+
+  if (shared.available)
+  {
+    if (!mNAMPath.GetLength() && shared.settings.namFolder)
+      if (auto* browser = GetUI()->GetControlWithTag(kCtrlTagModelFileBrowser))
+        browser->As<NAMFileBrowserControl>()->SetPreferredDirectory(shared.settings.namFolder->c_str());
+    if (!mIRPath.GetLength() && shared.settings.irFolder)
+      if (auto* browser = GetUI()->GetControlWithTag(kCtrlTagIRFileBrowser))
+        browser->As<NAMFileBrowserControl>()->SetPreferredDirectory(shared.settings.irFolder->c_str());
   }
 }
 
@@ -864,6 +925,7 @@ void Amphibia::_ApplyDSPStaging()
     _SetInputGain();
     _SetOutputGain();
   }
+
   (void)mIRLoader.ActivateAtBlockBoundary();
 }
 
