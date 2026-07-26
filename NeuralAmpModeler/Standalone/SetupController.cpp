@@ -87,4 +87,11 @@ bool ShouldShowWizard(const SetupState& state, const CommandLineOptions& options
   if (criticalConfigurationInvalid && userAcceptedRepair) return true;
   return state.completion == SetupCompletionState::NeverStarted;
 }
+
+void SeedLegacyAudio(SettingsDocument& document, const std::optional<AudioConfiguration>& activeLegacyAudio)
+{
+  if (document.standalone.audio || !activeLegacyAudio) return;
+  document.standalone.audio = activeLegacyAudio;
+  document.standalone.setup.audioConfigured = true;
+}
 } // namespace amphibia::setup

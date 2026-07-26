@@ -36,4 +36,5 @@ private:
 
 bool ShouldShowWizard(const SetupState& state, const CommandLineOptions& options, bool explicitRerun,
                       bool criticalConfigurationInvalid, bool userAcceptedRepair);
+void SeedLegacyAudio(SettingsDocument& document, const std::optional<AudioConfiguration>& activeLegacyAudio);
 } // namespace amphibia::setup

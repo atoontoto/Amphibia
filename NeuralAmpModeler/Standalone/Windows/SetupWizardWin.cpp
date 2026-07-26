@@ -192,7 +192,9 @@ private:
     const auto loaded = mHost.SetupSettings().Load();
     if (loaded.status == SettingsLoadStatus::Loaded || loaded.status == SettingsLoadStatus::RecoveredFromBackup)
       return loaded.document;
-    return {};
+    SettingsDocument document;
+    if (loaded.status == SettingsLoadStatus::Missing) SeedLegacyAudio(document, mHost.Current());
+    return document;
   }
 
   static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
