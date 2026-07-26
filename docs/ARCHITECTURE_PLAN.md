@@ -304,3 +304,24 @@ remain outside the architecture.
 Milestone 3 adds a provider-neutral local content boundary under `NeuralAmpModeler/Library/`: source/plan/result types, path policy, recursive scanner, ZIP inventory/extractor, OS SHA-256, schema-1 JSON index, managed object transactions, and a joined import/maintenance worker. UI drag/drop and Settings actions are adapters; they do not own archive or database policy. `ManagedLibrary` is the only publisher of permanent objects/metadata, and `_RequestModel()` / `_RequestIR()` remain the only product loading gateways.
 
 The managed root is optional and separate from referenced browsing. Its content-addressed objects and pack associations are suitable inputs for a future provider adapter, but no provider/network concept enters this slice. The existing upstream-heavy DSP/UI translation unit includes the library implementation at its established amalgamation boundary; vendored C readers are explicit app/VST3 build inputs. Future extraction into a standalone library target is allowed if it preserves these APIs and merge boundaries.
+
+# Milestone 6 configuration overlay
+
+Milestone 6 replaces only the Windows generic APP shell sources with
+product-owned copies under `Standalone/Windows`. Amphibia-owned core services
+under `Standalone/` define command-line policy, schema-1 settings, wizard state,
+transactional audio changes, meters/test tone, and folder validation. The APP
+host adapts RtAudio and the product library through `ConfigurationServices.h`.
+
+The editor's `NAMConfigurationPanelControl` is shared by APP and VST3. It owns
+no settings or provider engine: callbacks reload/merge the shared JSON fields,
+seed existing non-recursive browsers, and reuse library/provider actions. A
+compile-time message distinguishes standalone audio settings from DAW-owned
+VST3 audio. The VST3 project compiles settings/shared-preference support but no
+wizard, APP host, device enumerator, or command-line main.
+
+The stable boundary handed to Milestone 7 is: `--first-run`/`--setup`/repair
+entry points; `%LOCALAPPDATA%\Amphibia` settings/library ownership; explicit
+standalone/VST3 component targets; schema/future-version preservation; and
+user-content retention rules. Milestone 7 may package these interfaces but must
+not move device/content work into DSP or delete settings/library/folder data.

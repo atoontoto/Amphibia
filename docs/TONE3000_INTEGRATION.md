@@ -154,3 +154,16 @@ cross-process browser-flow ownership, and deterministic development mocks.
 An actual loopback/custom-URI receiver is intentionally not selected because
 TONE3000 has not confirmed Amphibia's production registration strategy.
 Production controls remain disabled and no live-provider pass is claimed.
+
+## Milestone 6 setup behavior
+
+The wizard's TONE3000 page is informational and optional. It reads no token and
+starts no browser, callback receiver, credential lookup, DNS, or HTTP operation
+on entry. In this repository it says that the integration is not configured,
+explains that local NAM/IR operation is unaffected, and permits Skip/Next and
+normal setup completion. The shared Configuration panel reuses the existing
+registration/connection/secure-store status and explicit provider actions.
+
+Setup JSON stores only the boolean `tone3000_configured` readiness projection;
+tokens, codes, PKCE values, client secrets, callback material, signed URLs, and
+provider payloads are forbidden. See `TONE3000_BRANDING_COMPLIANCE.md`.

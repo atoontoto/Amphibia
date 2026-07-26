@@ -47,3 +47,18 @@ The default path is read-only in Milestone 3; relocation is deliberately not par
 A TONE3000 individual download enters the same managed staging, NAM/WAV inspection, streaming SHA-256, content-addressed object, and transactional index path as Milestone 4. Exact provider association lookup lets a selected pack recognize an already-downloaded provider tone/model without redownloading it. The selected pack's Previous/Next controls consider only downloaded, compatible variants and never alter the inherited local-folder sequence.
 
 `Remove Local Copy` is exact and explicit. It refuses an active protected hash, removes only the chosen provider association/pack entry, retains shared bytes while another association references them, and deletes an unpinned, unshared object only after committing metadata. Disconnecting an account does not invoke this removal. Cached valid managed NAM/IR objects remain usable offline.
+
+## Milestone 6 setup surface
+
+The standalone Managed library page and the shared in-editor Configuration
+panel project the existing service's root, schema, object/NAM/IR/pack counts,
+managed byte count, current task, staging readiness, and verification result.
+The standalone page offers Open Library Folder, Verify Library/Cancel Task,
+Clean Staging, Import Files, Import Folder, and Import ZIP. Work remains on the
+joined import worker, and the user may continue setup while it runs.
+
+No relocation or automatic object deletion was added. Clean Staging is
+confirmed and confined to staging. An unavailable, read-only, corrupt, or
+future-schema library does not disable referenced-file mode. Verification state
+is invalidated when a new scan/import begins so the setup summary cannot report
+a stale healthy result.

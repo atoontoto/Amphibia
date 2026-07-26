@@ -167,3 +167,19 @@ The macOS product project does not yet compile the new provider/network source
 set or an `NSURLSession` adapter. Keychain/browser source is present but is not
 a platform build claim. This is an explicit Milestone 5/platform integration
 handoff, not an upstream omission to paper over.
+
+# Milestone 6 overlay
+
+| Area | Amphibia change | Upstream-sync treatment |
+| --- | --- | --- |
+| `Standalone/*.h,*.cpp` | Product setup types/controller, command line, settings store, transactional audio, test/meter, folder validation | Amphibia-owned; preserve schema and RT boundary. |
+| `Standalone/Windows/AmphibiaAPP*`, `SetupWizardWin.*` | Product-owned Windows APP shell and native wizard/menu/diagnostics integration | Reconcile upstream APP fixes manually; do not revert projects to direct generic APP sources. |
+| `ConfigurationServices.h`, `SharedSettings.*` | Narrow host/product library bridge and cross-surface shared preferences | Keep outside DSP/provider wire types; VST3 writes shared fields only. |
+| `NeuralAmpModeler.cpp/.h`, `NeuralAmpModelerControls.h` | Explicit configuration panel, preferred-browser seeding, library status/actions | Sensitive inherited UI seam; keep setup I/O out of `ProcessBlock()` and project state. |
+| app/VST3 Visual Studio projects | Windows APP source substitution; shared settings sources in both; no wizard in VST3 | Reconcile generated projects explicitly and retain v143 default/AAX disabled. |
+| `tests/milestone6`, characterization contract | Fake audio/settings/controller tests and source-level VST3/RT ownership checks | Amphibia-owned; do not describe fake devices/static checks as hardware/host validation. |
+
+The macOS APP project still uses the pinned generic sources and has no Milestone
+6 wizard integration. This is an explicit platform limitation. Installer,
+packaging, signing, component selection, and uninstall retention remain
+Milestone 7 and were not started here.

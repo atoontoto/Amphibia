@@ -121,3 +121,23 @@ is detached and shutdown is not described as instantaneous.
 The callback receiver starts before browser launch and is cancelled before exact API work. A named semaphore on Windows and `flock` lease on macOS ensure only one Amphibia instance owns a hosted browser/callback flow for the credential namespace. The semaphore is intentionally releasable from an asynchronous completion thread. Credential refresh retains its separate Milestone 4 lock.
 
 Download completion may request managed activation, but the coordinator does not construct or exchange DSP. The product-side callback must resolve the managed SHA-256 and call `_RequestModel()` or `_RequestIR()`; only a later Milestone 2 Active/Failed result may call `NotifyActivation`. Downloaded, Preparing, and Active are therefore independent states. The existing active DSP remains in place throughout failed or cancelled provider work.
+
+# Milestone 6 setup and settings ownership
+
+The Windows wizard, command-line policy, device enumeration/open/close, folder
+validation/counting, library verification/import/cleanup, provider actions,
+settings load/merge/write, and diagnostics formatting run on the startup/message
+thread or their joined workers. None is called by `ProcessBlock()`.
+
+The APP callback performs only existing audio processing, lock-free peak
+publication, underrun accounting, silent-input routing for output-only mode,
+and the already-configured bounded test oscillator. Test start/stop parameters
+are published atomically; there is no callback file I/O, parsing, UI access, or
+settings lock.
+
+Shared preferences are read on `OnUIOpen()` and explicit panel actions only.
+The settings write lock is bounded and never acquired from audio code. Folder
+validation uses an asynchronous same-directory scan. Managed library work uses
+the existing joined `ImportWorker`; UI timers copy its status. Closing the
+wizard can cancel its current library task, while navigating forward may leave
+the bounded task running.

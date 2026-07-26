@@ -21,3 +21,16 @@ The TONE3000 production flow is intentionally unconfigured in this repository. A
 Milestone 5 adds a cross-process hosted-selection lease, exact callback/tone/model identity checks, bounded pagination, short-lived download URLs, and stale task suppression. The shipped callback receiver fails closed because no approved production desktop callback exists. Do not enable the buttons by substituting an arbitrary port, wildcard redirect, LAN listener, custom URI, client secret, scraped brand asset, or undocumented prompt/filter.
 
 Every exact variant still follows provider download to randomized staging, local inspection, SHA-256, managed promotion, provenance, and a separate explicit load request. Download success must never be treated as DSP activation success. Exact cached-copy removal must protect active and shared objects.
+
+Milestone 6 adds a bounded command-line allow-list, versioned settings with
+future-schema rejection, backup recovery, atomic replacement, and a bounded
+cross-process merge lock. The standalone wizard performs device operations,
+folder validation, library maintenance, settings writes, and diagnostics only
+off the audio thread. Its test oscillator is explicitly armed, amplitude/time
+bounded, and preconfigured before the callback consumes it. Folder preferences
+reject redirected selections and never authorize automatic recursive import.
+
+Do not work around a settings error by inserting provider secrets, changing the
+managed-library root, or granting broad permissions. Preserve corrupt settings
+for private review and redact local paths/device names. Installer, elevation,
+system-wide modification, signing, and update security remain Milestone 7.

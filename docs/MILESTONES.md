@@ -56,36 +56,28 @@ Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented 
 - [x] Download/promote only after user action and expose a separate activation request that the product must route through `_RequestModel()` or `_RequestIR()` after configuration becomes available.
 - [x] Add deterministic development/mock validation for cancellation, stale callbacks, constraints, exact download, cached audition, and multiple-instance ownership.
 
-## Milestone 6 — download/import hardening
+## Milestone 6 — first-run setup and configuration
 
-- [x] Enforce Windows transport HTTPS/redirect/host policy, timeouts, rate limits, byte caps, streamed validation, hashes, and atomic promotion for the Milestone 4 foundation.
-- [ ] Complete equivalent macOS transport coverage and broader malicious HTTP/download corpus, disk-full, interruption, restart, and sanitizer coverage.
-- [ ] Add clear-cache/remove-item UX with explicit scope and current provider-term handling.
+- [x] Add Windows first-run detection, exact command-line overrides, completion/cancel/rerun/repair policy, and safe mode.
+- [x] Add DirectSound/ASIO device/channel/rate/buffer selection with transactional rollback, explicit no-audio continuation, bounded output test, and non-recording meters.
+- [x] Add referenced NAM/IR folder setup, live managed-library health/counts/actions, and an optional honest TONE3000 page.
+- [x] Add schema-1 atomic/backup settings, legacy active-audio seeding, sensitive-field exclusion, and bounded cross-process shared-field merges.
+- [x] Add the explicit VST3 Configuration panel with DAW-owned audio and no standalone wizard path.
+- [x] Add native/fake/static tests and the first-run/audio/settings/privacy/security documentation set.
+- [ ] Validate the native setup flow with real Windows audio hardware and a DAW host.
+- [ ] Implement and validate the equivalent macOS standalone setup integration.
 
-## Milestone 7 — standalone reliability
+## Milestone 7 — installer, packaging, and end-user deployment
 
-- [ ] Persist/restore plugin state and device configuration independently.
-- [ ] Recover from missing devices/formats and validate cold-start/offline/cache migration.
-- [ ] Run long-duration audio, device-reset, and rapid-switch stress tests.
+- [ ] Build Windows/macOS packages with explicit standalone and VST3 component selection and post-install `--first-run` support.
+- [ ] Test clean install, upgrade, repair, uninstall, managed-content/user-folder preservation, and NeuralAmpModeler coexistence in clean systems.
+- [ ] Finalize release artifact naming, notices, signing/notarization, checksums, and protected publication policy.
 
-## Milestone 8 — installers and side-by-side safety
+## Later release gates
 
-- [ ] Build signed/notarized Windows and macOS packages with exact manifests/notices.
-- [ ] Test install, upgrade, repair, uninstall, user-data retention, and NAM coexistence in clean VMs.
-
-## Milestone 9 — CI and release security
-
-- [ ] Pin CI actions/dependencies immutably and add macOS, plugin validation, sanitizers, secret scans, SBOM, and artifact integrity.
-- [ ] Gate signing/release publication behind protected environments.
-
-## Milestone 10 — documentation and usability
-
-- [ ] Complete and verify release-user documentation, screenshots, commands, limitations, data deletion, and offline behavior.
-
-## Milestone 11 — release candidate and handoff
-
-- [ ] Complete cross-host/platform validation and resolve or explicitly waive every release blocker.
-- [ ] Sign/tag a reproducible release candidate and publish checksums/provenance/notices.
+- [ ] Complete macOS provider transport, broad host/plugin validation, real-device/reset stress, sanitizers, SBOM, and artifact integrity.
+- [ ] Resolve visual/font provenance, final owner/support identifiers, live provider registration/redirect approval, and all documented release blockers.
+- [ ] Sign/tag a reproducible release candidate only after Milestone 7 and the remaining gates pass.
 
 ## Milestone 4 evidence record
 
@@ -98,6 +90,14 @@ Windows native test and standalone/VST3 evidence is recorded in `MILESTONE_4_REP
 Milestone 5 adds the visible controls and native bounded selection model, plus a provider-neutral hosted-flow coordinator. It deliberately does not enable a live repository build: the exact approved production callback, publishable client registration, brand assets, and final privacy/repository/support values do not exist. The unconfigured controls do not open a browser, start a receiver, read credentials, or perform network work.
 
 Deterministic evidence is recorded in `MILESTONE_5_REPORT.md`. The exact-variant pipeline is mock-tested through promotion/activation separation, while Release VST3 compilation proves the additive UI and provider sources integrate with the product target. macOS and live-provider validation remain open.
+
+## Milestone 6 evidence record
+
+The Windows standalone wizard, shared settings, VST3 configuration panel, and
+managed-library setup projection are recorded in `MILESTONE_6_REPORT.md`.
+Device behavior is covered with deterministic fakes and Windows targets compile,
+but no real hardware, DAW-host, or macOS manual validation is claimed. Installer,
+packaging, signing, and system-wide changes were not started.
 
 ## Global non-claims
 

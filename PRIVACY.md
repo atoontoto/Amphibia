@@ -36,3 +36,19 @@ managed staging root. No persistent provider request/body log is emitted.
 The hosted `Search TONE3000` and `Find IR on TONE3000` controls are explicit user actions. In the unconfigured repository build they are disabled and start no listener, credential access, browser, DNS, or HTTP work. Hosted discovery occurs on TONE3000's own site; Amphibia implements no unrestricted catalog search, scraping, recommendations, mirroring, remote image fetch, or background synchronization.
 
 Within a callback-selected pack, the local filter examines only bounded in-memory model names and paths. The panel/task snapshot is transient and is not written to DAW state. Exact provider IDs and attribution enter the managed library only after an explicit successful individual download.
+
+## Setup and configuration
+
+Audio-device display names and NAM/IR folder paths may be stored locally in
+Amphibia's versioned application settings. They are not transmitted. Setup
+adds no analytics, telemetry, advertising identifier, or background service.
+The output-test samples are generated transiently and are neither stored nor
+uploaded. Input audio is not recorded; the UI receives only a lock-free peak
+measurement.
+
+Entering the optional TONE3000 setup page does not open a browser, read a
+credential, connect, or send a request. Managed-library verification and
+staging cleanup remain local. Copied diagnostics are generated locally and
+must remain bounded/redacted; users should review device names and local paths
+before sharing them. No token, authorization code, PKCE value, credential
+payload, or signed URL is permitted in setup settings or diagnostics.

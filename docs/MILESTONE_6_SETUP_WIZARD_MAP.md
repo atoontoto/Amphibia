@@ -1,6 +1,6 @@
 # Milestone 6 standalone setup-wizard map
 
-Status: pre-implementation setup, settings, audio, and UI integration gate
+Status: implemented; closure evidence is in `MILESTONE_6_REPORT.md`
 
 Evidence date: 2026-07-26
 

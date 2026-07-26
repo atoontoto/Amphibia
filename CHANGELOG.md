@@ -2,6 +2,15 @@
 
 All notable Amphibia changes are recorded here. The project has no public release yet.
 
+## Unreleased - Milestone 6
+
+- Added a native Windows nine-page first-run wizard with bounded command-line overrides, completion/cancel/rerun/repair policy, safe mode, and an honest optional-provider page.
+- Added DirectSound/ASIO enumeration, input/output/channel/rate/buffer selection, transactional device rollback, output-only mode, a bounded faded test tone, and non-recording peak meters.
+- Added shared NAM/IR folder preferences, same-directory validation, managed-library health/counts and six explicit maintenance/import actions, plus legacy INI audio seeding.
+- Added schema-1 atomic JSON settings with backup recovery, future-schema rejection, sensitive-field guards, and bounded cross-process reload/merge locking.
+- Added an explicit shared standalone/VST3 Configuration panel; the VST3 states that its DAW controls audio and contains no standalone wizard startup path.
+- Added Milestone 6 native/fake/static contract tests and setup/security/user documentation. No installer, signing, release publication, macOS wizard validation, real-hardware pass, or DAW-host pass is claimed.
+
 ## Unreleased - Milestone 5
 
 - Added fail-closed Unconfigured, DevelopmentConfigured, and ProductionConfigured registration validation without embedding a client secret or inventing production registration values.

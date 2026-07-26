@@ -1,6 +1,6 @@
 # Amphibia threat model
 
-Status: Milestone 4 provider-foundation review (2026-07-26)
+Status: Milestone 6 setup/configuration review (2026-07-26)
 
 Review trigger: any new provider, network/archive library, state-schema change, installer change, or credential flow change
 
@@ -162,3 +162,25 @@ No network, provider, OAuth, TLS, telemetry, scripting, executable loading, or t
 | substituted exact variant | downloaded content/provenance | list URL or model identity changes before click | refresh exact model ID and recheck tone/format/architecture before download; deterministic substitution checks | provider may legitimately remove a variant |
 | automatic activation confusion | active DSP/project state | callback or download silently replaces sound | callback only opens exact panel; explicit download/audition; managed activation and Active confirmation remain separate | live host/editor validation remains open |
 | destructive cache removal | managed bytes/attribution | active or shared object is deleted | exact association tuple, protected active hashes, shared/pinned liveness, metadata-first removal; native test | crash after metadata commit can leave a reportable orphan |
+
+## Milestone 6 setup threat register
+
+| Threat | Asset | Attack | Mitigation | Test | Remaining risk |
+| --- | --- | --- | --- | --- | --- |
+| Malicious command line | startup integrity | oversized/unknown value becomes a path or shell fragment | exact allow-list, 256-byte bounded diagnostic, terminal help/error before host/audio creation | parser and static startup-order contract | Windows GUI help is interactive, not console output |
+| Unsafe settings path | user configuration/filesystem | redirected or broad path escapes Amphibia data root | path is derived from app-support + fixed Amphibia filename; no CLI override | settings temporary-root tests and source review | compromised OS profile/app-support API is trusted |
+| Corrupt/future settings | valid configuration | malformed data crashes startup or is overwritten | 1 MiB cap, typed bounds, future-schema refusal, validated backup, safe defaults | corrupt/backup/future-schema tests | backup may also be corrupt; user repair is then required |
+| Device-name injection | UI/diagnostics/settings | hostile driver name injects control/log text | bounded strings, native controls, no shell composition, local-only diagnostics | Unicode/duplicate/fake-device tests | third-party driver UI behavior is outside Amphibia |
+| Folder-path injection | local files/privacy | crafted path causes recursion, provider leak, or overwrite | filesystem dialog, directory check, no shell input, same-directory validation, local-only JSON | Unicode/missing/file/count/static privacy tests | path may disclose identity if user shares settings/diagnostics |
+| Symlink/reparse selection | filesystem boundary | selected folder redirects after validation | reject selected reparse/symlink roots and do not recurse for preference setup | platform policy/source contract; manual redirected-path pass pending | target can change after check; loads still revalidate files |
+| Library path redirection | managed objects | root is relocated to unsafe/untrusted location | fixed application-data root, containment checks, relocation absent | Milestone 3 library path/schema tests | compromised root ACL/profile remains an OS risk |
+| Output-test loudness | hearing/equipment | automatic, stacked, unbounded test signal | explicit warning/action, 0.05 peak, fade, <=5 s, one atomic instance, stop on transitions | deterministic peak/fade/stack/stop tests | physical gain/speaker sensitivity cannot be inferred |
+| Unexpected input monitoring | user privacy/hearing | guitar input is recorded, retained, or routed unexpectedly | meter computes peak only; output-only supported; no input capture storage/upload added | meter and static serialization/privacy contract | driver/DAW routing outside Amphibia may monitor input |
+| Provider launch from wizard | account/network privacy | page entry opens browser or starts OAuth | page is informational; unconfigured gate; only explicit existing actions can connect | static page-entry/VST3 contract and provider mocks | future registered UI requires live manual review |
+| Setup-state rollback | configuration integrity | Cancel or failed audio overwrites known-good state | draft model; Finish-only completion; device rollback; atomic settings backup | controller cancel/finish and fake transaction tests | previewed active stream is session state until Finish/restart |
+| Standalone/VST3 settings race | audio/setup/shared state | plug-in overwrites standalone fields or processes interleave writes | bounded cross-process lock, reload-before-merge, field-specific updates, future-schema refusal | round-trip/update/static ownership contract | last successful shared-folder write wins by design |
+| Diagnostics leakage | paths, device identity, secrets | copied status exposes private/local/provider material | bounded local formatting; sensitive fields never stored; no tokens/signed URLs; user review guidance | canary and static serialization checks | current audio diagnostics include local device display names |
+| Wizard callback after destruction | process stability | async validation/library completion touches dead window | future ownership checked by message timer, joined worker, no worker UI callback; timer killed on destroy | deterministic worker shutdown from prior suites; manual rapid-close pending | native file dialog/driver calls return on OS timing |
+
+No installer/elevation/update threat surface was added. That review belongs to
+Milestone 7 before any package or uninstall behavior exists.
