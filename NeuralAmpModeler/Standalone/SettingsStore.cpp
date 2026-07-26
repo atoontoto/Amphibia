@@ -1,8 +1,10 @@
 #include "SettingsStore.h"
 
+#include <chrono>
 #include <fstream>
 #include <random>
 #include <system_error>
+#include <thread>
 
 #include "nlohmann/json.hpp"
 
@@ -15,6 +17,58 @@ namespace amphibia::setup
 namespace
 {
 using Json = nlohmann::json;
+
+class SettingsWriteLock
+{
+public:
+  explicit SettingsWriteLock(const std::filesystem::path& settingsPath)
+  {
+    std::error_code directoryError;
+    std::filesystem::create_directories(settingsPath.parent_path(), directoryError);
+    if (directoryError) return;
+    auto lockPath = settingsPath;
+    lockPath += ".lock";
+#if defined(_WIN32)
+    for (int attempt = 0; attempt < 100 && mHandle == INVALID_HANDLE_VALUE; ++attempt)
+    {
+      mHandle = CreateFileW(lockPath.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_ALWAYS,
+                            FILE_ATTRIBUTE_HIDDEN | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
+      if (mHandle == INVALID_HANDLE_VALUE) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+#else
+    mPath = std::move(lockPath);
+    for (int attempt = 0; attempt < 100 && !mAcquired; ++attempt)
+    {
+      std::error_code code;
+      mAcquired = std::filesystem::create_directory(mPath, code);
+      if (!mAcquired) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+#endif
+  }
+  ~SettingsWriteLock()
+  {
+#if defined(_WIN32)
+    if (mHandle != INVALID_HANDLE_VALUE) CloseHandle(mHandle);
+#else
+    if (mAcquired) { std::error_code code; std::filesystem::remove(mPath, code); }
+#endif
+  }
+  bool Acquired() const
+  {
+#if defined(_WIN32)
+    return mHandle != INVALID_HANDLE_VALUE;
+#else
+    return mAcquired;
+#endif
+  }
+private:
+#if defined(_WIN32)
+  HANDLE mHandle{INVALID_HANDLE_VALUE};
+#else
+  std::filesystem::path mPath;
+  bool mAcquired{};
+#endif
+};
 
 Json AudioToJson(const AudioConfiguration& value)
 {
@@ -223,6 +277,13 @@ SettingsLoadResult SettingsStore::Load() const
 
 bool SettingsStore::Save(const SettingsDocument& document, std::string& error) const
 {
+  SettingsWriteLock lock(mPath);
+  if (!lock.Acquired()) { error = "Settings are busy in another Amphibia process."; return false; }
+  return SaveUnlocked(document, error);
+}
+
+bool SettingsStore::SaveUnlocked(const SettingsDocument& document, std::string& error) const
+{
   if (document.schemaVersion != kSettingsSchemaVersion ||
       document.standalone.setup.schemaVersion != kSetupSchemaVersion)
   {
@@ -269,22 +330,26 @@ bool SettingsStore::Save(const SettingsDocument& document, std::string& error) c
 
 bool SettingsStore::UpdateShared(const SharedSettings& shared, std::string& error) const
 {
+  SettingsWriteLock lock(mPath);
+  if (!lock.Acquired()) { error = "Settings are busy in another Amphibia process."; return false; }
   auto loaded = Load();
   if (loaded.status == SettingsLoadStatus::FutureSchema) { error = loaded.message; return false; }
   auto document = loaded.status == SettingsLoadStatus::Loaded || loaded.status == SettingsLoadStatus::RecoveredFromBackup
                     ? loaded.document : SettingsDocument{};
   document.shared = shared;
-  return Save(document, error);
+  return SaveUnlocked(document, error);
 }
 
 bool SettingsStore::UpdateStandalone(const StandaloneSettings& standalone, std::string& error) const
 {
+  SettingsWriteLock lock(mPath);
+  if (!lock.Acquired()) { error = "Settings are busy in another Amphibia process."; return false; }
   auto loaded = Load();
   if (loaded.status == SettingsLoadStatus::FutureSchema) { error = loaded.message; return false; }
   auto document = loaded.status == SettingsLoadStatus::Loaded || loaded.status == SettingsLoadStatus::RecoveredFromBackup
                     ? loaded.document : SettingsDocument{};
   document.standalone = standalone;
-  return Save(document, error);
+  return SaveUnlocked(document, error);
 }
 
 bool ContainsSensitiveSetupData(const std::string& serialized)

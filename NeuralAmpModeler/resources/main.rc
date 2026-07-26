@@ -81,7 +81,10 @@ IDR_MENU1 MENU
 BEGIN
     POPUP "&File"
     BEGIN
-        MENUITEM "&Preferences...\tCtrl+,",     ID_PREFERENCES
+        MENUITEM "&Audio Settings...\tCtrl+,",  ID_AUDIO_SETTINGS
+        MENUITEM "Run Setup Wizard Again...",   ID_SETUP_WIZARD
+        MENUITEM "Restart in Safe Mode",         ID_SAFE_MODE
+        MENUITEM SEPARATOR
         MENUITEM "&Quit",                       ID_QUIT
     END
     POPUP "&Debug"
@@ -95,6 +98,7 @@ BEGIN
     BEGIN
         MENUITEM "&About",                      ID_ABOUT
         MENUITEM "&Read Manual",                ID_HELP
+        MENUITEM "Copy Audio Diagnostics",      ID_COPY_DIAGNOSTICS
     END
 END
 
@@ -203,7 +207,7 @@ END
 
 IDR_ACCELERATOR1 ACCELERATORS
 BEGIN
-    VK_OEM_COMMA,   ID_PREFERENCES,         VIRTKEY, CONTROL, NOINVERT
+    VK_OEM_COMMA,   ID_AUDIO_SETTINGS,       VIRTKEY, CONTROL, NOINVERT
     "B",            ID_SHOW_BOUNDS,         VIRTKEY, CONTROL, NOINVERT
     "D",            ID_SHOW_DRAWN,          VIRTKEY, CONTROL, NOINVERT
     "F",            ID_SHOW_FPS,            VIRTKEY, CONTROL, NOINVERT

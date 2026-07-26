@@ -32,18 +32,25 @@
     <ClCompile Include="..\..\iPlug2\IPlug\IPlugTimer.cpp">
       <Filter>IPlug</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\iPlug2\IPlug\APP\IPlugAPP.cpp">
+    <ClCompile Include="..\Standalone\Windows\AmphibiaAPP.cpp">
       <Filter>IPlug\APP</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\iPlug2\IPlug\APP\IPlugAPP_dialog.cpp">
+    <ClCompile Include="..\Standalone\Windows\AmphibiaAPPDialog.cpp">
       <Filter>IPlug\APP</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\iPlug2\IPlug\APP\IPlugAPP_host.cpp">
+    <ClCompile Include="..\Standalone\Windows\AmphibiaAPPHost.cpp">
       <Filter>IPlug\APP</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\iPlug2\IPlug\APP\IPlugAPP_main.cpp">
+    <ClCompile Include="..\Standalone\Windows\AmphibiaAPPMain.cpp">
       <Filter>IPlug\APP</Filter>
     </ClCompile>
+    <ClCompile Include="..\Standalone\Windows\SetupWizardWin.cpp"><Filter>IPlug\APP</Filter></ClCompile>
+    <ClCompile Include="..\Standalone\AudioConfiguration.cpp"><Filter>IPlug\APP</Filter></ClCompile>
+    <ClCompile Include="..\Standalone\CommandLine.cpp"><Filter>IPlug\APP</Filter></ClCompile>
+    <ClCompile Include="..\Standalone\FolderValidation.cpp"><Filter>IPlug\APP</Filter></ClCompile>
+    <ClCompile Include="..\Standalone\SettingsStore.cpp"><Filter>IPlug\APP</Filter></ClCompile>
+    <ClCompile Include="..\Standalone\SetupController.cpp"><Filter>IPlug\APP</Filter></ClCompile>
+    <ClCompile Include="..\Standalone\SetupTypes.cpp"><Filter>IPlug\APP</Filter></ClCompile>
     <ClCompile Include="..\..\iPlug2\Dependencies\IPlug\RTAudio\RtAudio.cpp">
       <Filter>IPlug\APP\RTAudioMidi</Filter>
     </ClCompile>
@@ -217,9 +224,16 @@
     <ClInclude Include="..\..\iPlug2\IPlug\APP\IPlugAPP.h">
       <Filter>IPlug\APP</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\iPlug2\IPlug\APP\IPlugAPP_host.h">
+    <ClInclude Include="..\Standalone\Windows\AmphibiaAPPHost.h">
       <Filter>IPlug\APP</Filter>
     </ClInclude>
+    <ClInclude Include="..\Standalone\Windows\SetupWizardWin.h"><Filter>IPlug\APP</Filter></ClInclude>
+    <ClInclude Include="..\Standalone\AudioConfiguration.h"><Filter>IPlug\APP</Filter></ClInclude>
+    <ClInclude Include="..\Standalone\CommandLine.h"><Filter>IPlug\APP</Filter></ClInclude>
+    <ClInclude Include="..\Standalone\FolderValidation.h"><Filter>IPlug\APP</Filter></ClInclude>
+    <ClInclude Include="..\Standalone\SettingsStore.h"><Filter>IPlug\APP</Filter></ClInclude>
+    <ClInclude Include="..\Standalone\SetupController.h"><Filter>IPlug\APP</Filter></ClInclude>
+    <ClInclude Include="..\Standalone\SetupTypes.h"><Filter>IPlug\APP</Filter></ClInclude>
     <ClInclude Include="..\..\iPlug2\Dependencies\IPlug\RTAudio\RtAudio.h">
       <Filter>IPlug\APP\RTAudioMidi</Filter>
     </ClInclude>

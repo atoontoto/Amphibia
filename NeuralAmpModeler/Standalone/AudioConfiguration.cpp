@@ -46,7 +46,8 @@ bool TestToneGenerator::Start(double sampleRate, double frequencyHz, double dura
 {
   if (sampleRate < 8000.0 || sampleRate > 768000.0 || frequencyHz < 20.0 || frequencyHz > 20000.0 ||
       durationSeconds <= 0.0 || durationSeconds > 5.0) return false;
-  if (mActive.exchange(true, std::memory_order_acq_rel)) return false;
+  std::uint8_t inactive = 0;
+  if (!mState.compare_exchange_strong(inactive, 1, std::memory_order_acq_rel)) return false;
   constexpr double pi = 3.14159265358979323846;
   mPhase = 0.0;
   mPhaseIncrement = 2.0 * pi * frequencyHz / sampleRate;
@@ -55,6 +56,7 @@ bool TestToneGenerator::Start(double sampleRate, double frequencyHz, double dura
   mRemaining.store(mTotalSamples, std::memory_order_release);
   mGain = 0.0;
   mGainStep = kMaximumPeak / static_cast<double>(mFadeSamples);
+  mState.store(2, std::memory_order_release);
   return true;
 }
 
@@ -65,14 +67,14 @@ void TestToneGenerator::Stop()
 
 void TestToneGenerator::ProcessNonInterleaved(double* output, int channels, int frames)
 {
-  if (!output || channels <= 0 || frames <= 0 || !mActive.load(std::memory_order_acquire)) return;
+  if (!output || channels <= 0 || frames <= 0 || mState.load(std::memory_order_acquire) != 2) return;
   constexpr double pi = 3.14159265358979323846;
   auto remaining = mRemaining.load(std::memory_order_relaxed);
   for (int frame = 0; frame < frames; ++frame)
   {
     if (remaining == 0)
     {
-      mActive.store(false, std::memory_order_release);
+      mState.store(0, std::memory_order_release);
       break;
     }
     const auto elapsed = mTotalSamples > remaining ? mTotalSamples - remaining : 0;
@@ -85,7 +87,7 @@ void TestToneGenerator::ProcessNonInterleaved(double* output, int channels, int 
     --remaining;
   }
   mRemaining.store(remaining, std::memory_order_release);
-  if (remaining == 0) mActive.store(false, std::memory_order_release);
+  if (remaining == 0) mState.store(0, std::memory_order_release);
 }
 
 void AudioMeters::Observe(const double* input, int inputChannels, const double* output, int outputChannels, int frames)

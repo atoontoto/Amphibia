@@ -54,11 +54,12 @@ public:
   static constexpr double kMaximumPeak = 0.05;
   bool Start(double sampleRate, double frequencyHz = 440.0, double durationSeconds = 2.0);
   void Stop();
-  bool Active() const { return mActive.load(std::memory_order_acquire); }
+  bool Active() const { return mState.load(std::memory_order_acquire) == 2; }
   void ProcessNonInterleaved(double* output, int channels, int frames);
 
 private:
-  std::atomic<bool> mActive{false};
+  // 0 = inactive, 1 = being initialized by the UI thread, 2 = active on the audio thread.
+  std::atomic<std::uint8_t> mState{0};
   std::atomic<std::uint64_t> mRemaining{0};
   double mPhase{};
   double mPhaseIncrement{};

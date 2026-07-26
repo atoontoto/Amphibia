@@ -38,6 +38,7 @@ public:
   std::filesystem::path BackupPath() const;
 
 private:
+  bool SaveUnlocked(const SettingsDocument& document, std::string& error) const;
   std::filesystem::path mPath;
 };
 
