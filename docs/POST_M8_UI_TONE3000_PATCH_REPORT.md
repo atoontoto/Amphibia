@@ -189,7 +189,7 @@ Access and refresh tokens remain only in the isolated OS credential service
 with no plaintext/settings/state fallback. The public client ID is not stored
 there. Construction, scan, state restore, Settings opening, and audio
 processing do not bind, access credentials, open a browser, or perform
-provider/network work. The rebuilt release security scan passed 622 files with
+provider/network work. The rebuilt release security scan passed 623 files with
 zero findings. It accepts the expected public `t3k_pub_` configuration while
 continuing to reject private-client, token, private-key, authorization-code,
 signed-URL, private-path, and credential patterns.
@@ -211,7 +211,7 @@ signed-URL, private-path, and credential patterns.
 - Milestone 5 Release hosted-selection suite (9/9);
 - Milestone 6 Release setup suite (7/7);
 - CycloneDX/asset/pin validation (51 components, 33 assets);
-- release credential/path scan (622 files, zero findings).
+- release credential/path scan (623 files, zero findings).
 
 `pytest` was not installed; the repository's Python test entry points were run
 directly and passed.
@@ -255,10 +255,25 @@ The Windows packaging pipeline rebuilt Release standalone/VST3 and regenerated:
 - source, dependency, artifact, and checksum manifests.
 
 All outputs are under ignored `artifacts/release/0.1.0` and are not committed,
-published, uploaded, tagged, or called stable. They are unsigned. The canonical
-SHA-256 set is `artifacts/release/0.1.0/SHA256SUMS.txt`; the final values are
-also recorded in the repository-owner handoff after the documentation-source
-package regeneration.
+published, uploaded, tagged, or called stable. They are unsigned. The final
+package/evidence source commit is
+`b69dd56a3a77784a001249278bc6f0ba66980a58`. The canonical checksum file is
+`artifacts/release/0.1.0/SHA256SUMS.txt`; its final SHA-256 values are:
+
+| File | SHA-256 |
+| --- | --- |
+| `Amphibia-0.1.0-Windows-Setup.exe` | `dd12bca12c4e444fec818408278cbfc6290ccadb5dcb2089205562bb12eaba57` |
+| `Amphibia-0.1.0-Windows-Portable.zip` | `e6d2b04cf75e166fd4dbec3a9575a246fdb85e65ad62717af74f27316ee584b5` |
+| `Amphibia-0.1.0-Windows-VST3.zip` | `51554e7b50274014e419371776216a60e5ca025b33b6a3e245e711208151ac5d` |
+| `Amphibia-0.1.0-Windows-Standalone.zip` | `22828df08a417d9ecb8bc7ab27e90f9a714304376edd6c809394a8d5640a3859` |
+| `SOURCE-COMMIT.txt` | `f4490074beac6fa6014d24d5671bf15c3f95ad1403b34762efd8cc7cd1143769` |
+| `DEPENDENCY-VERSIONS.txt` | `d56a68afc6826f3913b1ca2b24bf04a99c67e7e83f3148e70a7344ad07ae1713` |
+| `THIRD_PARTY_NOTICES.txt` | `907503544adb1874ac8c47b02ca70eca734bdda32948d1e52c9633e2147af6c7` |
+| `Amphibia-0.1.0-SBOM.cdx.json` | `027d945061e99072cc748b9f353a6c64e2d4338c16a4f5eb916f2dfb5980e131` |
+| `ASSET-PROVENANCE.json` | `12dbf349c79acc8ac8df9ac6691e80633e0b51a0d010ed7a040f21716c03b4e2` |
+| `RELEASE-SECURITY-SCAN.json` | `744e5798dffae8b3cfa21706b167e29181515ed67650693d0a404192fe229acc` |
+| `BINARY-INSPECTION.txt` | `78d469c9d4c480f1eebea9e8628a72c94f302b2e80c589727f7a4902c6d8ca9b` |
+| `ARTIFACT-MANIFEST.txt` | `994f140dc525cbc91c678071105c17f5a39842b88702364cf44b54b9f17b7984` |
 
 The existing public-release blockers remain: inherited compiled UI artwork
 provenance, legacy ASIO authority, current external vulnerability metadata,
@@ -294,18 +309,19 @@ Remotes:
 - `origin`: `https://github.com/atoontoto/Amphibia.git`;
 - `upstream`: `https://github.com/sdatkinson/NeuralAmpModelerPlugin.git`.
 
-Corrective local commits through implementation:
+Corrective local commits through the final package source:
 
 - `9311b48` — `docs: map post-M8 UI and TONE3000 corrective patch`;
 - `eee634e` — `fix: repair UI and enable public TONE3000 OAuth`;
 - `cf10b1f` — `test: cover UI layout loopback callback and port conflicts`;
 - `0238af6` — `fix: complete DPI and settings visibility repair`.
+- `b69dd56` — `docs: close post-M8 UI and TONE3000 patch report`.
 
-The report/documentation commit that contains this file is necessarily
-identified by the final `git log` after the file is committed and is included
-in the final repository-owner handoff. The worktree and recursive submodule
-state are checked again after that commit. The pinned iPlug2 submodule remains
-at `66f9060b5287afdb2ddb83aab5a2a2a8e66a4d5e`; no submodule change is part of
+The final hash-record commit changes only this report after package generation
+and is necessarily identified by the final `git log` after it is committed.
+The worktree and recursive submodule state are checked again after that commit.
+The pinned iPlug2 submodule remains at
+`66f9060b5287afdb2ddb83aab5a2a2a8e66a4d5e`; no submodule change is part of
 this patch.
 
 Git push was not performed. The repository owner will push manually.
