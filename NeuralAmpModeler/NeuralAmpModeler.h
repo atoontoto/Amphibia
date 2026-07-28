@@ -22,6 +22,12 @@
 #include "Library/ContentHash.h"
 #include "ToneStack.h"
 #include "Providers/Tone3000/Tone3000Configuration.h"
+#include "Providers/Tone3000/Tone3000Provider.h"
+#include "Providers/Tone3000/Tone3000HostedSelectionCoordinator.h"
+#include "Platform/FixedLoopbackCallbackReceiver.h"
+#include "Platform/SystemBrowser.h"
+#include "Credentials/ISecureCredentialStore.h"
+#include "Network/PlatformHttpTransport.h"
 
 #include "IPlug_include_in_plug_hdr.h"
 #include "ISender.h"
@@ -392,6 +398,12 @@ private:
   enum class ImportTarget { None, Model, IR };
   std::unique_ptr<amphibia::library::ManagedLibrary> mLibrary;
   std::unique_ptr<amphibia::library::ImportWorker> mImportWorker;
+  amphibia::platform::PlatformSystemBrowser mTone3000Browser;
+  amphibia::credentials::PlatformSecureCredentialStore mTone3000Credentials;
+  amphibia::network::PlatformHttpTransport mTone3000Transport;
+  amphibia::platform::FixedLoopbackCallbackReceiver mTone3000CallbackReceiver;
+  std::unique_ptr<amphibia::providers::tone3000::Tone3000Provider> mTone3000Provider;
+  std::unique_ptr<amphibia::providers::tone3000::Tone3000HostedSelectionCoordinator> mTone3000Selection;
   ImportTarget mImportTarget{ImportTarget::None};
   std::uint64_t mReviewedImportTask{};
   std::uint64_t mCompletedImportTask{};
@@ -399,6 +411,15 @@ private:
   std::optional<amphibia::library::ContentHash> mPendingManagedIR;
   std::optional<amphibia::library::ContentHash> mActiveManagedModel;
   std::optional<amphibia::library::ContentHash> mActiveManagedIR;
+  struct PendingProviderActivation
+  {
+    std::uint64_t taskId{};
+    std::string providerModelId;
+    amphibia::providers::HostedSelectionKind kind{amphibia::providers::HostedSelectionKind::NamA1AndCustom};
+    amphibia::library::ContentHash managedHash;
+  };
+  std::optional<PendingProviderActivation> mPendingProviderActivation;
+  std::string mLastTone3000SnapshotSignature;
   amphibia::providers::tone3000::Tone3000Configuration mTone3000Configuration{
     amphibia::providers::tone3000::ConfiguredTone3000()};
   amphibia::providers::tone3000::Tone3000ConfigurationValidation mTone3000Registration{

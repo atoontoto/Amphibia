@@ -9,6 +9,7 @@
 #include "IPlugPaths.h"
 #include "Providers/ProviderTypes.h"
 #include "Providers/Tone3000/Tone3000HostedSelectionCoordinator.h"
+#include "UI/EditorLayout.h"
 
 #ifdef OS_WIN
   #include <Windows.h>
@@ -989,10 +990,12 @@ struct RemoteProviderUIActions
   IActionFunction disconnect;
   IActionFunction testConnection;
   IActionFunction cancel;
+  IActionFunction open;
   bool connectEnabled{};
   bool disconnectEnabled{};
   bool testEnabled{};
   bool cancelEnabled{};
+  bool openEnabled{};
 };
 
 struct LocalFolderUIActions
@@ -1032,7 +1035,8 @@ public:
     const auto padded = bounds.GetPadded(-24.f);
     const auto text = IText(DEFAULT_TEXT_SIZE, EAlign::Near, PluginColors::HELP_TEXT);
     const auto labelStyle = mStyle.WithDrawFrame(false).WithValueText(text);
-    const auto buttonStyle = mStyle.WithShowLabel(false).WithDrawFrame(true);
+    const auto buttonStyle = mStyle.WithShowLabel(true).WithDrawFrame(true)
+      .WithLabelText(IText(11.f, EAlign::Center, PluginColors::NAM_THEMEFONTCOLOR));
     AddChildControl(new IBitmapControl(bounds, mBitmap))->SetIgnoreMouse(true);
     AddChildControl(new IVLabelControl(padded.GetFromTop(42.f), "CONFIGURATION",
       DEFAULT_STYLE.WithValueText(IText(26.f, COLOR_WHITE, "Michroma-Regular")).WithDrawFrame(false)));
@@ -1100,7 +1104,8 @@ class NAMSettingsPageControl : public IContainerBaseWithNamedChildren
 public:
   NAMSettingsPageControl(const IRECT& bounds, const IBitmap& bitmap, const IBitmap& inputLevelBackgroundBitmap,
                          const IBitmap& switchBitmap, ISVG closeSVG, const IVStyle& style,
-                         const IVStyle& radioButtonStyle, LibraryUIActions libraryActions = {},
+                         const IVStyle& radioButtonStyle, LocalFolderUIActions folderActions = {},
+                         LibraryUIActions libraryActions = {},
                          RemoteProviderUIActions providerActions = {})
   : IContainerBaseWithNamedChildren(bounds)
   , mAnimationTime(0)
@@ -1110,6 +1115,7 @@ public:
   , mStyle(style)
   , mRadioButtonStyle(radioButtonStyle)
   , mCloseSVG(closeSVG)
+  , mFolderActions(std::move(folderActions))
   , mLibraryActions(std::move(libraryActions))
   , mProviderActions(std::move(providerActions))
   {
@@ -1118,9 +1124,7 @@ public:
 
   void ClearModelInfo()
   {
-    auto* modelInfoControl = static_cast<ModelInfoControl*>(GetNamedChild(mControlNames.modelInfo));
-    assert(modelInfoControl != nullptr);
-    modelInfoControl->ClearModelInfo();
+    if (mModelInfo) mModelInfo->ClearModelInfo();
   }
 
   void RefreshLibraryInfo()
@@ -1133,6 +1137,22 @@ public:
   {
     if (mProviderInfo && mProviderActions.information)
       mProviderInfo->SetStr(mProviderActions.information().c_str());
+  }
+
+  void RefreshFolderInfo()
+  {
+    if (mFolderInfo && mFolderActions.information)
+      mFolderInfo->SetStr(mFolderActions.information().c_str());
+  }
+
+  void ShowSection(amphibia::ui::SettingsSection section)
+  {
+    mActiveSection = section;
+    ApplySectionVisibility();
+    RefreshFolderInfo();
+    RefreshLibraryInfo();
+    RefreshProviderInfo();
+    HideAnimated(false);
   }
 
   bool OnKeyDown(float x, float y, const IKeyPress& key) override
@@ -1153,6 +1173,8 @@ public:
     if (hide == false)
     {
       mHide = false;
+      ForAllChildrenFunc([](int, IControl* child) { child->Hide(false); });
+      ApplySectionVisibility();
     }
     else // hide subcontrols immediately
     {
@@ -1183,131 +1205,182 @@ public:
 
   void OnAttached() override
   {
-    const float pad = 20.0f;
-    const IVStyle titleStyle = DEFAULT_STYLE.WithValueText(IText(30, COLOR_WHITE, "Michroma-Regular"))
-                                 .WithDrawFrame(false)
-                                 .WithShadowOffset(2.f);
+    const auto calculated = amphibia::ui::CalculateSettingsLayout(GetRECT().W(), GetRECT().H());
+    const auto rect = [](const amphibia::ui::Rect& value) {
+      return IRECT(value.left, value.top, value.right, value.bottom);
+    };
     const auto text = IText(DEFAULT_TEXT_SIZE, EAlign::Center, PluginColors::HELP_TEXT);
     const auto leftText = text.WithAlign(EAlign::Near);
-    const auto style = mStyle.WithDrawFrame(false).WithValueText(text);
-    const IVStyle leftStyle = style.WithValueText(leftText);
+    const auto labelStyle = mStyle.WithDrawFrame(false).WithValueText(leftText);
+    const auto headingStyle = DEFAULT_STYLE
+      .WithValueText(IText(18.f, COLOR_WHITE, "Michroma-Regular"))
+      .WithDrawFrame(false);
+    const auto buttonStyle = mStyle.WithShowLabel(true).WithDrawFrame(true)
+      .WithLabelText(IText(11.f, EAlign::Center, PluginColors::NAM_THEMEFONTCOLOR));
 
     AddNamedChildControl(new IBitmapControl(GetRECT(), mBitmap), mControlNames.bitmap)->SetIgnoreMouse(true);
-    const auto titleArea = GetRECT().GetPadded(-(pad + 10.0f)).GetFromTop(50.0f);
-    AddNamedChildControl(new IVLabelControl(titleArea, "SETTINGS", titleStyle), mControlNames.title);
-    AddChildControl(new IVButtonControl(titleArea.GetFromRight(150.f).GetPadded(-4.f), [](IControl* caller) {
-      if (auto* panel = caller->GetUI()->GetControlWithTag(kCtrlTagConfigurationPanel))
-        panel->As<NAMConfigurationPanelControl>()->ShowPanel();
-    }, "Configuration...", style.WithShowLabel(false).WithDrawFrame(true)));
+    AddNamedChildControl(new IVLabelControl(rect(calculated.header), "SETTINGS",
+      DEFAULT_STYLE.WithValueText(IText(26.f, COLOR_WHITE, "Michroma-Regular")).WithDrawFrame(false)),
+      mControlNames.title);
 
-    // Attach input/output calibration controls
+    for (std::size_t index = 0; index < amphibia::ui::kSettingsSectionCaptions.size(); ++index)
     {
-      const float height = NAM_KNOB_HEIGHT + NAM_SWTICH_HEIGHT + 10.0f;
-      const float width = titleArea.W();
-      const auto inputOutputArea = titleArea.GetFromBottom(height).GetTranslated(0.0f, height);
-      const auto inputArea = inputOutputArea.GetFromLeft(0.5f * width);
-      const auto outputArea = inputOutputArea.GetFromRight(0.5f * width);
-
-      const float knobWidth = 87.0f; // HACK based on looking at the main page knobs.
-      const auto inputLevelArea =
-        inputArea.GetFromTop(NAM_KNOB_HEIGHT).GetFromBottom(25.0f).GetMidHPadded(0.5f * knobWidth);
-      const auto inputSwitchArea = inputArea.GetFromBottom(NAM_SWTICH_HEIGHT).GetMidHPadded(0.5f * knobWidth);
-
-      auto* inputLevelControl = AddNamedChildControl(
-        new InputLevelControl(inputLevelArea, kInputCalibrationLevel, mInputLevelBackgroundBitmap, text),
-        mControlNames.inputCalibrationLevel, kCtrlTagInputCalibrationLevel);
-      inputLevelControl->SetTooltip(
-        "The analog level, in dBu RMS, that corresponds to digital level of 0 dBFS peak in the host as its signal "
-        "enters this plugin.");
-      AddNamedChildControl(
-        new NAMSwitchControl(inputSwitchArea, kCalibrateInput, "Calibrate Input", mStyle, mSwitchBitmap),
-        mControlNames.calibrateInput, kCtrlTagCalibrateInput);
-
-      // Same-ish height & width as input controls
-      const auto outputRadioArea = outputArea.GetFromBottom(
-        1.1f * (inputLevelArea.H() + inputSwitchArea.H())); // .GetMidHPadded(0.55f * knobWidth);
-      const float buttonSize = 10.0f;
-      auto* outputModeControl =
-        AddNamedChildControl(new OutputModeControl(outputRadioArea, kOutputMode, mRadioButtonStyle, buttonSize),
-                             mControlNames.outputMode, kCtrlTagOutputMode);
-      outputModeControl->SetTooltip(
-        "How to adjust the level of the output.\nRaw=No adjustment.\nNormalized=Adjust the level so that all models "
-        "are about the same loudness.\nCalibrated=Match the input's digital-analog calibration.");
+      AddChildControl(new IVButtonControl(rect(calculated.navigationButtons[index]),
+        [this, index](IControl*) { ShowSection(static_cast<amphibia::ui::SettingsSection>(index)); },
+        amphibia::ui::kSettingsSectionCaptions[index].data(), buttonStyle));
     }
 
-    const float halfWidth = PLUG_WIDTH / 2.0f - pad;
-    const auto bottomArea = GetRECT().GetPadded(-pad).GetFromBottom(108.0f);
-    const float lineHeight = 15.0f;
-    const auto modelInfoArea = bottomArea.GetFromLeft(halfWidth).GetFromTop(4 * lineHeight);
-    const auto aboutArea = bottomArea.GetFromRight(halfWidth).GetFromTop(7 * lineHeight);
-    AddNamedChildControl(new ModelInfoControl(modelInfoArea, leftStyle), mControlNames.modelInfo);
-    AddNamedChildControl(new AboutControl(aboutArea, leftStyle, leftText), mControlNames.about);
+    const IRECT content = rect(calculated.content);
+    const auto addPage = [&](amphibia::ui::SettingsSection section) {
+      auto* page = new IContainerBase(content);
+      AddChildControl(page);
+      page->SetIgnoreMouse(false);
+      mPages[static_cast<std::size_t>(section)] = page;
+      return page;
+    };
+    const auto row = [&](std::size_t index, float height = 30.f) {
+      const auto value = amphibia::ui::Row(
+        {content.L, content.T, content.R, content.B}, index, height, 7.f);
+      return rect(value);
+    };
 
-    const auto libraryArea = GetRECT().GetPadded(-pad).GetCentredInside(GetRECT().W() - 2.f * pad, 112.f)
-                               .GetVShifted(66.f);
-    const auto providerArea = GetRECT().GetPadded(-pad).GetCentredInside(GetRECT().W() - 2.f * pad, 62.f)
-                                .GetVShifted(-34.f);
-    mProviderInfo = new IVLabelControl(providerArea.GetFromTop(26.f),
-      "TONE3000 | Configuration: Not configured | Connection: Disconnected | Secure storage: Available",
-      leftStyle);
-    AddNamedChildControl(mProviderInfo, mControlNames.providerInfo);
-    RefreshProviderInfo();
-    const auto providerButtons = providerArea.GetReducedFromTop(28.f);
-    const IVStyle providerButtonStyle = style.WithShowLabel(false).WithDrawFrame(true);
-    const std::array<std::tuple<const char*, IActionFunction, bool>, 4> providerActions{{
-      {"Connect", mProviderActions.connect, mProviderActions.connectEnabled},
-      {"Disconnect", mProviderActions.disconnect, mProviderActions.disconnectEnabled},
-      {"Test connection", mProviderActions.testConnection, mProviderActions.testEnabled},
-      {"Cancel", mProviderActions.cancel, mProviderActions.cancelEnabled}}};
-    for (std::size_t index = 0; index < providerActions.size(); ++index)
-    {
-      auto action = std::get<1>(providerActions[index]);
-      if (!action) action = [](IControl*) {};
-      auto* button = AddChildControl(new IVButtonControl(
-        providerButtons.GetGridCell(0, static_cast<int>(index), 1, 4).GetPadded(-2.f),
-        std::move(action), std::get<0>(providerActions[index]), providerButtonStyle));
-      button->SetDisabled(!std::get<2>(providerActions[index]));
-    }
-    mLibraryInfo = new IVLabelControl(libraryArea.GetFromTop(34.f), "Managed library unavailable", leftStyle);
-    AddNamedChildControl(mLibraryInfo, mControlNames.libraryInfo);
-    RefreshLibraryInfo();
-    const auto buttons = libraryArea.GetReducedFromTop(38.f);
-    const IVStyle buttonStyle = style.WithShowLabel(false).WithDrawFrame(true);
-    const std::array<std::pair<const char*, IActionFunction>, 7> actions{{
+    auto* general = addPage(amphibia::ui::SettingsSection::General);
+    general->AddChildControl(new IVLabelControl(row(0), "GENERAL", headingStyle));
+#ifdef APP_API
+    constexpr const char* audioOwnership =
+      "Standalone audio devices, channels, sample rate, and buffer size are configured in Audio Settings.";
+#else
+    constexpr const char* audioOwnership =
+      "Audio devices, channel routing, sample rate, and buffer size are controlled by your DAW.";
+#endif
+    general->AddChildControl(new IVLabelControl(IRECT(content.L, row(1).T, content.R, row(1).B + 18.f),
+                                                audioOwnership, labelStyle));
+    general->AddChildControl(new IVLabelControl(IRECT(content.L, row(3).T, content.R, row(3).B + 18.f),
+      "Local files remain primary. Hosted actions start only after an explicit click.", labelStyle));
+
+    auto* local = addPage(amphibia::ui::SettingsSection::LocalFiles);
+    local->AddChildControl(new IVLabelControl(row(0), "LOCAL FILES", headingStyle));
+    mFolderInfo = new IVLabelControl(IRECT(content.L, row(1).T, content.R, row(2).B),
+                                    "Local folders unavailable", labelStyle);
+    local->AddChildControl(mFolderInfo);
+    local->AddChildControl(new IVButtonControl(row(3), mFolderActions.chooseNamFolder,
+                                               "Choose NAM folder", buttonStyle));
+    local->AddChildControl(new IVButtonControl(row(4), mFolderActions.chooseIrFolder,
+                                               "Choose IR folder", buttonStyle));
+
+    auto* library = addPage(amphibia::ui::SettingsSection::ManagedLibrary);
+    library->AddChildControl(new IVLabelControl(row(0), "MANAGED LIBRARY", headingStyle));
+    mLibraryInfo = new IVLabelControl(IRECT(content.L, row(1).T, content.R, row(2).B),
+                                     "Managed library unavailable", labelStyle);
+    library->AddChildControl(mLibraryInfo);
+    const std::array<std::pair<const char*, IActionFunction>, 7> libraryActions{{
       {"Open folder", mLibraryActions.openFolder}, {"Verify", mLibraryActions.verify},
       {"Remove unused", mLibraryActions.removeUnused}, {"Clear staging", mLibraryActions.clearStaging},
       {"Import files", mLibraryActions.importFiles}, {"Import folder", mLibraryActions.importFolder},
       {"Import ZIP", mLibraryActions.importZip}}};
-    for (std::size_t index = 0; index < actions.size(); ++index)
-      AddChildControl(new IVButtonControl(buttons.GetGridCell(static_cast<int>(index / 4),
-                                                             static_cast<int>(index % 4), 2, 4).GetPadded(-2.f),
-                                          actions[index].second, actions[index].first, buttonStyle));
+    const amphibia::ui::Rect libraryButtons{content.L, row(3).T, content.R, row(5).B};
+    for (std::size_t index = 0; index < libraryActions.size(); ++index)
+      library->AddChildControl(new IVButtonControl(
+        rect(amphibia::ui::GridCell(libraryButtons, 3, 3, index)),
+        libraryActions[index].second, libraryActions[index].first, buttonStyle));
 
-    auto closeAction = [&](IControl* pCaller) {
-      static_cast<NAMSettingsPageControl*>(pCaller->GetParent())->HideAnimated(true);
-    };
-    AddNamedChildControl(
-      new NAMSquareButtonControl(CornerButtonArea(GetRECT()), closeAction, mCloseSVG), mControlNames.close);
+    auto* provider = addPage(amphibia::ui::SettingsSection::Tone3000);
+    provider->AddChildControl(new IVLabelControl(row(0), "TONE3000", headingStyle));
+    mProviderInfo = new IVLabelControl(IRECT(content.L, row(1).T, content.R, row(2).B + 18.f),
+      "Application registration: Development\nCallback: Fixed local callback\nStatus: Disconnected", labelStyle);
+    provider->AddChildControl(mProviderInfo);
+    const std::array<std::tuple<std::string_view, IActionFunction, bool>, 5> providerActions{{
+      {amphibia::ui::kTone3000SettingsActionCaptions[0], mProviderActions.connect, mProviderActions.connectEnabled},
+      {amphibia::ui::kTone3000SettingsActionCaptions[1], mProviderActions.disconnect, mProviderActions.disconnectEnabled},
+      {amphibia::ui::kTone3000SettingsActionCaptions[2], mProviderActions.testConnection, mProviderActions.testEnabled},
+      {amphibia::ui::kTone3000SettingsActionCaptions[3], mProviderActions.cancel, mProviderActions.cancelEnabled},
+      {amphibia::ui::kTone3000SettingsActionCaptions[4], mProviderActions.open, mProviderActions.openEnabled}}};
+    const amphibia::ui::Rect providerButtons{content.L, row(3).T, content.R, row(5).B};
+    for (std::size_t index = 0; index < providerActions.size(); ++index)
+    {
+      auto action = std::get<1>(providerActions[index]);
+      if (!action) action = [](IControl*) {};
+      auto* button = new IVButtonControl(
+        rect(amphibia::ui::GridCell(providerButtons, 3, 2, index)),
+        std::move(action), std::get<0>(providerActions[index]).data(), buttonStyle);
+      provider->AddChildControl(button);
+      button->SetDisabled(!std::get<2>(providerActions[index]));
+    }
 
+    auto* calibration = addPage(amphibia::ui::SettingsSection::Calibration);
+    calibration->AddChildControl(new IVLabelControl(row(0), "CALIBRATION", headingStyle));
+    const auto inputArea = IRECT(content.L, row(1).T, content.L + content.W() * .48f, content.B);
+    const auto outputArea = IRECT(content.L + content.W() * .52f, row(1).T, content.R, content.B);
+    auto* inputLevelControl = new InputLevelControl(inputArea.GetFromTop(42.f), kInputCalibrationLevel,
+                                                    mInputLevelBackgroundBitmap, text);
+    calibration->AddChildControl(inputLevelControl, kCtrlTagInputCalibrationLevel);
+    inputLevelControl->SetTooltip(
+      "The analog level in dBu RMS corresponding to 0 dBFS peak at the plug-in input.");
+    calibration->AddChildControl(new NAMSwitchControl(
+      IRECT(inputArea.L, inputArea.T + 54.f, inputArea.R, inputArea.T + 104.f),
+      kCalibrateInput, "Calibrate Input", mStyle, mSwitchBitmap), kCtrlTagCalibrateInput);
+    auto* outputModeControl =
+      new OutputModeControl(outputArea.GetFromTop(126.f), kOutputMode, mRadioButtonStyle, 10.f);
+    calibration->AddChildControl(outputModeControl, kCtrlTagOutputMode);
+    outputModeControl->SetTooltip(
+      "Raw: no adjustment. Normalized: consistent loudness. Calibrated: match input calibration.");
+
+    auto* diagnostics = addPage(amphibia::ui::SettingsSection::Diagnostics);
+    diagnostics->AddChildControl(new IVLabelControl(row(0), "DIAGNOSTICS", headingStyle));
+    mModelInfo = new ModelInfoControl(IRECT(content.L, row(1).T, content.R, row(5).B), labelStyle);
+    diagnostics->AddChildControl(mModelInfo);
+
+    auto* about = addPage(amphibia::ui::SettingsSection::About);
+    about->AddChildControl(new IVLabelControl(row(0), "ABOUT", headingStyle));
+    about->AddChildControl(new AboutControl(IRECT(content.L, row(1).T, content.R, content.B),
+                                            labelStyle, leftText));
+
+    AddChildControl(new IVLabelControl(rect(calculated.footer),
+      "Choose one section. Inactive sections are hidden and cannot receive input.",
+      mStyle.WithDrawFrame(false).WithValueText(IText(10.f, EAlign::Near, PluginColors::HELP_TEXT))));
+    AddNamedChildControl(new NAMSquareButtonControl(rect(calculated.close), [this](IControl*) {
+      HideAnimated(true);
+    }, mCloseSVG), mControlNames.close);
+
+    RefreshFolderInfo();
+    RefreshLibraryInfo();
+    RefreshProviderInfo();
+    ApplySectionVisibility();
     OnResize();
   }
 
   void SetModelInfo(const ModelInfo& modelInfo)
   {
-    auto* modelInfoControl = static_cast<ModelInfoControl*>(GetNamedChild(mControlNames.modelInfo));
-    assert(modelInfoControl != nullptr);
-    modelInfoControl->SetModelInfo(modelInfo);
+    if (mModelInfo) mModelInfo->SetModelInfo(modelInfo);
   };
 
 private:
+  void ApplySectionVisibility()
+  {
+    const auto visible = amphibia::ui::CalculateSettingsPageVisibility(mActiveSection);
+    for (std::size_t index = 0; index < mPages.size(); ++index)
+    {
+      if (!mPages[index]) continue;
+      const bool inactive = !visible[index];
+      mPages[index]->SetDisabled(inactive);
+      mPages[index]->Hide(inactive);
+    }
+    if (GetUI()) GetUI()->SetAllControlsDirty();
+  }
+
   IBitmap mBitmap;
   IBitmap mInputLevelBackgroundBitmap;
   IBitmap mSwitchBitmap;
   IVStyle mStyle;
   IVStyle mRadioButtonStyle;
   ISVG mCloseSVG;
+  LocalFolderUIActions mFolderActions;
   LibraryUIActions mLibraryActions;
   RemoteProviderUIActions mProviderActions;
+  std::array<IContainerBase*, static_cast<std::size_t>(amphibia::ui::SettingsSection::Count)> mPages{};
+  amphibia::ui::SettingsSection mActiveSection{amphibia::ui::SettingsSection::General};
+  ModelInfoControl* mModelInfo{};
+  IVLabelControl* mFolderInfo{};
   IVLabelControl* mLibraryInfo{};
   IVLabelControl* mProviderInfo{};
   int mAnimationTime = 200;

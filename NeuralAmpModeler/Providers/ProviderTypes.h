@@ -94,6 +94,7 @@ enum class ProviderErrorCode
   Offline,
   DnsFailure,
   TlsFailure,
+  LocalPortInUse,
   ConnectTimeout,
   RequestTimeout,
   InvalidRedirect,

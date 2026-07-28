@@ -32,6 +32,11 @@ bool ExactLoopback(const std::string& value)
                      [](unsigned char c) { return std::isdigit(c) != 0; });
 }
 
+bool RegisteredFixedLoopback(const std::string& value)
+{
+  return value == "http://127.0.0.1:43821/oauth/callback";
+}
+
 bool CustomUri(const std::string& value)
 {
   const auto colon = value.find(':');
@@ -71,6 +76,9 @@ Tone3000ConfigurationValidation ValidateTone3000Configuration(const Tone3000Conf
   if ((loopback && !ExactLoopback(configuration.redirectUri)) ||
       (configuration.callbackStrategy == Tone3000CallbackStrategy::CustomUri && !CustomUri(configuration.redirectUri)))
     return Invalid(state, "The registered TONE3000 redirect URI is invalid for its callback strategy.");
+  if (configuration.callbackStrategy == Tone3000CallbackStrategy::FixedLoopback &&
+      !RegisteredFixedLoopback(configuration.redirectUri))
+    return Invalid(state, "The fixed TONE3000 callback must use the registered IPv4 loopback URI.");
 
   if (configuration.kind == Tone3000ConfigurationKind::Production)
   {
@@ -98,10 +106,12 @@ bool Tone3000Configuration::IsProductionUsable() const noexcept
 
 Tone3000Configuration ConfiguredTone3000()
 {
-  // Registration values are intentionally supplied only by an owner-reviewed
-  // build configuration. The repository default contains no client identity,
-  // redirect, callback claim, support contact, or brand-asset approval.
-  return UnconfiguredTone3000();
+  Tone3000Configuration configuration;
+  configuration.clientId = "t3k_pub_kQRhztgEo6BAZeTI1o0iJmOurV7PdeUV";
+  configuration.redirectUri = "http://127.0.0.1:43821/oauth/callback";
+  configuration.kind = Tone3000ConfigurationKind::Development;
+  configuration.callbackStrategy = Tone3000CallbackStrategy::FixedLoopback;
+  return configuration;
 }
 
 } // namespace amphibia::providers::tone3000

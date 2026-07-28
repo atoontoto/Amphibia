@@ -421,6 +421,7 @@
     <ClCompile Include="..\Network\RequestPolicy.cpp" />
     <ClCompile Include="..\Network\PlatformHttpTransport.cpp" />
     <ClCompile Include="..\Platform\SystemBrowser.cpp" />
+    <ClCompile Include="..\Platform\FixedLoopbackCallbackReceiver.cpp" />
     <ClCompile Include="..\Providers\Tone3000\Pkce.cpp" />
     <ClCompile Include="..\Providers\Tone3000\OAuthCallback.cpp" />
     <ClCompile Include="..\Providers\Tone3000\OAuthController.cpp" />

@@ -1,10 +1,12 @@
 #include <algorithm> // std::clamp, std::min
 #include <cctype>
+#include <chrono>
 #include <cmath> // pow
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 #include "Colors.h"
@@ -23,6 +25,7 @@
 
 #include "NeuralAmpModelerControls.h"
 #include "SharedSettings.h"
+#include "UI/EditorLayout.h"
 
 using namespace iplug;
 using namespace igraphics;
@@ -31,6 +34,11 @@ const double kDCBlockerFrequency = 5.0;
 
 namespace
 {
+IRECT ToIRECT(const amphibia::ui::Rect& rect)
+{
+  return {rect.left, rect.top, rect.right, rect.bottom};
+}
+
 bool IsLibraryTaskActive(amphibia::library::ImportTaskState state)
 {
   using State = amphibia::library::ImportTaskState;
@@ -135,6 +143,62 @@ Amphibia::Amphibia(const InstanceInfo& info)
   {
     std::cerr << "Managed library unavailable: " << exception.what() << '\n';
   }
+  if (mLibrary && mTone3000Registration.providerUsable)
+  {
+    mTone3000Provider = std::make_unique<amphibia::providers::tone3000::Tone3000Provider>(
+      mTone3000Configuration, mTone3000Browser, mTone3000Credentials, mTone3000Transport, *mLibrary);
+    mTone3000Selection =
+      std::make_unique<amphibia::providers::tone3000::Tone3000HostedSelectionCoordinator>(
+        mTone3000Configuration, *mTone3000Provider, mTone3000CallbackReceiver,
+        [this](const amphibia::providers::RemoteModel& model) -> std::optional<std::string> {
+          if (!mLibrary) return std::nullopt;
+          const auto association =
+            mLibrary->FindProviderAssociation("tone3000", model.providerToneId, model.providerModelId);
+          return association ? std::optional<std::string>(amphibia::library::ToHex(association->objectHash)) :
+                               std::nullopt;
+        },
+        [this](std::uint64_t taskId, const std::string& managedSha256,
+               amphibia::providers::HostedSelectionKind kind) {
+          if (!mTone3000Selection) return;
+          const auto snapshot = mTone3000Selection->Snapshot();
+          if (!snapshot.selectedVariant || *snapshot.selectedVariant >= snapshot.variants.size()) return;
+          const auto modelId = snapshot.variants[*snapshot.selectedVariant].model.providerModelId;
+          try
+          {
+            const auto hash = amphibia::library::ContentHashFromHex(managedSha256);
+            mPendingProviderActivation = PendingProviderActivation{taskId, modelId, kind, hash};
+            _RequestManaged(hash, kind == amphibia::providers::HostedSelectionKind::ImpulseResponse ?
+              amphibia::library::ManagedObjectType::WaveImpulseResponse :
+              amphibia::library::ManagedObjectType::NamModel);
+          }
+          catch (const std::exception&)
+          {
+            mTone3000Selection->NotifyActivation(taskId, modelId, false,
+              "The downloaded variant could not be resolved in the managed library.");
+            mPendingProviderActivation.reset();
+          }
+        },
+        [this](const amphibia::providers::RemoteModel& model, const std::string&) {
+          if (!mLibrary)
+            return amphibia::providers::ProviderError{
+              amphibia::providers::ProviderErrorCode::StorageFailed, "The managed library is unavailable."};
+          std::unordered_set<std::string> protectedHashes;
+          {
+            std::lock_guard<std::mutex> lock(mPathMutex);
+            if (mActiveManagedModel) protectedHashes.insert(amphibia::library::ToHex(*mActiveManagedModel));
+            if (mActiveManagedIR) protectedHashes.insert(amphibia::library::ToHex(*mActiveManagedIR));
+          }
+          const auto removed = mLibrary->RemoveProviderCopy(
+            "tone3000", model.providerToneId, model.providerModelId, protectedHashes);
+          if (removed == amphibia::library::ProviderCopyRemoval::NotFound)
+            return amphibia::providers::ProviderError{
+              amphibia::providers::ProviderErrorCode::NotFound, "The local provider copy was not found."};
+          if (removed == amphibia::library::ProviderCopyRemoval::ActiveProtected)
+            return amphibia::providers::ProviderError{
+              amphibia::providers::ProviderErrorCode::Forbidden, "The active provider copy cannot be removed."};
+          return amphibia::providers::ProviderError{};
+        });
+  }
   _InitToneStack();
   nam::activations::Activation::enable_fast_tanh();
   GetParam(kInputLevel)->InitGain("Input", 0.0, -20.0, 20.0, 0.1);
@@ -195,64 +259,108 @@ Amphibia::Amphibia(const InstanceInfo& info)
     const auto meterBackgroundBitmap = pGraphics->LoadBitmap(METERBACKGROUND_FN);
 
     const auto b = pGraphics->GetBounds();
-    const auto mainArea = b.GetPadded(-20);
-    const auto contentArea = mainArea.GetPadded(-10);
-    const auto titleHeight = 50.0f;
-    const auto titleArea = contentArea.GetFromTop(titleHeight);
+    const auto layout = amphibia::ui::CalculateMainEditorLayout(b.W(), b.H());
+    const auto titleArea = ToIRECT(layout.title);
 
-    // Areas for knobs
-    const auto knobsPad = 20.0f;
-    const auto knobsExtraSpaceBelowTitle = 25.0f;
-    const auto singleKnobPad = -2.0f;
-    const auto knobsArea = contentArea.GetFromTop(NAM_KNOB_HEIGHT)
-                             .GetReducedFromLeft(knobsPad)
-                             .GetReducedFromRight(knobsPad)
-                             .GetVShifted(titleHeight + knobsExtraSpaceBelowTitle);
-    const auto inputKnobArea = knobsArea.GetGridCell(0, kInputLevel, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto noiseGateArea = knobsArea.GetGridCell(0, kNoiseGateThreshold, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto bassKnobArea = knobsArea.GetGridCell(0, kToneBass, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto midKnobArea = knobsArea.GetGridCell(0, kToneMid, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto trebleKnobArea = knobsArea.GetGridCell(0, kToneTreble, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto outputKnobArea = knobsArea.GetGridCell(0, kOutputLevel, 1, numKnobs).GetPadded(-singleKnobPad);
+    const auto inputKnobArea = ToIRECT(layout.knobs[kInputLevel]);
+    const auto noiseGateArea = ToIRECT(layout.knobs[kNoiseGateThreshold]);
+    const auto bassKnobArea = ToIRECT(layout.knobs[kToneBass]);
+    const auto midKnobArea = ToIRECT(layout.knobs[kToneMid]);
+    const auto trebleKnobArea = ToIRECT(layout.knobs[kToneTreble]);
+    const auto outputKnobArea = ToIRECT(layout.knobs[kOutputLevel]);
 
     const auto ngToggleArea =
       noiseGateArea.GetVShifted(noiseGateArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
     const auto eqToggleArea = midKnobArea.GetVShifted(midKnobArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
 
-    // Areas for model and IR
-    const auto fileWidth = 200.0f;
-    const auto fileHeight = 30.0f;
-    const auto irYOffset = 38.0f;
-    const auto modelArea =
-      contentArea.GetFromBottom((2.0f * fileHeight)).GetFromTop(fileHeight).GetMidHPadded(fileWidth).GetVShifted(-1);
-    const auto slimIconArea =
-      IRECT(modelArea.R + 6.f, modelArea.T - 29.f, modelArea.R + 6.f + 2.f * 28.f, modelArea.T - 1.f);
-    const auto modelIconArea = modelArea.GetFromLeft(30).GetTranslated(-40, 10);
-    const auto irArea = modelArea.GetVShifted(irYOffset);
-    const auto irSwitchArea = irArea.GetFromLeft(30.0f).GetHShifted(-40.0f).GetScaledAboutCentre(0.6f);
-    const auto tone3000ModelArea = IRECT(modelArea.R + 7.f, modelArea.T, contentArea.R, modelArea.B);
-    const auto tone3000IrArea = IRECT(irArea.R + 7.f, irArea.T, contentArea.R, irArea.B);
+    const auto modelArea = ToIRECT(layout.model);
+    const auto irArea = ToIRECT(layout.impulseResponse);
+    const auto slimIconArea = ToIRECT(layout.slimIcon);
+    const auto modelIconArea = ToIRECT(layout.modelIcon);
+    const auto irSwitchArea = ToIRECT(layout.impulseResponseSwitch);
+    const auto tone3000ModelArea = ToIRECT(layout.searchTone3000);
+    const auto tone3000IrArea = ToIRECT(layout.findTone3000Ir);
 
-    // Areas for meters
-    const auto inputMeterArea = contentArea.GetFromLeft(30).GetHShifted(-20).GetMidVPadded(100).GetVShifted(-25);
-    const auto outputMeterArea = contentArea.GetFromRight(30).GetHShifted(20).GetMidVPadded(100).GetVShifted(-25);
+    const auto inputMeterArea = ToIRECT(layout.inputMeter);
+    const auto outputMeterArea = ToIRECT(layout.outputMeter);
 
-    // Misc Areas
-    const auto settingsButtonArea = CornerButtonArea(b);
+    const auto settingsButtonArea = ToIRECT(layout.settings);
 
     RemoteProviderUIActions providerActions;
     providerActions.information = [this] {
-#if defined(OS_WIN) || defined(OS_MAC)
-      constexpr const char* storage = "Available";
-#else
-      constexpr const char* storage = "Unavailable";
-#endif
-      const auto state = mTone3000Registration.state == amphibia::providers::tone3000::Tone3000RegistrationState::ProductionConfigured ?
-        "Production configured" : mTone3000Registration.state == amphibia::providers::tone3000::Tone3000RegistrationState::DevelopmentConfigured ?
-        "Development configured" : "Not configured";
-      return std::string("TONE3000 integration | Configuration: ") + state +
-        " | Connection: Disconnected | API: Offline | Secure storage: " + storage +
-        "\n" + mTone3000Registration.userMessage;
+      const auto registration =
+        mTone3000Registration.state ==
+          amphibia::providers::tone3000::Tone3000RegistrationState::ProductionConfigured ?
+        "Production" :
+        mTone3000Registration.state ==
+          amphibia::providers::tone3000::Tone3000RegistrationState::DevelopmentConfigured ?
+        "Development" : "Not configured";
+      std::string connection = "Disconnected";
+      amphibia::credentials::SecureCredential credential;
+      const amphibia::credentials::CredentialKey key{
+        mTone3000Configuration.credentialServiceNamespace, mTone3000Configuration.credentialAccount};
+      if (mTone3000Credentials.Load(key, credential) && credential.username && !credential.username->empty())
+        connection = "Connected as @" + *credential.username;
+      return std::string("Application registration: ") + registration +
+        "\nCallback: Fixed local callback\nStatus: " + connection;
+    };
+    providerActions.connect = [this](IControl* caller) {
+      if (!mTone3000Provider) return;
+      const auto start = [this] {
+        return mTone3000CallbackReceiver.Start(
+          mTone3000Configuration.redirectUri, std::chrono::steady_clock::now() + std::chrono::minutes(5),
+          [this](amphibia::providers::ProviderResult<std::string> callback) {
+            if (!mTone3000Provider) return;
+            if (callback) mTone3000Provider->CompleteAuthorizationCallback(*callback.value);
+            else mTone3000Provider->CancelAuthorization();
+          });
+      };
+      auto error = start();
+      while (error.code == amphibia::providers::ProviderErrorCode::LocalPortInUse &&
+             _ShowMessageBox(caller->GetUI(), error.userMessage.c_str(), "TONE3000", kMB_RETRYCANCEL) == kRETRY)
+        error = start();
+      if (error)
+      {
+        if (error.code != amphibia::providers::ProviderErrorCode::LocalPortInUse)
+          _ShowMessageBox(caller->GetUI(), error.userMessage.c_str(), "TONE3000", kMB_OK);
+        return;
+      }
+      amphibia::providers::AuthorizationRequest request;
+      request.purpose = amphibia::providers::AuthorizationPurpose::ConnectAccount;
+      mTone3000Provider->BeginAuthorization(request, [this](auto) {
+        mTone3000CallbackReceiver.Cancel();
+      });
+    };
+    providerActions.disconnect = [this](IControl*) {
+      if (mTone3000Provider) mTone3000Provider->Disconnect();
+    };
+    providerActions.testConnection = [this](IControl*) {
+      if (mTone3000Provider) mTone3000Provider->FetchCurrentUser([](auto) {});
+    };
+    providerActions.cancel = [this](IControl*) {
+      if (mTone3000Selection) mTone3000Selection->Cancel();
+      else if (mTone3000Provider) mTone3000Provider->CancelCurrentOperation();
+      mTone3000CallbackReceiver.Cancel();
+    };
+    providerActions.open = [this](IControl* caller) {
+      if (const auto error = mTone3000Browser.OpenExplicit("https://www.tone3000.com"))
+        _ShowMessageBox(caller->GetUI(), error.userMessage.c_str(), "TONE3000", kMB_OK);
+    };
+    providerActions.connectEnabled = mTone3000Provider != nullptr;
+    providerActions.disconnectEnabled = mTone3000Provider != nullptr;
+    providerActions.testEnabled = mTone3000Provider != nullptr;
+    providerActions.cancelEnabled = mTone3000Provider != nullptr;
+    providerActions.openEnabled = true;
+
+    auto startHostedSelection = [this](amphibia::providers::HostedSelectionKind kind) {
+      if (!mTone3000Selection) return;
+      auto error = mTone3000Selection->Begin(kind);
+      while (error.code == amphibia::providers::ProviderErrorCode::LocalPortInUse && GetUI() &&
+             _ShowMessageBox(GetUI(), error.userMessage.c_str(), "TONE3000", kMB_RETRYCANCEL) == kRETRY)
+        error = mTone3000Selection->Begin(kind);
+      if (auto* graphics = GetUI())
+        if (auto* panel = graphics->GetControlWithTag(kCtrlTagTone3000Panel))
+          panel->As<Tone3000SelectionPanelControl>()->Update(mTone3000Selection->Snapshot());
     };
 
     LibraryUIActions libraryActions;
@@ -334,15 +442,12 @@ Amphibia::Amphibia(const InstanceInfo& info)
         const auto tag = nam ? kCtrlTagModelFileBrowser : kCtrlTagIRFileBrowser;
         if (auto* browser = caller->GetUI()->GetControlWithTag(tag))
           browser->As<NAMFileBrowserControl>()->SetPreferredDirectory(selected.Get());
-        if (auto* panel = caller->GetUI()->GetControlWithTag(kCtrlTagConfigurationPanel))
-          panel->As<NAMConfigurationPanelControl>()->ShowPanel();
+        if (auto* settings = caller->GetUI()->GetControlWithTag(kCtrlTagSettingsBox))
+          settings->As<NAMSettingsPageControl>()->ShowSection(amphibia::ui::SettingsSection::LocalFiles);
       });
     };
     folderActions.chooseNamFolder = [chooseSharedFolder](IControl* caller) { chooseSharedFolder(true, caller); };
     folderActions.chooseIrFolder = [chooseSharedFolder](IControl* caller) { chooseSharedFolder(false, caller); };
-    const auto configurationLibraryActions = libraryActions;
-    const auto configurationProviderActions = providerActions;
-
     // Model loader button
     auto loadModelCompletionHandler = [&](const WDL_String& fileName, const WDL_String& path) {
       if (fileName.GetLength())
@@ -410,19 +515,21 @@ Amphibia::Amphibia(const InstanceInfo& info)
                                 "Get IRs", getUrl,
                                 [this](const std::vector<std::string>& paths) { _HandleDroppedPaths(paths, false); }),
       kCtrlTagIRFileBrowser);
-    const auto providerButtonStyle = style.WithShowLabel(false).WithDrawFrame(true)
-      .WithValueText(IText(9.f, PluginColors::NAM_THEMEFONTCOLOR, "Roboto-Regular"));
+    const auto providerButtonStyle = style.WithShowLabel(true).WithDrawFrame(true)
+      .WithLabelText(IText(9.f, PluginColors::NAM_THEMEFONTCOLOR, "Roboto-Regular"));
     auto* searchTone3000 = pGraphics->AttachControl(new IVButtonControl(
       tone3000ModelArea, [](IControl* caller) {
         if (auto* panel = caller->GetUI()->GetControlWithTag(kCtrlTagTone3000Panel))
           panel->As<Tone3000SelectionPanelControl>()->ShowArchitectureChoice();
-      }, "Search TONE3000", providerButtonStyle), kCtrlTagTone3000Search);
-    searchTone3000->SetDisabled(!mTone3000Registration.providerUsable);
+      }, amphibia::ui::kSearchTone3000Caption.data(), providerButtonStyle), kCtrlTagTone3000Search);
+    searchTone3000->SetDisabled(!mTone3000Registration.providerUsable || !mTone3000Selection);
     searchTone3000->SetTooltip(mTone3000Registration.providerUsable ?
       "Open TONE3000 hosted selection" : "TONE3000 integration is not configured in this build.");
     auto* findTone3000Ir = pGraphics->AttachControl(new IVButtonControl(
-      tone3000IrArea, [](IControl*) {}, "Find IR on TONE3000", providerButtonStyle), kCtrlTagTone3000FindIR);
-    findTone3000Ir->SetDisabled(!mTone3000Registration.providerUsable);
+      tone3000IrArea, [startHostedSelection](IControl*) {
+        startHostedSelection(amphibia::providers::HostedSelectionKind::ImpulseResponse);
+      }, amphibia::ui::kFindTone3000IrCaption.data(), providerButtonStyle), kCtrlTagTone3000FindIR);
+    findTone3000Ir->SetDisabled(!mTone3000Registration.providerUsable || !mTone3000Selection);
     findTone3000Ir->SetTooltip(mTone3000Registration.providerUsable ?
       "Open TONE3000 hosted cabinet/IR selection" : "TONE3000 integration is not configured in this build.");
     pGraphics->AttachControl(
@@ -449,29 +556,40 @@ Amphibia::Amphibia(const InstanceInfo& info)
       settingsButtonArea,
       [pGraphics](IControl* pCaller) {
         auto* settings = pGraphics->GetControlWithTag(kCtrlTagSettingsBox)->As<NAMSettingsPageControl>();
-        settings->RefreshLibraryInfo();
-        settings->RefreshProviderInfo();
-        settings->HideAnimated(false);
+        settings->ShowSection(amphibia::ui::SettingsSection::General);
       },
       gearSVG));
 
     pGraphics
       ->AttachControl(new NAMSettingsPageControl(b, backgroundBitmap, inputLevelBackgroundBitmap, switchHandleBitmap,
-                                                 crossSVG, style, radioButtonStyle, std::move(libraryActions),
+                                                 crossSVG, style, radioButtonStyle, std::move(folderActions),
+                                                 std::move(libraryActions),
                                                  std::move(providerActions)),
                       kCtrlTagSettingsBox)
       ->Hide(true);
 
-    pGraphics->AttachControl(new NAMConfigurationPanelControl(b, backgroundBitmap, crossSVG, style,
-                                                              std::move(folderActions), configurationLibraryActions,
-                                                              configurationProviderActions),
-                             kCtrlTagConfigurationPanel)->Hide(true);
-
     Tone3000PanelActions tone3000PanelActions;
-    tone3000PanelActions.openSource = [](const std::string& url) {
-      // The panel accepts only the exact HTTPS source URL preserved by the provider task.
-      // Live provider construction remains disabled until registration and callback approval exist.
-      (void)url;
+    tone3000PanelActions.begin = startHostedSelection;
+    tone3000PanelActions.reopenBrowser = [this] {
+      if (mTone3000Selection) (void)mTone3000Selection->ReopenBrowser();
+    };
+    tone3000PanelActions.cancel = [this] {
+      if (mTone3000Selection) mTone3000Selection->Cancel();
+    };
+    tone3000PanelActions.selectVariant = [this](std::size_t index) {
+      if (mTone3000Selection) (void)mTone3000Selection->SelectVariant(index);
+    };
+    tone3000PanelActions.download = [this](bool audition) {
+      if (mTone3000Selection) (void)mTone3000Selection->DownloadSelected(audition);
+    };
+    tone3000PanelActions.adjacentDownloaded = [this](int direction) {
+      if (mTone3000Selection) (void)mTone3000Selection->SelectAdjacentDownloaded(direction);
+    };
+    tone3000PanelActions.removeLocalCopy = [this] {
+      if (mTone3000Selection) (void)mTone3000Selection->RemoveSelectedLocalCopy();
+    };
+    tone3000PanelActions.openSource = [this](const std::string& url) {
+      (void)mTone3000Browser.OpenExplicit(url);
     };
     pGraphics->AttachControl(new Tone3000SelectionPanelControl(b, std::move(tone3000PanelActions)),
                              kCtrlTagTone3000Panel)->Hide(true);
@@ -495,6 +613,10 @@ Amphibia::Amphibia(const InstanceInfo& info)
 
 Amphibia::~Amphibia()
 {
+  if (mTone3000Selection) mTone3000Selection->Shutdown();
+  if (mTone3000Provider) mTone3000Provider->Shutdown();
+  mTone3000CallbackReceiver.Shutdown();
+  mTone3000Transport.Shutdown();
   // Factories capture this plug-in, so join them while the complete owner is
   // still alive. Shutdown is idempotent for member teardown.
   if (mImportWorker) mImportWorker->Shutdown();
@@ -623,6 +745,22 @@ void Amphibia::OnIdle()
   }
   _PollLoadingStatus();
   _PollImportStatus();
+  if (mTone3000Selection)
+  {
+    const auto snapshot = mTone3000Selection->Snapshot();
+    const auto selected = snapshot.selectedVariant ? std::to_string(*snapshot.selectedVariant) : "-";
+    const auto signature = std::to_string(snapshot.taskId) + ":" +
+      std::to_string(static_cast<int>(snapshot.stage)) + ":" +
+      std::to_string(snapshot.variants.size()) + ":" + selected + ":" + snapshot.statusText;
+    if (snapshot.stage != amphibia::providers::HostedSelectionStage::Idle &&
+        signature != mLastTone3000SnapshotSignature)
+    {
+      mLastTone3000SnapshotSignature = signature;
+      if (auto* graphics = GetUI())
+        if (auto* panel = graphics->GetControlWithTag(kCtrlTagTone3000Panel))
+          panel->As<Tone3000SelectionPanelControl>()->Update(snapshot);
+    }
+  }
   const int latency = mPendingLatency.exchange(-1, std::memory_order_acq_rel);
   if (latency >= 0 && GetLatency() != latency)
     SetLatency(latency);
@@ -1403,6 +1541,14 @@ void Amphibia::_PollLoadingStatus()
       {
         { std::lock_guard<std::mutex> lock(mPathMutex); mActiveManagedModel = mPendingManagedModel; }
         try { if (mLibrary) mLibrary->MarkUsed(*mPendingManagedModel); } catch (...) {}
+        if (mPendingProviderActivation &&
+            mPendingProviderActivation->kind != amphibia::providers::HostedSelectionKind::ImpulseResponse &&
+            mPendingProviderActivation->managedHash == *mPendingManagedModel && mTone3000Selection)
+        {
+          mTone3000Selection->NotifyActivation(mPendingProviderActivation->taskId,
+                                               mPendingProviderActivation->providerModelId, true);
+          mPendingProviderActivation.reset();
+        }
         mPendingManagedModel.reset();
       }
       else
@@ -1414,6 +1560,15 @@ void Amphibia::_PollLoadingStatus()
     else if (modelStatus.state == amphibia::loading::LoadState::Failed)
     {
       mPendingManagedModel.reset();
+      if (mPendingProviderActivation &&
+          mPendingProviderActivation->kind != amphibia::providers::HostedSelectionKind::ImpulseResponse &&
+          mTone3000Selection)
+      {
+        mTone3000Selection->NotifyActivation(mPendingProviderActivation->taskId,
+                                             mPendingProviderActivation->providerModelId, false,
+                                             "The downloaded NAM variant could not be prepared.");
+        mPendingProviderActivation.reset();
+      }
       const std::string text = "Failed: " + modelStatus.displayName + " (active: " + basename(mModelLoader.ActivePath()) + ")";
       SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed, static_cast<int>(text.size()), text.c_str());
     }
@@ -1446,6 +1601,14 @@ void Amphibia::_PollLoadingStatus()
       {
         { std::lock_guard<std::mutex> lock(mPathMutex); mActiveManagedIR = mPendingManagedIR; }
         try { if (mLibrary) mLibrary->MarkUsed(*mPendingManagedIR); } catch (...) {}
+        if (mPendingProviderActivation &&
+            mPendingProviderActivation->kind == amphibia::providers::HostedSelectionKind::ImpulseResponse &&
+            mPendingProviderActivation->managedHash == *mPendingManagedIR && mTone3000Selection)
+        {
+          mTone3000Selection->NotifyActivation(mPendingProviderActivation->taskId,
+                                               mPendingProviderActivation->providerModelId, true);
+          mPendingProviderActivation.reset();
+        }
         mPendingManagedIR.reset();
       }
       else
@@ -1457,6 +1620,15 @@ void Amphibia::_PollLoadingStatus()
     else if (irStatus.state == amphibia::loading::LoadState::Failed)
     {
       mPendingManagedIR.reset();
+      if (mPendingProviderActivation &&
+          mPendingProviderActivation->kind == amphibia::providers::HostedSelectionKind::ImpulseResponse &&
+          mTone3000Selection)
+      {
+        mTone3000Selection->NotifyActivation(mPendingProviderActivation->taskId,
+                                             mPendingProviderActivation->providerModelId, false,
+                                             "The downloaded IR variant could not be prepared.");
+        mPendingProviderActivation.reset();
+      }
       const std::string text = "Failed: " + irStatus.displayName + " (active: " + basename(mIRLoader.ActivePath()) + ")";
       SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed, static_cast<int>(text.size()), text.c_str());
     }
