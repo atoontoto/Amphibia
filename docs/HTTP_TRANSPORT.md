@@ -130,3 +130,14 @@ flag.
 Hosted selection adds no catalog-search endpoint. After one callback-selected tone ID, the provider fetches one exact tone, then pages only `/api/v1/models?tone_id=...` at at most 300 records per page. Pagination is bounded to 16 pages/4,800 variants and rejects changed totals, duplicate model IDs, repeated pages, empty intermediate pages, missing IDs, and impossible metadata. Model URLs remain only in the task snapshot.
 
 An explicit download refreshes `/api/v1/models/{model_id}` and verifies exact tone/model identity, format, and supported architecture before passing its URL to the existing streamed downloader. Listing never downloads bytes. Provider task generations suppress late metadata completions after cancel/shutdown; native transport limits and timeouts remain the Milestone 4 contract.
+
+## Post-Milestone-8 loopback callback boundary
+
+The OAuth callback is deliberately not part of `IHttpTransport`: it is a
+minimal fixed local HTTP receiver. On Windows it binds the retained Winsock
+listener exclusively to `127.0.0.1:43821`, accepts one bounded HTTP/1.1 `GET`
+for `/oauth/callback`, requires the exact Host value and a loopback peer, and
+adds `Cache-Control: no-store` to the local response. Request-line/header caps,
+finite deadline, cancellation, shutdown, and terminal socket release are
+covered by native tests. It does not follow redirects, serve files, accept
+LAN traffic, or fall back to another address or port.

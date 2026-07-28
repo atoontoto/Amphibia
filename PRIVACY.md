@@ -33,7 +33,12 @@ classifications under the platform application-data directory. Referenced
 sources remain read-only. Staging cleanup is confined to Amphibia's verified
 managed staging root. No persistent provider request/body log is emitted.
 
-The hosted `Search TONE3000` and `Find IR on TONE3000` controls are explicit user actions. In the unconfigured repository build they are disabled and start no listener, credential access, browser, DNS, or HTTP work. Hosted discovery occurs on TONE3000's own site; Amphibia implements no unrestricted catalog search, scraping, recommendations, mirroring, remote image fetch, or background synchronization.
+The hosted `Search TONE3000` and `Find IR on TONE3000` controls are explicit
+user actions. The development public-client build enables them, but merely
+opening Amphibia or Settings starts no listener, credential access, browser,
+DNS, or HTTP work. Hosted discovery occurs on TONE3000's own site; Amphibia
+implements no unrestricted catalog search, scraping, recommendations,
+mirroring, remote image fetch, or background synchronization.
 
 Within a callback-selected pack, the local filter examines only bounded in-memory model names and paths. The panel/task snapshot is transient and is not written to DAW state. Exact provider IDs and attribution enter the managed library only after an explicit successful individual download.
 
@@ -79,3 +84,10 @@ No repository-derived dependency metadata was submitted to an external
 vulnerability service during the local Milestone 8 run. The resulting
 vulnerability gate is reported as blocked rather than weakening this privacy
 boundary or claiming a successful scan.
+
+The publishable `t3k_pub_…` client identifier is application configuration,
+not user data and not a credential. No client secret is used. The fixed
+callback listens only while an explicit authorization is active, only at
+`http://127.0.0.1:43821/oauth/callback`, and returns a minimal no-store local
+response with no code, state, token, verifier, account identity, or model URL.
+The post-patch source/package scan found no private credential or path finding.

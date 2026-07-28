@@ -43,8 +43,14 @@ is a separate reviewed action. The input meter publishes only a peak number;
 input samples are not recorded, retained, or uploaded.
 
 TONE3000 is optional. Entering its page starts no browser, credential, or
-network operation. The repository build reports that production integration is
-unconfigured and permits setup to finish normally.
+network operation. The repository build reports a Development public-client
+registration with a fixed local callback and permits setup to finish normally.
+Only an explicit Connect, Search TONE3000, or Find IR action can start OAuth.
+
+The editor Settings surface uses seven bounded sections: General, Local Files,
+Managed Library, TONE3000, Calibration, Diagnostics, and About. Standalone
+General can open its audio settings; VST3 instead states that its DAW owns
+devices, routing, sample rate, and buffer size.
 
 ## Platform status
 

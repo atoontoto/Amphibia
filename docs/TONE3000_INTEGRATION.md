@@ -1,6 +1,7 @@
-# TONE3000 integration plan and current limitations
+# TONE3000 integration and current limitations
 
-Status: Milestone 5 hosted-selection workflow implemented; live production integration blocked by registration
+Status: post-Milestone-8 development public-client workflow enabled;
+production approval and complete live validation remain blocked
 
 Reviewed: 2026-07-26; API Terms effective 2026-07-07
 
@@ -17,10 +18,13 @@ streamed individual `model_url` download, schema-2 creator/license provenance,
 and deterministic mocks. The default API policy is 100 requests/minute with a
 bounded queue/retries and `Retry-After` support.
 
-The Settings page reports the integration and secure-storage status. Because
-no publishable client ID or approved desktop redirect is present, it reports
-Not configured and keeps Connect/Test/Disconnect/Cancel disabled. It performs
-no automatic login, browser launch, request, download, or activation.
+The Settings page reports Development registration, fixed local callback,
+connection status, and explicit Connect/Disconnect/Test/Cancel/Open actions.
+The checked-in public desktop client ID is centralized in
+`Tone3000Configuration.cpp`; it has the `t3k_pub_` prefix and is not a
+credential. There is no client secret. Construction, scan, restore, and merely
+opening Settings remain inert: only an explicit account or hosted-selection
+action may bind the callback and open a browser.
 
 Milestone 5 adds visible hosted entry points, architecture pre-selection,
 waiting/cancel/reopen states, exact tone resolution, bounded all-page model
@@ -62,15 +66,12 @@ Only one authorization request may be active per process. A fresh random state a
 
 ## Redirect URI decision
 
-The product brief prefers a random loopback port “if allowed.” The current provider documentation says a redirect URI must match the registered list, but it does not promise production wildcard loopback ports or RFC 8252 dynamic-port matching for this service. The official example's automatic localhost allowance is described for development, not a production desktop registration guarantee.
-
-Therefore:
-
-- Do not assume a random production port is allowed.
-- Register an exact loopback URI and fixed high port if TONE3000 approves that desktop pattern, binding only `127.0.0.1`.
-- If TONE3000 explicitly confirms dynamic loopback ports, prefer a random OS-assigned port and register/construct it per their instructions.
-- If loopback is not supported, evaluate a provider-approved private-use custom URI scheme with platform registration and equivalent state/PKCE checks.
-- Keep the Online login action disabled with an actionable configuration message until a real publishable client ID and registered redirect are provided.
+The owner-registered development redirect is exactly
+`http://127.0.0.1:43821/oauth/callback`. Amphibia binds the actual receiver
+exclusively to IPv4 loopback on port 43821 and retains that socket through the
+flow. It never substitutes `localhost`, a wildcard/LAN/IPv6 address, another
+port/path, HTTPS, a random port, or a custom scheme. Failure to acquire the
+port prevents browser launch and offers Retry or Cancel.
 
 ## Format and architecture filters
 
@@ -123,8 +124,8 @@ Offline/provider-unavailable behavior:
 These are release gates, not implementation guesses:
 
 1. The OAuth/API examples use prompt `load_tone`, while free-tier/terms prose refers to `get_tone`. Initial Amphibia scope needs only `select_tone`; any later load prompt requires confirmation of the canonical name.
-2. Random loopback-port support for production native clients is undocumented.
-3. No publishable client ID, registered redirect URI, or named TONE3000 registration owner is present in the brief/repository.
+2. The fixed development callback is configured; separate production
+   registration, brand approval, and release authorization are not implied.
 4. A single hosted selection spanning both A1 and A2 is undocumented because omission excludes A2 and the architecture parameter appears singular.
 5. Native unrestricted search is outside the documented free-tier surface. “Search TONE3000” is product wording for opening the provider-hosted selector, not a native `/tones/search` client.
 6. API and terms can change or access can be revoked. Re-verify the contract immediately before implementation and release, and isolate it behind `Tone3000Provider`.
@@ -132,7 +133,7 @@ These are release gates, not implementation guesses:
 
 ## Validation status
 
-Milestone 4 provides 20 native foundation tests covering PKCE vectors/random
+Milestone 4 now provides 26 native foundation tests covering PKCE vectors/random
 contracts, strict/single-use OAuth callbacks and lifecycle endings, disabled
 ambiguous prompts, URL/redirect/redaction/retry/rate policy, typed parsing/API
 requests, secure download/promotion/provenance, unconfigured/explicit provider
@@ -142,27 +143,31 @@ and an isolated Windows Credential Manager store/load/replace/remove cycle.
 Schema-1 migration and provider association preservation also run in the
 Milestone 3 suite.
 
-These are deterministic mocks and a `127.0.0.1`-only local test server. They
-do not establish real provider authorization, production callback approval,
-live token refresh/download behavior, certificate failure behavior against a
-real service, process-crash recovery, or macOS operation. No registered client
-configuration was available, so live-provider validation was not run.
+These include deterministic mocks plus a real fixed IPv4 loopback receiver.
+They prove exclusive bind, one bounded callback, wrong-path/oversize rejection,
+port conflict, timeout/cancellation/shutdown release, and no random fallback.
+They do not establish production callback approval, live token
+refresh/download behavior, certificate failure behavior against a real
+service, process-crash recovery, or macOS operation.
 
-Milestone 5 adds the callback interface and a fail-closed unavailable receiver,
-the hosted selection UI/model, explicit variant/attribution presentation,
-cross-process browser-flow ownership, and deterministic development mocks.
-An actual loopback/custom-URI receiver is intentionally not selected because
-TONE3000 has not confirmed Amphibia's production registration strategy.
-Production controls remain disabled and no live-provider pass is claimed.
+Milestone 5 added the callback interface, hosted selection UI/model, explicit
+variant/attribution presentation, cross-process browser-flow ownership, and
+deterministic development mocks. This corrective patch selects the fixed
+receiver in the Windows standalone and VST3 products. A real development
+boundary attempt confirmed the listener owned `127.0.0.1:43821` before the
+browser step and that cancellation released it. Account authorization was not
+completed, so token exchange, current user, metadata, download, promotion,
+audition, offline restore, and disconnect retention remain blocked/not
+attempted and are not counted as live passes.
 
 ## Milestone 6 setup behavior
 
 The wizard's TONE3000 page is informational and optional. It reads no token and
 starts no browser, callback receiver, credential lookup, DNS, or HTTP operation
-on entry. In this repository it says that the integration is not configured,
-explains that local NAM/IR operation is unaffected, and permits Skip/Next and
-normal setup completion. The shared Configuration panel reuses the existing
-registration/connection/secure-store status and explicit provider actions.
+on entry. It reports the optional development registration, explains that
+local NAM/IR operation is unaffected, and permits Skip/Next and normal setup
+completion. The shared Settings TONE3000 section owns the registration,
+callback, connection, secure-store status, and explicit provider actions.
 
 Setup JSON stores only the boolean `tone3000_configured` readiness projection;
 tokens, codes, PKCE values, client secrets, callback material, signed URLs, and
@@ -170,9 +175,10 @@ provider payloads are forbidden. See `TONE3000_BRANDING_COMPLIANCE.md`.
 
 ## Install and uninstall boundary
 
-No installer artifact contains a provider client ID, secret, token, signed URL,
-account payload, model, or brand asset. Normal upgrade/uninstall preserves the
-isolated Windows Credential Manager target. Explicit interactive user-data
+Installer and portable binaries contain the expected publishable public client
+configuration but no client secret, token, signed URL, account payload, model,
+or new brand asset. Normal upgrade/uninstall preserves the isolated Windows
+Credential Manager target. Explicit interactive user-data
 cleanup calls `CredDelete` only for
 `org.amphibiaaudio.Amphibia.TONE3000/oauth-v1`; silent uninstall preserves it.
 With credentialed elevation, cleanup may run in the administrator's credential

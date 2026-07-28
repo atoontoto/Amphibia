@@ -1,12 +1,13 @@
 # Post-Milestone-8 UI and TONE3000 Configuration Patch map
 
-Status: pre-implementation corrective-patch map
+Status: implemented and validated corrective-patch map
 
 Baseline: completed Amphibia Milestones 0 through 8 on `main`
 
 Evidence date: 2026-07-28
 
-This document was created before corrective implementation. The work is a
+This document was created before corrective implementation and retained as the
+audit-to-implementation map. The work is a
 post-Milestone-8 corrective patch. It is not Milestone 9 and does not consume,
 anticipate, renumber, or complete Milestone 9 scope.
 
@@ -103,6 +104,19 @@ The broken UI is caused by a combination of structural and paint-policy defects:
    no-op.
 
 This is a release-blocking defect, not normal appearance.
+
+Post-implementation validation confirmed two additional mechanics behind the
+reported symptoms:
+
+- on Windows at fractional DPI, the standalone native parent and iPlug child
+  remained at a 600 x 400 physical client while graphics were painted at the
+  scaled size, clipping the right and bottom edges; the host now sizes both
+  native windows from the effective DPI while preserving logical 600 x 400
+  coordinates;
+- hiding only a section container was insufficient because the completion of
+  the overlay animation recursively exposed descendants again; section
+  switching now applies visibility and enablement to every page descendant and
+  reapplies the selected section after animation completes.
 
 ## Current control ownership
 
@@ -259,19 +273,17 @@ accept one bounded `GET /oauth/callback?...` request, return a minimal no-store
 response, and release ownership on every terminal path. Provider/controller
 state validation remains authoritative after transport parsing.
 
-## Exact files planned for change
+## Exact files changed
 
-Implementation may adjust this list only where compilation or direct tests
-prove a directly related dependency.
+Compilation and direct tests required the following directly related files.
 
 ### UI and product wiring
 
 - `NeuralAmpModeler/NeuralAmpModeler.{h,cpp}`;
 - `NeuralAmpModeler/NeuralAmpModelerControls.h`;
-- a centralized editor/settings layout header/source under
-  `NeuralAmpModeler/UI/`;
-- directly related Windows standalone dialog/host code if required for
-  Settings entry, resize, or DPI recalculation.
+- `NeuralAmpModeler/UI/EditorLayout.h`;
+- `NeuralAmpModeler/Standalone/Windows/AmphibiaAPPDialog.cpp` for native
+  parent/child DPI sizing.
 
 ### Provider and callback
 
@@ -285,7 +297,7 @@ prove a directly related dependency.
 ### Tests and packaging evidence
 
 - existing Milestone 4-6 suites where their owned contracts are extended;
-- a dedicated post-M8 native UI/callback test project and static contract test;
+- Milestone 4 native layout/callback tests and the post-M8 static contract test;
 - `scripts/package-windows.ps1` and Milestone 7/8 tests only if public-client
   scanning or new source/evidence inventory requires a direct update;
 - generated ignored artifacts under `artifacts/release/0.1.0`, never committed.
@@ -347,3 +359,26 @@ outside `ProcessBlock()`.
 - No Milestone 9 documentation will be rewritten as completed.
 - No `MILESTONE_9_REPORT.md`, completion marker, Git tag, or release artifact
   will be created.
+
+## Corrective implementation result
+
+`EditorLayout.h` now computes the main editor and seven Settings sections from
+named metrics at 100%, 125%, 150%, and 200% logical scale. Only General, Local
+Files, Managed Library, TONE3000, Calibration, Diagnostics, or About can own
+visible/enabled page descendants at one time. Main and Settings buttons paint
+their captions, including disabled captions.
+
+The Windows standalone was visually inspected at the machine's actual 125%
+display scale. The complete main editor and all seven Settings pages were
+reviewed from real Release windows; the ignored evidence is under
+`artifacts/post-m8-*.png`. VST3 uses the same tested editor layout and retains
+the DAW-audio ownership message, but no REAPER installation was available for
+host-dependent visual inspection.
+
+`ConfiguredTone3000()` now provides one centralized public desktop
+development registration (`t3k_pub_…`, no client secret) and the exact fixed
+redirect `http://127.0.0.1:43821/oauth/callback`. The product receiver retains
+an exclusive socket bound only to `127.0.0.1:43821`, confirms readiness before
+browser launch, accepts one bounded exact-path GET, and releases the socket on
+success, failure, cancellation, timeout, or shutdown. No alternate port,
+address, path, or callback strategy is selected.

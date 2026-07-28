@@ -21,9 +21,9 @@ package is not evidence for an installation or runtime test.
 | `M8-A05` | PASS | `dumpbin`, version APIs, import allowlist, and Authenticode inspection recorded x64/0.1.0/expected imports/`NotSigned`. Standalone and VST3 have high-entropy ASLR, NX, and CFG. Inno Setup is high-entropy ASLR/NX but its generated loader does not report CFG. |
 | `M8-A06` | PASS | Deterministic CycloneDX 1.5 SBOM: 51 components including 33 compiled assets. Repository validation passed; CycloneDX CLI 0.33.1 independently validated the final schema. |
 | `M8-A07` | BLOCKED | OSV-Scanner 2.4.0 could not complete the release-scope C++ scan offline because no offline `GIT` ecosystem database exists, and external metadata submission was not authorized. A broader preliminary scan found `idna 3.9.0` advisory `PYSEC-2026-215`/`GHSA-65pc-fj4g-8rjx` only in excluded `NeuralAmpModelerCore/docs/requirements.txt`; it is not packaged or linked. No zero-vulnerability claim is made. |
-| `M8-A08` | PASS | Artifact scanner, PDB alternate-path hardening, archive checks, and binary string/path checks found no private user/workspace path, credential, or live OAuth client identifier. Extracted URLs matched documented NAM/TONE3000, license/schema, and Inno/Windows metadata strings; no unexpected actionable endpoint was found. |
+| `M8-A08` | PASS | Artifact scanner, PDB alternate-path hardening, archive checks, and binary string/path checks found no private user/workspace path or credential. The corrective build intentionally contains one centralized publishable `t3k_pub_…` client identifier and the registered loopback URI; no private client secret or unexpected actionable endpoint was found. |
 | `M8-T01` | PASS | Identity, inherited behavior, state, Milestone 6 static, Milestone 7 installer/package, and Milestone 8 contracts passed. |
-| `M8-T02` | PASS | Native Milestone 2, 3, 4, 5, and 6 Release x64 executables passed: 10 groups, library suite, 20 provider-foundation cases, 9 selection cases, and 7 setup groups respectively. Tests used generated/temporary fixtures and `.test` credentials. |
+| `M8-T02` | PASS | Native Milestone 2, 3, 4, 5, and 6 Release x64 executables passed: 10 groups, library suite, 26 provider-foundation/layout/loopback cases, 9 selection cases, and 7 setup groups respectively. Tests used generated/temporary fixtures and `.test` credentials. |
 | `M8-T03` | PASS | Clean commit `df22facae5bc517c8c471e3d4c5d2864524733f7` rebuilt standalone/VST3 and generated the complete unsigned package/evidence set. |
 | `M8-I01` | BLOCKED | No disposable Windows environment for standalone-only install/launch. |
 | `M8-I02` | BLOCKED | No disposable Windows/DAW environment for VST3-only install/discovery/load. |
@@ -43,13 +43,34 @@ package is not evidence for an installation or runtime test.
 | `M8-D04` | BLOCKED | No supported disposable/manual DAW render environment. |
 | `M8-C01` | BLOCKED | Official NAM was not installed and no isolated coexistence environment was available. |
 | `M8-C02` | PASS | State 1.1 round trip, frozen 1.0 prefix, managed references, and legacy NAM compatibility passed automated native/static contracts. |
-| `M8-P01` | PASS | Static/native provider contracts confirm the repository build is unconfigured and fail-closed without credential, browser, listener, DNS, or HTTP work. |
-| `M8-P02` | BLOCKED | No approved production client registration, redirect, branding, or live-provider authority. |
+| `M8-P01` | PASS | Static/native provider contracts confirm Development public-client configuration, exact fixed callback, inert construction/page entry, explicit browser boundary, and fail-closed bind conflicts. |
+| `M8-P02` | BLOCKED | Development configuration is operationally wired, but production registration/branding/release authority and the complete live provider sequence remain unvalidated. |
 | `M8-S01` | BLOCKED | No approved code-signing certificate or protected signer; every inspected executable is `NotSigned`. |
 | `M8-M01` | BLOCKED | No macOS runner/hardware or signing/notarization identities. |
 
 No available prerequisite was silently skipped: the remaining unexecuted
 environment-dependent items are `BLOCKED`, not `PASS`.
+
+## Post-Milestone-8 corrective evidence
+
+- The real Release standalone main editor and all seven Settings sections were
+  manually inspected at the machine's actual 125% Windows display scale.
+  Central layout tests also exercised 100%, 125%, 150%, and 200% calculations.
+- A real port-conflict UI exercise held only `127.0.0.1:43821`; Amphibia showed
+  the required Retry/Cancel failure and opened no browser. Native tests cover
+  bind/success/cancel/timeout/shutdown release, wrong path, oversize input, and
+  cross-instance ownership.
+- A development boundary attempt confirmed listener readiness and Amphibia
+  ownership before the browser step, then confirmed cancellation and immediate
+  rebind. Account authorization was not completed, so token exchange, current
+  user, exact metadata/list, download, promotion, audition, offline restore,
+  and disconnect/local-retention were not live-passed.
+- Debug/Release standalone and VST3 built. REAPER was not available for this
+  patch's host-dependent VST3 visual pass. AAX and macOS were not built.
+- The unsigned package set, SBOM, asset evidence, binary inspection, manifests,
+  checksum file, and security scan were regenerated. The scan found zero
+  findings; the inherited artwork, vulnerability-metadata, signing,
+  isolated/manual Windows, production-provider, and macOS gates remain open.
 
 ## Release policy gates
 

@@ -2,6 +2,25 @@
 
 All notable Amphibia changes are recorded here. The project has no public release yet.
 
+## Unreleased - Post-Milestone-8 corrective patch
+
+- Replaced overlapping Settings/configuration canvases with one centralized,
+  bounded seven-section layout and explicit descendant visibility/enablement.
+- Restored readable captions for main and Settings buttons, wired the existing
+  hosted NAM/IR actions, and corrected standalone fractional-DPI parent/child
+  sizing without changing the logical editor or audio behavior.
+- Configured the official public desktop client as
+  `DevelopmentConfigured` with no client secret and exact callback
+  `http://127.0.0.1:43821/oauth/callback`.
+- Added an exclusive retained IPv4-loopback receiver, bounded one-request HTTP
+  parsing, readiness-before-browser ordering, deterministic port-conflict
+  Retry/Cancel behavior, and terminal socket release.
+- Added layout-scale and callback/port coverage, manually inspected the real
+  Windows standalone at 125%, rebuilt Debug/Release standalone and VST3, and
+  regenerated unsigned Windows packages and evidence. Complete live account
+  authorization and REAPER-host visual validation remain unclaimed.
+- This is not Milestone 9 and implements no Milestone 9 scope.
+
 ## Unreleased - Milestone 8
 
 - Added deterministic CycloneDX 1.5 and exact compiled-asset evidence,

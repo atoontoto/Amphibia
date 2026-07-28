@@ -1,7 +1,7 @@
 # TONE3000 OAuth and credential lifecycle
 
-Status: Milestone 4 foundation; production authorization remains gated on
-registered publishable configuration and an approved exact desktop redirect.
+Status: fixed-loopback development public client enabled by the
+post-Milestone-8 corrective patch; production approval remains gated.
 
 Amphibia uses external-browser OAuth 2.0 Authorization Code with PKCE S256.
 Every flow receives an OS-CSPRNG verifier and state. The callback parser caps
@@ -31,10 +31,12 @@ generic-password Keychain item. The namespace is
 `.test` namespace and removes it. Backend failure disables connection rather
 than writing plaintext.
 
-No production callback listener or custom URI registration is enabled: the
-current provider material does not confirm fixed/random desktop loopback or a
-private-use scheme. Tests inject callback URIs and bind mock HTTP only to
-loopback. Explicit UI action is the only browser-launch entry.
+The development product receiver uses only the exact registered redirect
+`http://127.0.0.1:43821/oauth/callback`. It binds an exclusive retained socket
+to `127.0.0.1:43821`, accepts a bounded `GET` for `/oauth/callback`, verifies
+the peer is loopback, returns a minimal no-store response, and selects no
+fallback. A bind conflict prevents browser launch and offers Retry or Cancel.
+Explicit UI action remains the only browser-launch entry.
 
 Shutdown prevents new work, invalidates OAuth, cancels download/transport
 handles, suppresses late callbacks, joins native transport workers, then
@@ -50,4 +52,8 @@ Hosted NAM uses `prompt=select_tone`, `format=nam`, and documented `gears` value
 
 The callback is not trusted as tone metadata. After exact state/code handling, only its bounded tone ID advances the flow; exact tone and exact models are then fetched from the authenticated API. A provider cancellation is a normal Cancelled terminal state, not an invalid-state warning. Code, state, verifier, callback URI, token, and browser URL never enter the UI snapshot or DAW state.
 
-The repository still has no confirmed registered callback strategy. The production receiver therefore fails closed behind `IHostedSelectionCallbackReceiver`; deterministic tests inject a development receiver. No LAN listener, permanent server, or custom URI registration is created by the shipped build.
+The Windows products now inject `FixedLoopbackCallbackReceiver` behind
+`IHostedSelectionCallbackReceiver`. It starts before provider authorization,
+stops on every terminal path, and is neither a LAN listener nor a permanent
+server. Production registration/branding and a completed live account flow
+remain unclaimed.

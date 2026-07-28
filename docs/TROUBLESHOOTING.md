@@ -35,9 +35,16 @@ NAM and IR files remain usable.
 
 ## TONE3000 is unavailable
 
-The repository build is intentionally unconfigured. Entering the page does not
-connect. Local files and managed local imports still work, and setup may finish.
-Never place tokens or signed URLs in the JSON settings file.
+Entering the page does not connect. Check that it reports Development
+registration and Fixed local callback, then use an explicit Connect/Search/Find
+IR action. Local files and managed local imports still work, and setup may
+finish. Never place tokens or signed URLs in the JSON settings file.
+
+If authorization says local callback port 43821 is already in use, close the
+application that owns that port and choose Retry, or choose Cancel. Amphibia
+does not kill the other application, open the browser while the bind has
+failed, or choose another port. Firewall changes and elevation are not
+required; the listener uses only `127.0.0.1`.
 
 ## Recovery commands
 

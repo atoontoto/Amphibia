@@ -1,6 +1,6 @@
 # Amphibia threat model
 
-Status: Milestone 6 setup/configuration review (2026-07-26)
+Status: post-Milestone-8 UI/fixed-loopback review (2026-07-29)
 
 Review trigger: any new provider, network/archive library, state-schema change, installer change, or credential flow change
 
@@ -53,7 +53,7 @@ Trust boundaries exist between the audio thread, UI thread, worker services, loc
 | Refresh-token theft | Persistent account access | OS credential store; least-readable service/account ACL; redacted logs; explicit disconnect deletes credential; never serialize token. | Platform tests plus repository/log scans. |
 | Malicious local process sends loopback response | Login confusion | Bind loopback only, exact active state, one outstanding flow, PKCE, prompt close after terminal response. | Adversarial local HTTP tests. |
 | Listener exposed beyond local host | Remote callback injection | Bind `127.0.0.1` (and optionally `::1` only when separately registered/tested), never wildcard; verify bound address; minimal HTTP parser. | Socket inspection integration test. |
-| Redirect URI mismatch or undocumented dynamic ports | Auth unavailable | Use only provider-registered exact URI; do not assume wildcard/random-port support; feature remains disabled until registration is confirmed. | Production configuration gate. |
+| Redirect URI mismatch or undocumented dynamic ports | Auth unavailable | Use only `http://127.0.0.1:43821/oauth/callback`; never choose a wildcard, random port, or fallback. | Configuration and native exact-bind tests. |
 | TLS interception / redirect downgrade | Tampered API or payload | Platform trust store, HTTPS only, strict hostname verification, bounded redirect count, reject HTTPS-to-HTTP redirect, allow-list API/download hosts or revalidate provider-signed locations. | HTTP-client tests with invalid cert and redirect chain. |
 | Oversized response / decompression bomb | Memory/disk exhaustion, UI/audio disruption | Header and streaming byte caps, timeouts, cancellation, minimum free-space check, archive entry/count/ratio/uncompressed-size caps. | Generated oversized fixtures and fuzz/property tests. |
 | ZIP Slip (`../`, absolute, drive/UNC path) | Arbitrary file overwrite | Normalize separators; reject absolute/rooted/drive/UNC paths, `.`/`..`, empty/control/NUL components; enforce canonical descendant; no symlink/hardlink/device extraction. | Cross-platform malicious archive corpus. |
@@ -120,8 +120,9 @@ On any failure, the active DSP is unchanged. Temporary data is removed by a best
 
 ## Release blockers from this review
 
-- Production OAuth client registration and exact redirect rules are unknown.
-- Production desktop redirect approval and a publishable client registration remain unavailable.
+- A development public client and exact fixed redirect are configured.
+  Production registration/branding/release approval and complete live-provider
+  validation remain unavailable.
 - WinHTTP is implemented and tested on Windows; the macOS HTTP adapter remains a platform-validation gap.
 - The inherited DSP path outside the Milestone 2 loading bridge still needs allocator instrumentation across the supported host matrix before a product-wide real-time-safety claim.
 - Platform signing/notarization is not implemented. Milestone 8 adds baseline
@@ -140,11 +141,11 @@ No network, provider, OAuth, TLS, telemetry, scripting, executable loading, or t
 | Threat | Asset | Boundary / attack | Mitigation and test | Remaining risk |
 | --- | --- | --- | --- | --- |
 | OAuth CSRF | account authorization | browser callback supplies attacker state | 32-byte CSPRNG state, constant-time compare, single use; wrong/replayed-state tests | compromised host process can observe its own memory |
-| code interception | authorization code | another process receives callback | PKCE S256 and exact callback; RFC vector/callback-route tests | production redirect strategy awaits approval |
+| code interception | authorization code | another process receives callback | PKCE S256 and exact fixed callback; RFC vector/callback-route tests | another local process can race the registered port, which fails visibly before browser launch |
 | verifier theft | PKCE verifier | memory/log/state disclosure | move-only pending value, secure clear, never serialize/log; repository/state canary checks | crash dumps may capture live process memory |
-| callback hijack | authorization result | wrong route/duplicate/malformed query | exact bounded parser, mutually exclusive result, one pending flow; adversarial parser tests | no production listener is enabled yet |
+| callback hijack | authorization result | wrong route/duplicate/malformed query | exact bounded parser, mutually exclusive result, one pending flow; adversarial parser and real-listener tests | a compromised local process remains outside Amphibia's trust boundary |
 | custom URI hijack | authorization result | another application registers scheme | custom schemes disabled without approval | future platform registration requires new review |
-| loopback abuse | authorization result | non-loopback or multiple requests | production listener disabled; test bypass is explicit loopback-only | approved listener implementation remains work |
+| loopback abuse | authorization result | non-loopback or multiple requests | exclusive `127.0.0.1:43821` bind, loopback-peer/Host/exact-path checks, one bounded GET, finite deadline, terminal close | account-provider live completion remains unvalidated |
 | token leakage/replay | access/refresh tokens | logs, state, URLs, metadata | platform credential store, central redaction, no plaintext fallback; canary scans/tests | malicious local debugger can inspect memory |
 | refresh race/rotation | refresh token | two host processes refresh old token | five-second named/file lock, reload after lock, generation and atomic replace; contention test | crash between provider rotation and local replace can require login |
 | malicious redirect | bearer token | redirect exfiltrates Authorization | automatic redirects off, every hop validated, cross-origin secret stripping; redirect tests | native resolver/connect DNS-rebinding visibility is limited |
@@ -178,7 +179,7 @@ No network, provider, OAuth, TLS, telemetry, scripting, executable loading, or t
 | Library path redirection | managed objects | root is relocated to unsafe/untrusted location | fixed application-data root, containment checks, relocation absent | Milestone 3 library path/schema tests | compromised root ACL/profile remains an OS risk |
 | Output-test loudness | hearing/equipment | automatic, stacked, unbounded test signal | explicit warning/action, 0.05 peak, fade, <=5 s, one atomic instance, stop on transitions | deterministic peak/fade/stack/stop tests | physical gain/speaker sensitivity cannot be inferred |
 | Unexpected input monitoring | user privacy/hearing | guitar input is recorded, retained, or routed unexpectedly | meter computes peak only; output-only supported; no input capture storage/upload added | meter and static serialization/privacy contract | driver/DAW routing outside Amphibia may monitor input |
-| Provider launch from wizard | account/network privacy | page entry opens browser or starts OAuth | page is informational; unconfigured gate; only explicit existing actions can connect | static page-entry/VST3 contract and provider mocks | future registered UI requires live manual review |
+| Provider launch from wizard | account/network privacy | page entry opens browser or starts OAuth | page is informational; only explicit Connect/Search/Find actions can bind or connect | static page-entry/VST3 contract, provider mocks, manual Settings inspection | complete live account flow remains blocked |
 | Setup-state rollback | configuration integrity | Cancel or failed audio overwrites known-good state | draft model; Finish-only completion; device rollback; atomic settings backup | controller cancel/finish and fake transaction tests | previewed active stream is session state until Finish/restart |
 | Standalone/VST3 settings race | audio/setup/shared state | plug-in overwrites standalone fields or processes interleave writes | bounded cross-process lock, reload-before-merge, field-specific updates, future-schema refusal | round-trip/update/static ownership contract | last successful shared-folder write wins by design |
 | Diagnostics leakage | paths, device identity, secrets | copied status exposes private/local/provider material | bounded local formatting; sensitive fields never stored; no tokens/signed URLs; user review guidance | canary and static serialization checks | current audio diagnostics include local device display names |

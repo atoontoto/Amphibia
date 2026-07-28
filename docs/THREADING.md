@@ -141,3 +141,18 @@ validation uses an asynchronous same-directory scan. Managed library work uses
 the existing joined `ImportWorker`; UI timers copy its status. Closing the
 wizard can cancel its current library task, while navigating forward may leave
 the bounded task running.
+
+# Post-Milestone-8 callback and section ownership
+
+`FixedLoopbackCallbackReceiver` owns one joined receive worker and a retained
+listener socket. `Start()` validates and binds synchronously so the hosted
+coordinator can prove readiness before browser launch. The worker accepts and
+parses one bounded request; `Cancel()`, timeout, terminal completion, and
+`Shutdown()` close the listener and suppress stale completion. Socket work,
+OAuth state, token exchange, provider metadata, and browser launch remain
+outside `ProcessBlock()`.
+
+The message thread owns Settings section selection. The overlay's animation
+completion reapplies visibility and enablement for every descendant so an
+inactive page cannot paint or receive input. Section switches do not attach
+new controls; repeated open/close reuses the original control tree.

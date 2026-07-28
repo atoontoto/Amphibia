@@ -16,9 +16,20 @@ Important areas include malformed `.nam`/WAV handling, real-time safety, state d
 
 Never attach an authorization code, access/refresh token, complete signed model URL, credential-store export, or real provider user metadata to a report. Milestone 4 diagnostics are deliberately redacted and persistent request/body logging is disabled. If the platform credential backend is unavailable, provider authorization must fail closed; plaintext settings, DAW state, environment files, and library metadata are not fallback stores.
 
-The TONE3000 production flow is intentionally unconfigured in this repository. A publishable client ID and approved redirect are required before live testing. Reports that bypass HTTPS, certificate validation, redirect checks, response bounds, or the Milestone 3 promotion boundary are security regressions, not configuration workarounds.
+The TONE3000 development flow uses a centralized publishable public client,
+Authorization Code with PKCE S256, and the exact registered redirect
+`http://127.0.0.1:43821/oauth/callback`. It uses no client secret. Reports that
+bypass HTTPS, certificate validation, redirect checks, response bounds, or the
+Milestone 3 promotion boundary are security regressions, not configuration
+workarounds.
 
-Milestone 5 adds a cross-process hosted-selection lease, exact callback/tone/model identity checks, bounded pagination, short-lived download URLs, and stale task suppression. The shipped callback receiver fails closed because no approved production desktop callback exists. Do not enable the buttons by substituting an arbitrary port, wildcard redirect, LAN listener, custom URI, client secret, scraped brand asset, or undocumented prompt/filter.
+Milestone 5 adds a cross-process hosted-selection lease, exact
+callback/tone/model identity checks, bounded pagination, short-lived download
+URLs, and stale task suppression. The post-Milestone-8 receiver binds an
+exclusive retained socket only to `127.0.0.1:43821` before browser launch and
+releases it on every terminal path. Do not substitute another/random port,
+wildcard/LAN/IPv6 address, custom URI, client secret, scraped brand asset, or
+undocumented prompt/filter.
 
 Every exact variant still follows provider download to randomized staging, local inspection, SHA-256, managed promotion, provenance, and a separate explicit load request. Download success must never be treated as DSP activation success. Exact cached-copy removal must protect active and shared objects.
 
