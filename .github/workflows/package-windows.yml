@@ -11,41 +11,143 @@ jobs:
   package:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out immutable repository inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive
-      - uses: microsoft/setup-msbuild@v2
-      - uses: actions/setup-python@v5
+      - uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.x"
-      - name: Fetch pinned iPlug SDKs and libraries
-        shell: bash
+      - name: Fetch and verify pinned iPlug build inputs
+        shell: pwsh
         run: |
-          cd iPlug2/Dependencies/IPlug
-          ./download-iplug-sdks.sh
-          cd ..
-          ./download-prebuilt-libs.sh
+          $sdk = Join-Path $PWD 'iPlug2\Dependencies\IPlug\VST3_SDK'
+          if (Test-Path -LiteralPath $sdk) {
+            Remove-Item -LiteralPath $sdk -Recurse -Force
+          }
+          git clone --recursive --depth 1 --branch v3.8.0_build_66 `
+            https://github.com/steinbergmedia/vst3sdk.git $sdk
+          $sdkCommit = (git -C $sdk rev-parse HEAD).Trim()
+          if ($sdkCommit -ne '9fad9770f2ae8542ab1a548a68c1ad1ac690abe0') {
+            throw "Unexpected VST3 SDK commit: $sdkCommit"
+          }
+
+          $archive = Join-Path $env:RUNNER_TEMP 'IPLUG2_DEPS_WIN.zip'
+          Invoke-WebRequest `
+            'https://github.com/iPlug2/iPlug2/releases/download/setup/IPLUG2_DEPS_WIN.zip' `
+            -OutFile $archive
+          $expected = 'bcd96ce22282a890cabb5cd114a658cc84f36a620e189b89f05d8005773b1757'
+          $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "iPlug2 Windows dependency checksum mismatch: $actual"
+          }
+          $expanded = Join-Path $env:RUNNER_TEMP 'iplug2-deps'
+          Expand-Archive -LiteralPath $archive -DestinationPath $expanded
+          $build = Join-Path $PWD 'iPlug2\Dependencies\Build'
+          New-Item -ItemType Directory -Path $build -Force | Out-Null
+          Copy-Item -Path (Join-Path $expanded 'IPLUG2_DEPS_WIN\*') `
+            -Destination $build -Recurse -Force
       - name: Install pinned Inno Setup compiler
         shell: pwsh
         run: |
-          winget install --id JRSoftware.InnoSetup --exact --version 6.7.3 --silent `
-            --accept-package-agreements --accept-source-agreements
-      - name: Build, test, and package unsigned development artifacts
+          $installer = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.3.exe'
+          Invoke-WebRequest `
+            'https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe' `
+            -OutFile $installer
+          $expected = '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732'
+          $actual = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "Inno Setup checksum mismatch: $actual"
+          }
+          & $installer /VERYSILENT /CURRENTUSER /NORESTART /SUPPRESSMSGBOXES
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup installation failed: $LASTEXITCODE"
+          }
+      - name: Download checksum-pinned validation scanners
+        shell: pwsh
+        run: |
+          $tools = Join-Path $env:RUNNER_TEMP 'amphibia-rc-tools'
+          New-Item -ItemType Directory -Path $tools -Force | Out-Null
+
+          $osv = Join-Path $tools 'osv-scanner.exe'
+          Invoke-WebRequest `
+            'https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_windows_amd64.exe' `
+            -OutFile $osv
+          $osvHash = (Get-FileHash -LiteralPath $osv -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($osvHash -ne '0cdd113610126d5dfd5e12ad0e0b4f3e879291ff19bb43b0c52ed2f2c2df1a37') {
+            throw "OSV-Scanner checksum mismatch: $osvHash"
+          }
+
+          $gitleaksZip = Join-Path $tools 'gitleaks.zip'
+          Invoke-WebRequest `
+            'https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_windows_x64.zip' `
+            -OutFile $gitleaksZip
+          $gitleaksHash = (Get-FileHash -LiteralPath $gitleaksZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($gitleaksHash -ne 'd29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e') {
+            throw "Gitleaks checksum mismatch: $gitleaksHash"
+          }
+          Expand-Archive -LiteralPath $gitleaksZip -DestinationPath $tools
+
+          $cycloneDx = Join-Path $tools 'cyclonedx.exe'
+          Invoke-WebRequest `
+            'https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.33.1/cyclonedx-win-x64.exe' `
+            -OutFile $cycloneDx
+          $cycloneDxHash = (Get-FileHash -LiteralPath $cycloneDx -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($cycloneDxHash -ne '9b360974c41a5d612eb026fb5e3bb1fa28e08865f7a4f915665b8bc94bd3bc31') {
+            throw "CycloneDX CLI checksum mismatch: $cycloneDxHash"
+          }
+          "AMPHIBIA_RC_TOOLS=$tools" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Build, test, and package unsigned RC evidence
         shell: pwsh
         run: ./scripts/package-windows.ps1
-      - name: Upload unsigned development artifacts
-        uses: actions/upload-artifact@v4
+      - name: Independently validate the CycloneDX SBOM schema
+        shell: pwsh
+        run: |
+          & (Join-Path $env:AMPHIBIA_RC_TOOLS 'cyclonedx.exe') validate `
+            --input-file artifacts/release/0.1.0/Amphibia-0.1.0-SBOM.cdx.json `
+            --input-format json --input-version v1_5 --fail-on-errors
+          if ($LASTEXITCODE -ne 0) {
+            throw "CycloneDX schema validation failed: $LASTEXITCODE"
+          }
+      - name: Scan repository history and worktree for secrets
+        shell: pwsh
+        run: |
+          $evidence = Join-Path $PWD 'artifacts\rc-evidence'
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          & (Join-Path $env:AMPHIBIA_RC_TOOLS 'gitleaks.exe') detect `
+            --source . --redact --no-banner --report-format json `
+            --report-path (Join-Path $evidence 'GITLEAKS.json')
+          if ($LASTEXITCODE -ne 0) {
+            throw "Gitleaks reported a finding or scan error: $LASTEXITCODE"
+          }
+      - name: Scan C++ source and generated SBOM for known vulnerabilities
+        shell: pwsh
+        run: |
+          $evidence = Join-Path $PWD 'artifacts\rc-evidence'
+          $osv = Join-Path $env:AMPHIBIA_RC_TOOLS 'osv-scanner.exe'
+          & $osv --version | Out-File (Join-Path $evidence 'OSV-SCANNER-VERSION.txt')
+          & $osv scan source --recursive --include-git-root `
+            --experimental-exclude 'iPlug2/Examples' `
+            --experimental-exclude 'iPlug2/Tests' `
+            --experimental-exclude 'NeuralAmpModelerCore/docs' `
+            --format json `
+            --output-file (Join-Path $evidence 'OSV-SOURCE.json') .
+          if ($LASTEXITCODE -ne 0) {
+            throw "OSV source scan reported a finding or scan error: $LASTEXITCODE"
+          }
+          & $osv scan source --format json `
+            --output-file (Join-Path $evidence 'OSV-SBOM.json') `
+            artifacts/release/0.1.0/Amphibia-0.1.0-SBOM.cdx.json
+          if ($LASTEXITCODE -ne 0) {
+            throw "OSV SBOM scan reported a finding or scan error: $LASTEXITCODE"
+          }
+      - name: Upload unsigned, non-public release-candidate evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: Amphibia-0.1.0-windows-unsigned-development
+          name: Amphibia-0.1.0-windows-unsigned-not-for-public-release
           path: |
-            artifacts/release/0.1.0/Amphibia-0.1.0-Windows-Setup.exe
-            artifacts/release/0.1.0/Amphibia-0.1.0-Windows-Portable.zip
-            artifacts/release/0.1.0/Amphibia-0.1.0-Windows-VST3.zip
-            artifacts/release/0.1.0/Amphibia-0.1.0-Windows-Standalone.zip
-            artifacts/release/0.1.0/SOURCE-COMMIT.txt
-            artifacts/release/0.1.0/DEPENDENCY-VERSIONS.txt
-            artifacts/release/0.1.0/THIRD_PARTY_NOTICES.txt
-            artifacts/release/0.1.0/ARTIFACT-MANIFEST.txt
-            artifacts/release/0.1.0/SHA256SUMS.txt
+            artifacts/release/0.1.0/
+            artifacts/rc-evidence/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7

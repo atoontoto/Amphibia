@@ -21,7 +21,7 @@ Release rule: no dependency or inherited asset ships without a recorded version,
 | Yoga | within iPlug2 | MIT | Include only if the product build links it. |
 | RtAudio | within iPlug2 standalone | MIT-like | Retain notice; verify enabled Windows/macOS backends. |
 | RtMidi | within iPlug2 standalone | MIT-like | Retain notice. |
-| VST3 SDK | downloaded/present through iPlug tooling | MIT in current upstream notice | Pin exact SDK commit/archive and checksum in CI; ship required notice. |
+| VST3 SDK | `v3.8.0_build_66` / `9fad9770f2ae8542ab1a548a68c1ad1ac690abe0` | MIT | CI clones the immutable tag/commit and verifies it; ship the MIT notice. |
 | Steinberg ASIO SDK interfaces | iPlug standalone dependency path | Steinberg ASIO SDK license | **Release review required.** Verify the exact files/binaries redistributed and compliance with the SDK's separate terms. |
 | REAPER SDK | within iPlug2 | license file present | Exclude if unused; otherwise review compiled/distributed surface. |
 | HIIR | within iPlug2 extras | license file present | Determine whether linked, then include/exclude from notices accordingly. |
@@ -35,8 +35,8 @@ The existing `NeuralAmpModeler/installer/ThirdPartyNotices.txt` is a useful star
 
 | Asset group | Checkout evidence | Decision |
 |---|---|---|
-| `Roboto-Regular.ttf` | Present under `NeuralAmpModeler/resources/fonts`; no adjacent license file found. | Do not ship until the exact font version and Apache-2.0/OFL provenance (as applicable to that file) is proven and license text added; replacing it is acceptable. |
-| `Michroma-Regular.ttf` | Present under the same folder; no adjacent license file found. | Do not infer a license from the font name. Prove source/version and include its license, or replace. |
+| `Roboto-Regular.ttf` | Embedded name records: Google, version `1.100141` (2013), Apache-2.0; exact SHA-256 generated for every candidate. | Cleared for unmodified embedding. Include the full Apache-2.0 text and record the file hash in asset/SBOM evidence. |
+| `Michroma-Regular.ttf` | Embedded name records: Michroma Project Authors/Vernon Adams, version `1.100`, OFL-1.1, source URL `googlefonts/Michroma-font`; exact SHA-256 generated for every candidate. | Cleared for unmodified embedding. Include the full OFL-1.1 text and record the file hash in asset/SBOM evidence. |
 | NAM icons/backgrounds/knob/meter images | Added in upstream history, but no asset license/provenance manifest was found. | Replace with original Amphibia assets or obtain explicit provenance/permission before release. Source-code MIT alone is not treated as sufficient evidence for third-party visual assets. |
 | NAM application icons (`.ico`, `.icns`, xcassets) | NAM-branded and collision-prone. | Quarantined from Amphibia's selected Windows/macOS icon metadata in Milestone 1; replace before release. |
 | TONE3000 brand/logo | Not vendored. Provider guidelines require brand presentation. | Obtain/use only the official asset under documented brand permission; preserve aspect/color/clearspace; otherwise use provider-approved text treatment while seeking clarification. |
@@ -106,7 +106,9 @@ optional `signtool` versions are recorded in `SOURCE-COMMIT.txt`. Release
 binaries use `/MT`; dependency inspection rejects a dynamic MSVC runtime, so no
 Visual C++ Redistributable is included.
 
-The staged dependency manifest covers the pinned submodules, vendored archive
-reader, platform APIs, and installer tool. It is not yet a machine-readable SBOM.
-Inherited UI font/art provenance, ASIO review, TONE3000 registration/branding,
-and the final support/owner namespace remain public-release blockers.
+Milestone 8 adds `release/dependency-pins.json`, deterministic CycloneDX 1.5
+generation, exact compiled-asset hashes, and repository validation against
+submodule pins, notices, and archive contents. The current font evidence is
+cleared. Inherited UI artwork provenance, ASIO review, TONE3000
+registration/branding, and the final support/owner namespace remain
+public-release blockers.

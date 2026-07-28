@@ -7,7 +7,9 @@ Baseline: upstream `v0.7.15`, commit `96337e9ab6e3beb619459779bbb5c47e1b04d8c4`
 ## Milestone 1 changes now present
 
 - `config.h` is the central product/version/plug-in-ID registry; the C++ class is `Amphibia` while source filenames remain inherited.
-- State writing uses `###Amphibia###` with layout version `1.0.0`; reading accepts both Amphibia and the inherited NAM header without changing the payload layout.
+- State writing uses `###Amphibia###` with layout version `1.1.0`; it preserves
+  the complete `1.0.0` payload prefix and appends optional managed references.
+  Reading accepts both Amphibia and the inherited NAM header.
 - Windows output names, project GUIDs, solution, version resources, and installer placeholder carry Amphibia identity.
 - Apple bundle IDs, product outputs, AU symbols/codes, plists, interface metadata, and schemes carry Amphibia identity under a temporary technical namespace.
 - The inherited Windows/macOS application icons are deselected. Remaining inherited UI art/fonts are development-only release blockers pending provenance or replacement.
@@ -90,7 +92,7 @@ Only `upstream` is configured. Milestone 1 will add `origin` only when an actual
 
 | File / symbol | Current behavior | Planned change |
 |---|---|---|
-| `NeuralAmpModeler/NeuralAmpModeler.cpp`, `SerializeState()` | Milestone 1 writes `###Amphibia###`, state-layout `1.0.0`, then the inherited path/parameter payload. | A richer managed-reference schema remains Milestone 3; never include secrets. |
+| `NeuralAmpModeler/NeuralAmpModeler.cpp`, `SerializeState()` | Milestone 3 writes `###Amphibia###`, state-layout `1.1.0`, the complete inherited `1.0.0` path/parameter prefix, then optional managed references. | Preserve both legacy readers and the frozen prefix; never include secrets. |
 | `NeuralAmpModeler/NeuralAmpModeler.cpp`, `UnserializeState()` | Detects Amphibia or legacy NAM headers, then uses the inherited known-version reader. | Add binary/fixture compatibility tests before changing the schema in Milestone 3. |
 | `NeuralAmpModeler/Unserialization.cpp` | Implements historical parameter layouts and invokes staging after reading paths. | Retained migrations now use bounded reads and submit non-empty paths asynchronously; richer reader isolation remains Milestone 3. |
 | `iPlug2/IPlug/APP/IPlugAPP_host.cpp:104-163` | Loads/saves `settings.ini` under a `BUNDLE_NAME` directory. | Keep device preferences; change namespace and add a separate atomically written session state file. |

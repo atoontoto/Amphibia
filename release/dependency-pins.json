@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "evidence_id": "RC-EVIDENCE-2026-07-28",
+  "candidate": "Amphibia 0.1.0 RC validation build",
+  "dependencies": [
+    {
+      "id": "neural-amp-modeler-plugin",
+      "name": "NeuralAmpModelerPlugin",
+      "version": "0.7.15",
+      "commit": "96337e9ab6e3beb619459779bbb5c47e1b04d8c4",
+      "source": "https://github.com/sdatkinson/NeuralAmpModelerPlugin",
+      "license": "MIT",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:github/sdatkinson/NeuralAmpModelerPlugin@96337e9ab6e3beb619459779bbb5c47e1b04d8c4",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "neural-amp-modeler-core",
+      "name": "NeuralAmpModelerCore",
+      "version": "0.5.3",
+      "commit": "9c7b185de346fe0725dea537bcee4bc38b5bb6d6",
+      "source": "https://github.com/sdatkinson/NeuralAmpModelerCore",
+      "license": "MIT",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:github/sdatkinson/NeuralAmpModelerCore@9c7b185de346fe0725dea537bcee4bc38b5bb6d6",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "audio-dsp-tools",
+      "name": "AudioDSPTools",
+      "version": "0.1.1",
+      "commit": "0827c6c2fc0deced568536142ea86f189e0b98a1",
+      "source": "https://github.com/sdatkinson/AudioDSPTools",
+      "license": "MIT",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:github/sdatkinson/AudioDSPTools@0827c6c2fc0deced568536142ea86f189e0b98a1",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "iplug2",
+      "name": "iPlug2",
+      "version": "0.0.1-alpha-4019-g66f9060b5",
+      "commit": "66f9060b5287afdb2ddb83aab5a2a2a8e66a4d5e",
+      "source": "https://github.com/sdatkinson/iPlug2",
+      "license": "Zlib",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:github/sdatkinson/iPlug2@66f9060b5287afdb2ddb83aab5a2a2a8e66a4d5e",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "eigen-root",
+      "name": "Eigen",
+      "version": "git-ed8cda3ce4cb",
+      "commit": "ed8cda3ce4cb9d12640f9236fed968655a93b604",
+      "source": "https://gitlab.com/libeigen/eigen",
+      "license": "MPL-2.0",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:generic/eigen@ed8cda3ce4cb9d12640f9236fed968655a93b604",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "eigen-nam-core",
+      "name": "Eigen (NAM Core snapshot)",
+      "version": "git-87300c93cae6",
+      "commit": "87300c93cae6a8afd9a4f8aa8d9d5c5324cf02e1",
+      "source": "https://gitlab.com/libeigen/eigen",
+      "license": "MPL-2.0",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:generic/eigen@87300c93cae6a8afd9a4f8aa8d9d5c5324cf02e1",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "eigen-audio-dsp-tools",
+      "name": "Eigen (AudioDSPTools snapshot)",
+      "version": "git-6d829e766ff1",
+      "commit": "6d829e766ff1b1ab867d93631163cbc63ed5798f",
+      "source": "https://gitlab.com/libeigen/eigen",
+      "license": "MPL-2.0",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:generic/eigen@6d829e766ff1b1ab867d93631163cbc63ed5798f",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "nlohmann-json",
+      "name": "nlohmann/json",
+      "version": "3.12.0",
+      "source": "https://github.com/nlohmann/json",
+      "license": "MIT",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:github/nlohmann/json@3.12.0",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "minizip-ng",
+      "name": "minizip-ng",
+      "version": "4.2.2",
+      "source": "https://github.com/zlib-ng/minizip-ng",
+      "license": "Zlib",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:github/zlib-ng/minizip-ng@4.2.2",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "zlib",
+      "name": "zlib",
+      "version": "1.3.2",
+      "source": "https://github.com/madler/zlib",
+      "license": "Zlib",
+      "scope": ["standalone", "vst3"],
+      "purl": "pkg:github/madler/zlib@1.3.2",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "vst3-sdk",
+      "name": "VST 3 SDK",
+      "version": "3.8.0",
+      "commit": "9fad9770f2ae8542ab1a548a68c1ad1ac690abe0",
+      "tag": "v3.8.0_build_66",
+      "source": "https://github.com/steinbergmedia/vst3sdk",
+      "license": "MIT",
+      "scope": ["vst3"],
+      "purl": "pkg:github/steinbergmedia/vst3sdk@9fad9770f2ae8542ab1a548a68c1ad1ac690abe0",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "rtaudio",
+      "name": "RtAudio",
+      "version": "5.1.0",
+      "source": "https://github.com/thestk/rtaudio",
+      "license": "MIT",
+      "scope": ["standalone"],
+      "purl": "pkg:github/thestk/rtaudio@5.1.0",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "rtmidi",
+      "name": "RtMidi",
+      "version": "4.0.0",
+      "source": "https://github.com/thestk/rtmidi",
+      "license": "LicenseRef-RtMidi",
+      "scope": ["standalone"],
+      "purl": "pkg:github/thestk/rtmidi@4.0.0",
+      "release_status": "reviewed"
+    },
+    {
+      "id": "asio-sdk-interface",
+      "name": "Steinberg ASIO SDK interface",
+      "version": "2.3",
+      "source": "iPlug2/Dependencies/IPlug/RTAudio/include/asio.h",
+      "license": "LicenseRef-Steinberg-ASIO-SDK",
+      "scope": ["standalone"],
+      "release_status": "blocked-license-review"
+    },
+    {
+      "id": "nanovg",
+      "name": "NanoVG",
+      "version": "iPlug2-66f9060b5",
+      "source": "iPlug2/Dependencies/IGraphics/NanoVG",
+      "license": "Zlib",
+      "scope": ["standalone", "vst3"],
+      "release_status": "reviewed"
+    },
+    {
+      "id": "nanosvg",
+      "name": "NanoSVG",
+      "version": "iPlug2-66f9060b5",
+      "source": "iPlug2/Dependencies/IGraphics/NanoSVG",
+      "license": "Zlib",
+      "scope": ["standalone", "vst3"],
+      "release_status": "reviewed"
+    },
+    {
+      "id": "wdl",
+      "name": "WDL",
+      "version": "iPlug2-66f9060b5",
+      "source": "iPlug2/WDL",
+      "license": "Zlib",
+      "scope": ["standalone", "vst3"],
+      "release_status": "reviewed"
+    },
+    {
+      "id": "inno-setup",
+      "name": "Inno Setup",
+      "version": "6.7.3",
+      "source": "https://jrsoftware.org/isinfo.php",
+      "license": "LicenseRef-Inno-Setup",
+      "scope": ["installer-runtime"],
+      "release_status": "reviewed-noncommercial"
+    }
+  ],
+  "build_inputs": [
+    {
+      "id": "iplug2-windows-dependencies",
+      "name": "IPLUG2_DEPS_WIN.zip",
+      "source": "https://github.com/iPlug2/iPlug2/releases/download/setup/IPLUG2_DEPS_WIN.zip",
+      "bytes": 65212635,
+      "sha256": "bcd96ce22282a890cabb5cd114a658cc84f36a620e189b89f05d8005773b1757",
+      "release_asset_updated": "2022-01-16T22:06:52Z"
+    },
+    {
+      "id": "inno-setup-installer",
+      "name": "innosetup-6.7.3.exe",
+      "source": "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe",
+      "bytes": 10592232,
+      "sha256": "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732",
+      "release_asset_updated": "2026-05-26"
+    }
+  ],
+  "validation_tools": [
+    {
+      "id": "osv-scanner",
+      "version": "2.4.0",
+      "source": "https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_windows_amd64.exe",
+      "sha256": "0cdd113610126d5dfd5e12ad0e0b4f3e879291ff19bb43b0c52ed2f2c2df1a37"
+    },
+    {
+      "id": "gitleaks",
+      "version": "8.30.1",
+      "source": "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_windows_x64.zip",
+      "sha256": "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e"
+    },
+    {
+      "id": "cyclonedx-cli",
+      "version": "0.33.1",
+      "source": "https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.33.1/cyclonedx-win-x64.exe",
+      "sha256": "9b360974c41a5d612eb026fb5e3bb1fa28e08865f7a4f915665b8bc94bd3bc31"
+    }
+  ],
+  "github_actions": [
+    {
+      "name": "actions/checkout",
+      "major": "v4",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262"
+    },
+    {
+      "name": "microsoft/setup-msbuild",
+      "major": "v2",
+      "commit": "6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce"
+    },
+    {
+      "name": "actions/setup-python",
+      "major": "v5",
+      "commit": "a26af69be951a213d495a4c3e4e4022e16d87065"
+    },
+    {
+      "name": "actions/upload-artifact",
+      "major": "v4",
+      "commit": "ea165f8d65b6e75b540449e92b4886f43607fa02"
+    }
+  ]
+}

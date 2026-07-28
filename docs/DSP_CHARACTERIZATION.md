@@ -94,7 +94,8 @@ and truncated cases are generated in a temporary directory.
 
 ## State contract
 
-Current state is `###Amphibia###`, version `1.0.0`, active model path, active IR
+Current state is `###Amphibia###`, version `1.1.0`, the frozen `1.0.0` active
+model path, active IR
 path, then 13 parameter doubles. The legacy `###NeuralAmpModeler###` header is
 accepted with the inherited version readers. Headerless older layouts use the
 oldest reader. State path restoration is synchronous in the baseline and must

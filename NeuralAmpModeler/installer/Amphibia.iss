@@ -39,6 +39,7 @@ UsePreviousTasks=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64os
 ArchitecturesInstallIn64BitMode=x64os
+UseSetupLdr=x64
 MinVersion=10.0.10240
 ChangesAssociations=no
 ChangesEnvironment=no
@@ -49,6 +50,7 @@ RestartIfNeededByRun=no
 AllowNetworkDrive=no
 AllowUNCPath=no
 AllowRootDirectory=no
+RedirectionGuard=yes
 Compression=lzma2
 SolidCompression=yes
 ShowComponentSizes=yes
@@ -94,6 +96,12 @@ Source: "{#StageRoot}\LICENSE.txt"; DestDir: "{app}"; Components: standalone or 
 Source: "{#StageRoot}\THIRD_PARTY_NOTICES.txt"; DestDir: "{app}"; Components: standalone or vst3; Flags: ignoreversion
 Source: "{#StageRoot}\ATTRIBUTION.txt"; DestDir: "{app}"; Components: standalone or vst3; Flags: ignoreversion
 Source: "{#StageRoot}\PRIVACY.txt"; DestDir: "{app}"; Components: standalone or vst3; Flags: ignoreversion
+Source: "{#StageRoot}\Licenses\Roboto-Apache-2.0.txt"; DestDir: "{app}\Licenses"; Components: standalone or vst3; Flags: ignoreversion
+Source: "{#StageRoot}\Licenses\Michroma-OFL-1.1.txt"; DestDir: "{app}\Licenses"; Components: standalone or vst3; Flags: ignoreversion
+Source: "{#StageRoot}\Licenses\VST3-SDK-MIT.txt"; DestDir: "{app}\Licenses"; Components: standalone or vst3; Flags: ignoreversion
+Source: "{#StageRoot}\Licenses\iPlug2-Zlib.txt"; DestDir: "{app}\Licenses"; Components: standalone or vst3; Flags: ignoreversion
+Source: "{#StageRoot}\Licenses\minizip-ng-Zlib.txt"; DestDir: "{app}\Licenses"; Components: standalone or vst3; Flags: ignoreversion
+Source: "{#StageRoot}\Licenses\zlib.txt"; DestDir: "{app}\Licenses"; Components: standalone or vst3; Flags: ignoreversion
 Source: "{#StageRoot}\README.txt"; DestDir: "{app}"; Components: documentation; Flags: ignoreversion
 Source: "{#StageRoot}\CHANGELOG.txt"; DestDir: "{app}"; Components: documentation; Flags: ignoreversion
 Source: "{#StageRoot}\Documentation\*"; DestDir: "{app}\Documentation"; Components: documentation; Flags: ignoreversion recursesubdirs createallsubdirs

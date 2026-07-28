@@ -4,14 +4,27 @@ Amphibia is an independent derivative of the open-source [NeuralAmpModelerPlugin
 
 Milestone 1 retains upstream source/project/resource filenames where changing them would add merge risk without changing installed identity. Historical REAPER projects and the `###NeuralAmpModeler###` state header are retained strictly as compatibility fixtures.
 
-## Asset quarantine
+## Asset and font status
 
-The inherited `.ico`/`.icns` application icons, UI raster/SVG artwork, Roboto font file, and Michroma font file lack a complete asset provenance manifest in this checkout. The inherited Windows icon has been removed from compiled resources and the macOS plist no longer selects the inherited `.icns`. All inherited visual/font files are development-only, must not be treated as Amphibia brand assets, and block public binary distribution until replaced or individually cleared with source/version/license evidence.
+The inherited `.ico`/`.icns` application icons remain quarantined. The
+inherited Windows icon is absent from compiled resources and the macOS plist
+does not select the inherited `.icns`.
+
+The exact compiled UI raster/SVG list and hashes are generated into
+`ASSET-PROVENANCE.json` and the CycloneDX SBOM. Upstream Git history identifies
+the contributing changes, but individual art origin and redistribution
+authority are still incomplete. These files are not Amphibia brand assets and
+continue to block public binary distribution.
+
+The embedded font metadata clears the two unmodified fonts: Roboto Regular
+`1.100141` (2013), copyright Google, is Apache-2.0; Michroma Regular `1.100`,
+copyright the Michroma Project Authors, is OFL-1.1. The complete license texts
+and exact font hashes accompany the release evidence and archives.
 
 No TONE3000 logo or brand asset is included. Any future provider presentation must follow then-current provider terms and must accurately disclose the independent integration.
 
 Milestone 7 reconstructs the Windows VST3 package and excludes inherited shell
 icons, installer background art, and other loose build-tree resources from its
-allowlist. That containment does not clear UI art/fonts already compiled into
-the application or plug-in; the public-binary blocker remains until each embedded
-asset is replaced or proven redistributable.
+allowlist. Milestone 8 clears the font evidence but not the UI artwork. The
+public-binary blocker remains until every embedded visual asset is replaced or
+proven redistributable.

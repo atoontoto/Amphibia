@@ -21,6 +21,8 @@ $script:InstallerPath = Join-Path $script:ProductRoot 'installer\Amphibia.iss'
 $script:AppBinary = Join-Path $script:ProductRoot "build-win\app\x64\$Configuration\Amphibia.exe"
 $script:Vst3Binary = Join-Path $script:ProductRoot "build-win\vst3\x64\$Configuration\Amphibia.vst3"
 $script:ExpectedInnoVersion = '6.7.3'
+$script:EvidenceId = 'RC-EVIDENCE-2026-07-28'
+$script:CandidateLabel = 'Amphibia 0.1.0 RC validation build'
 
 function Invoke-Native {
     param(
@@ -222,7 +224,8 @@ function Invoke-RequiredTests {
         'tests\characterization\test_state_contract.py',
         'tests\characterization\test_milestone6_contract.py',
         'tests\milestone7\test_installer.py',
-        'tests\milestone7\test_packaging.py'
+        'tests\milestone7\test_packaging.py',
+        'tests\milestone8\test_release_readiness.py'
     )) {
         Invoke-Native 'python' @($scriptPath)
     }
@@ -266,12 +269,47 @@ function Assert-Binary {
     if ($LASTEXITCODE -ne 0 -or $headers -notmatch '(?im)\b8664 machine \(x64\)') {
         throw "Binary is not a verified Windows x64 PE: $Path"
     }
+    foreach ($hardening in @(
+        'High Entropy Virtual Addresses',
+        'Dynamic base',
+        'NX compatible'
+    )) {
+        if ($headers -notmatch [regex]::Escape($hardening)) {
+            throw "Required PE hardening '$hardening' is missing: $Path"
+        }
+    }
+    $loadConfig = (& $DumpBinPath /loadconfig $Path 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0 -or
+        $loadConfig -notmatch '(?im)^\s*CF instrumented\s*$' -or
+        $loadConfig -notmatch '(?im)^\s*FID table present\s*$') {
+        throw "Control Flow Guard load-configuration validation failed: $Path"
+    }
     $dependents = (& $DumpBinPath /dependents $Path 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0) {
         throw "Dependency inspection failed: $Path"
     }
     if ($dependents -match '(?im)\b(msvcp\d+|vcruntime\d+|ucrtbased|vcruntime\d+d)\.dll\b') {
         throw "Unexpected dynamically linked MSVC runtime in statically linked Release binary: $Path"
+    }
+    $allowedImports = @(
+        'advapi32.dll', 'api-ms-win-core-synch-l1-2-0.dll', 'bcrypt.dll',
+        'comctl32.dll', 'comdlg32.dll', 'dsound.dll', 'gdi32.dll',
+        'kernel32.dll', 'ole32.dll', 'opengl32.dll', 'shell32.dll',
+        'shlwapi.dll', 'user32.dll', 'winhttp.dll', 'wininet.dll',
+        'winmm.dll', 'ws2_32.dll'
+    )
+    $actualImports = @(
+        [regex]::Matches($dependents, '(?im)^\s*([A-Za-z0-9_.-]+\.dll)\s*$') |
+            ForEach-Object { $_.Groups[1].Value.ToLowerInvariant() } |
+            Sort-Object -Unique
+    )
+    $unexpectedImports = @($actualImports | Where-Object { $_ -notin $allowedImports })
+    if ($unexpectedImports.Count -gt 0) {
+        throw "Unexpected PE imports in $Path`: $($unexpectedImports -join ', ')"
+    }
+    $signature = Get-AuthenticodeSignature -LiteralPath $Path
+    if ($signature.Status -ne 'NotSigned') {
+        throw "Build output must be unsigned before the isolated signing phase: $Path ($($signature.Status))"
     }
     return $dependents
 }
@@ -319,7 +357,8 @@ function Copy-ReleaseInputs {
     $vst3BinaryDir = Join-Path $vst3 'Contents\x86_64-win'
     $vst3Resources = Join-Path $vst3 'Contents\Resources'
     $documentation = Join-Path $stage 'Documentation'
-    foreach ($directory in @($standalone, $vst3BinaryDir, $vst3Resources, $documentation)) {
+    $licenses = Join-Path $stage 'Licenses'
+    foreach ($directory in @($standalone, $vst3BinaryDir, $vst3Resources, $documentation, $licenses)) {
         New-Item -ItemType Directory -Path $directory -Force | Out-Null
     }
 
@@ -337,6 +376,18 @@ function Copy-ReleaseInputs {
     foreach ($entry in $rootCopies.GetEnumerator()) {
         Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot $entry.Key) -Destination (Join-Path $stage $entry.Value)
     }
+    Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'eigen\COPYING.APACHE') `
+        -Destination (Join-Path $licenses 'Roboto-Apache-2.0.txt')
+    Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'iPlug2\Dependencies\IGraphics\NanoVG\example\LICENSE_OFL.txt') `
+        -Destination (Join-Path $licenses 'Michroma-OFL-1.1.txt')
+    Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'iPlug2\Dependencies\IPlug\VST3_SDK\LICENSE.txt') `
+        -Destination (Join-Path $licenses 'VST3-SDK-MIT.txt')
+    Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'iPlug2\LICENSE.txt') `
+        -Destination (Join-Path $licenses 'iPlug2-Zlib.txt')
+    Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'ThirdParty\minizip-ng\LICENSE') `
+        -Destination (Join-Path $licenses 'minizip-ng-Zlib.txt')
+    Copy-Item -LiteralPath (Join-Path $script:RepositoryRoot 'ThirdParty\zlib\LICENSE') `
+        -Destination (Join-Path $licenses 'zlib.txt')
     Copy-Item -LiteralPath (Join-Path $stage 'THIRD_PARTY_NOTICES.txt') -Destination (Join-Path $vst3Resources 'THIRD_PARTY_NOTICES.txt')
 
     foreach ($doc in @(
@@ -476,6 +527,106 @@ function Write-ProvenanceManifests {
     }
 }
 
+function Write-MachineReadableEvidence {
+    param([hashtable]$Directories)
+
+    $commit = (git rev-parse HEAD).Trim()
+    $dirty = if (@(git status --porcelain=v1 --untracked-files=all).Count -eq 0) { 'clean' } else { 'dirty' }
+    $sbom = Join-Path $Directories.VersionRoot 'Amphibia-0.1.0-SBOM.cdx.json'
+    $assets = Join-Path $Directories.VersionRoot 'ASSET-PROVENANCE.json'
+    Invoke-Native 'python' @(
+        'scripts\generate-sbom.py',
+        '--output', $sbom,
+        '--asset-manifest', $assets,
+        '--source-commit', $commit,
+        '--worktree-status', $dirty
+    )
+    Invoke-Native 'python' @(
+        'scripts\validate-sbom.py',
+        '--sbom', $sbom,
+        '--asset-manifest', $assets
+    )
+    Copy-Item -LiteralPath $sbom -Destination (Join-Path $Directories.StageRoot 'Amphibia-0.1.0-SBOM.cdx.json')
+    Copy-Item -LiteralPath $assets -Destination (Join-Path $Directories.StageRoot 'ASSET-PROVENANCE.json')
+}
+
+function Write-BinaryInspection {
+    param(
+        [string]$VersionRoot,
+        [string]$DumpBinPath,
+        [array]$Binaries
+    )
+
+    $lines = @(
+        $script:CandidateLabel
+        "Evidence ID: $script:EvidenceId"
+        'Inspection: PE headers/imports/exports/version/hash/Authenticode'
+        'Policy: unsigned validation evidence; not for public release'
+        ''
+    )
+    foreach ($binary in $Binaries) {
+        $path = [string]$binary.Path
+        $label = [string]$binary.Label
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Binary inspection input is missing: $label"
+        }
+        $headers = (& $DumpBinPath /headers $path 2>&1 | Out-String)
+        if ($LASTEXITCODE -ne 0) {
+            throw "PE header inspection failed: $label"
+        }
+        $dependents = (& $DumpBinPath /dependents $path 2>&1 | Out-String)
+        if ($LASTEXITCODE -ne 0) {
+            throw "PE import inspection failed: $label"
+        }
+        $exports = (& $DumpBinPath /exports $path 2>&1 | Out-String)
+        if ($LASTEXITCODE -ne 0) {
+            throw "PE export inspection failed: $label"
+        }
+        $loadConfig = (& $DumpBinPath /loadconfig $path 2>&1 | Out-String)
+        if ($LASTEXITCODE -ne 0) {
+            throw "PE load-configuration inspection failed: $label"
+        }
+        $imports = @(
+            [regex]::Matches($dependents, '(?im)^\s*([A-Za-z0-9_.-]+\.dll)\s*$') |
+                ForEach-Object { $_.Groups[1].Value.ToUpperInvariant() } |
+                Sort-Object -Unique
+        )
+        $exportNames = @(
+            [regex]::Matches($exports, '(?im)^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+([A-Za-z_][A-Za-z0-9_@?]*)') |
+                ForEach-Object { $_.Groups[1].Value } |
+                Sort-Object -Unique
+        )
+        $metadata = (Get-Item -LiteralPath $path).VersionInfo
+        $signature = Get-AuthenticodeSignature -LiteralPath $path
+        $hardening = @(
+            foreach ($feature in @(
+                'High Entropy Virtual Addresses',
+                'Dynamic base',
+                'NX compatible'
+            )) {
+                "$feature=$(if ($headers -match [regex]::Escape($feature)) { 'yes' } else { 'no' })"
+            }
+        )
+        $hardening += "Control Flow Guard=$(if ($loadConfig -match '(?im)^\s*CF instrumented\s*$' -and $loadConfig -match '(?im)^\s*FID table present\s*$') { 'yes' } else { 'no' })"
+        $lines += @(
+            "[$label]"
+            "Bytes: $((Get-Item -LiteralPath $path).Length)"
+            "SHA-256: $((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant())"
+            "Product: $($metadata.ProductName)"
+            "File description: $($metadata.FileDescription)"
+            "File version: $($metadata.FileVersion)"
+            "Product version: $($metadata.ProductVersion)"
+            "Machine: $(if ($headers -match '(?im)\b8664 machine \(x64\)') { 'x64 (8664)' } else { 'unexpected' })"
+            "Hardening: $($hardening -join '; ')"
+            "Imports: $($imports -join ', ')"
+            "Exports: $(if ($exportNames.Count -gt 0) { $exportNames -join ', ' } else { 'none' })"
+            "Authenticode: $($signature.Status)"
+            ''
+        )
+    }
+    $lines | Set-Content -LiteralPath (Join-Path $VersionRoot 'BINARY-INSPECTION.txt') -Encoding UTF8
+}
+
 function New-ZipFromDirectory {
     param(
         [string]$SourceDirectory,
@@ -499,9 +650,10 @@ function New-ReleaseArchives {
     $standalonePackage = Join-Path $packages "Amphibia-$Version-Windows-Standalone"
     New-Item -ItemType Directory -Path $standalonePackage | Out-Null
     Copy-Item -LiteralPath (Join-Path $stage 'Standalone\Amphibia.exe') -Destination $standalonePackage
-    foreach ($name in @('LICENSE.txt', 'THIRD_PARTY_NOTICES.txt', 'ATTRIBUTION.txt', 'PRIVACY.txt', 'README.txt', 'CHANGELOG.txt', 'SOURCE-COMMIT.txt', 'DEPENDENCY-VERSIONS.txt')) {
+    foreach ($name in @('LICENSE.txt', 'THIRD_PARTY_NOTICES.txt', 'ATTRIBUTION.txt', 'PRIVACY.txt', 'README.txt', 'CHANGELOG.txt', 'SOURCE-COMMIT.txt', 'DEPENDENCY-VERSIONS.txt', 'Amphibia-0.1.0-SBOM.cdx.json', 'ASSET-PROVENANCE.json')) {
         Copy-Item -LiteralPath (Join-Path $stage $name) -Destination $standalonePackage
     }
+    Copy-Item -LiteralPath (Join-Path $stage 'Licenses') -Destination $standalonePackage -Recurse
     Copy-Item -LiteralPath (Join-Path $stage 'Documentation') -Destination $standalonePackage -Recurse
     New-ZipFromDirectory $standalonePackage (Join-Path $root "Amphibia-$Version-Windows-Standalone.zip")
 
@@ -512,6 +664,9 @@ function New-ReleaseArchives {
     Copy-Item -LiteralPath (Join-Path $stage 'ATTRIBUTION.txt') -Destination $vst3Package
     Copy-Item -LiteralPath (Join-Path $stage 'SOURCE-COMMIT.txt') -Destination $vst3Package
     Copy-Item -LiteralPath (Join-Path $stage 'DEPENDENCY-VERSIONS.txt') -Destination $vst3Package
+    Copy-Item -LiteralPath (Join-Path $stage 'Amphibia-0.1.0-SBOM.cdx.json') -Destination $vst3Package
+    Copy-Item -LiteralPath (Join-Path $stage 'ASSET-PROVENANCE.json') -Destination $vst3Package
+    Copy-Item -LiteralPath (Join-Path $stage 'Licenses') -Destination $vst3Package -Recurse
     New-ZipFromDirectory $vst3Package (Join-Path $root "Amphibia-$Version-Windows-VST3.zip")
 
     $portablePackage = Join-Path $packages "Amphibia-$Version-Windows-Portable"
@@ -519,9 +674,10 @@ function New-ReleaseArchives {
     Copy-Item -LiteralPath (Join-Path $stage 'Standalone') -Destination $portablePackage -Recurse
     Copy-Item -LiteralPath (Join-Path $stage 'VST3') -Destination $portablePackage -Recurse
     Copy-Item -LiteralPath (Join-Path $stage 'Documentation') -Destination $portablePackage -Recurse
-    foreach ($name in @('LICENSE.txt', 'THIRD_PARTY_NOTICES.txt', 'ATTRIBUTION.txt', 'PRIVACY.txt', 'README.txt', 'CHANGELOG.txt', 'SOURCE-COMMIT.txt', 'DEPENDENCY-VERSIONS.txt', 'PORTABLE-README.txt')) {
+    foreach ($name in @('LICENSE.txt', 'THIRD_PARTY_NOTICES.txt', 'ATTRIBUTION.txt', 'PRIVACY.txt', 'README.txt', 'CHANGELOG.txt', 'SOURCE-COMMIT.txt', 'DEPENDENCY-VERSIONS.txt', 'PORTABLE-README.txt', 'Amphibia-0.1.0-SBOM.cdx.json', 'ASSET-PROVENANCE.json')) {
         Copy-Item -LiteralPath (Join-Path $stage $name) -Destination $portablePackage
     }
+    Copy-Item -LiteralPath (Join-Path $stage 'Licenses') -Destination $portablePackage -Recurse
     if ($SkipTests) {
         Copy-Item -LiteralPath (Join-Path $stage 'UNVERIFIED-DEVELOPMENT.txt') -Destination $portablePackage
     }
@@ -575,7 +731,11 @@ function Write-ArtifactInventoryAndChecksums {
         "Amphibia-$Version-Windows-Standalone.zip",
         'SOURCE-COMMIT.txt',
         'DEPENDENCY-VERSIONS.txt',
-        'THIRD_PARTY_NOTICES.txt'
+        'THIRD_PARTY_NOTICES.txt',
+        'Amphibia-0.1.0-SBOM.cdx.json',
+        'ASSET-PROVENANCE.json',
+        'RELEASE-SECURITY-SCAN.json',
+        'BINARY-INSPECTION.txt'
     )
     foreach ($name in $artifactNames) {
         if (-not (Test-Path -LiteralPath (Join-Path $VersionRoot $name) -PathType Leaf)) {
@@ -584,10 +744,15 @@ function Write-ArtifactInventoryAndChecksums {
     }
 
     @(
+        $script:CandidateLabel
+        "Evidence ID: $script:EvidenceId"
         "Amphibia $Version Windows x64 artifact inventory"
         "Verification: $(if ($SkipTests) { 'UNVERIFIED DEVELOPMENT' } else { 'required automated tests passed' })"
         "Signing: $SigningStatus"
-        'Publication: workflow/development artifact only; not a stable public release'
+        'Asset gate: BLOCKED - inherited compiled UI artwork provenance is unresolved'
+        'ASIO license gate: BLOCKED - owner/legal review or removal is required'
+        'Environment gates: BLOCKED - clean install/DAW/hardware/coexistence validation unavailable'
+        'Publication: unsigned release-candidate evidence only; not for public release'
         ''
         $artifactNames
     ) | Set-Content -LiteralPath (Join-Path $VersionRoot 'ARTIFACT-MANIFEST.txt') -Encoding UTF8
@@ -633,6 +798,7 @@ $stagedBinaries = @(
 )
 $signingStatus = Invoke-OptionalSigning $stagedBinaries $signTool
 Write-ProvenanceManifests $directories $version $msbuild $iscc $signingStatus $appDependencies $vst3Dependencies
+Write-MachineReadableEvidence $directories
 
 Invoke-Native $iscc @(
     "/DMyAppVersion=$version",
@@ -649,10 +815,26 @@ if ($env:AMPHIBIA_SIGN_CERT_SHA1) {
     $signingStatus = Invoke-OptionalSigning @($installer) $signTool
 }
 
+Write-BinaryInspection $directories.VersionRoot $dumpbin @(
+    @{ Label = 'Standalone'; Path = (Join-Path $directories.StageRoot 'Standalone\Amphibia.exe') },
+    @{ Label = 'VST3'; Path = (Join-Path $directories.StageRoot 'VST3\Amphibia.vst3\Contents\x86_64-win\Amphibia.vst3') },
+    @{ Label = 'Setup'; Path = $installer }
+)
 New-ReleaseArchives $directories $version
 Assert-ArchiveContents $directories.VersionRoot $version
+Invoke-Native 'python' @(
+    'scripts\scan-release-secrets.py',
+    '--artifacts', $directories.VersionRoot,
+    '--output', (Join-Path $directories.VersionRoot 'RELEASE-SECURITY-SCAN.json')
+)
 Write-ArtifactInventoryAndChecksums $directories.VersionRoot $version $signingStatus
 Invoke-Native 'python' @('tests\milestone7\test_packaging.py', '--artifacts', $directories.VersionRoot)
+Invoke-Native 'python' @(
+    'scripts\validate-sbom.py',
+    '--sbom', (Join-Path $directories.VersionRoot 'Amphibia-0.1.0-SBOM.cdx.json'),
+    '--asset-manifest', (Join-Path $directories.VersionRoot 'ASSET-PROVENANCE.json'),
+    '--artifacts', $directories.VersionRoot
+)
 
 Write-Host ''
 Write-Host "Amphibia $version Windows packaging completed."

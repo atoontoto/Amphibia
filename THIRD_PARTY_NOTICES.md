@@ -4,14 +4,24 @@ Amphibia is derived from NeuralAmpModelerPlugin by Steven Atkinson and contribut
 
 The source tree includes pinned dependencies including NeuralAmpModelerCore, AudioDSPTools, iPlug2, Eigen, nlohmann/json, NanoVG/NanoSVG, RtAudio, RtMidi, and platform/SDK components. Their authoritative license files remain beside their source in the repository and must accompany any distribution as required.
 
+The Windows UI embeds unmodified Roboto Regular `1.100141` (2013), copyright
+Google, under Apache License 2.0, and unmodified Michroma Regular `1.100`,
+copyright the Michroma Project Authors/Vernon Adams, under SIL Open Font
+License 1.1. The complete license texts are included in the release `Licenses`
+directory. This font clearance does not clear the separately blocked inherited
+UI artwork.
+
 Milestone 3 vendors the reader subset of **minizip-ng 4.2.2** (zlib license) from <https://github.com/zlib-ng/minizip-ng/releases/tag/4.2.2> and **zlib 1.3.2** (zlib license) from <https://zlib.net/> under `ThirdParty/`. Their license files are retained beside the source. Amphibia disables archive writing/compression, encryption/crypto, OpenSSL, bzip2, LZMA, zstd, and iconv integrations; only stored/deflated local ZIP reading is compiled. Windows SHA-256 uses the operating-system CNG API and macOS uses CommonCrypto.
 
 Milestone 4 adds no vendored networking, TLS, OAuth, or credential library. Windows builds use the operating-system WinHTTP, Schannel trust store, Windows CNG, Credential Manager, Winsock, and ShellExecute APIs under the applicable Microsoft SDK/runtime terms. The macOS credential implementation uses Security.framework Keychain APIs and the system browser uses AppKit/Foundation APIs; the planned `NSURLSession` HTTP adapter is not yet implemented or validated. These operating-system components are not redistributed as Amphibia source. TONE3000 remains an external service governed by its own API terms and content licenses; no provider model, user data, signed URL, or brand asset is included in this repository.
 
-Windows installer generation uses Inno Setup 6.7.3 under the Inno Setup license.
-The compiler is a build tool and is not redistributed, while the generated
-installer includes Inno Setup runtime code. Commercial distribution must
-complete the applicable Inno Setup licensing review. MSVC/Windows SDK tools are
+Windows installer generation uses Inno Setup 6.7.3 under the Inno Setup
+license. That license permits use for any purpose, including commercial
+applications, subject to its notice/origin/modification conditions. The project
+uses the unmodified compiler for the documented non-commercial release scope;
+the generated installer includes Inno runtime code and retains its built-in
+notices. Inno separately requests purchase for commercial use, so a future
+commercial scope requires an owner policy decision. MSVC/Windows SDK tools are
 also build-time inputs; Amphibia Release binaries use the static MSVC runtime.
 
 This file is the human-readable notice copied into Milestone 7 Windows

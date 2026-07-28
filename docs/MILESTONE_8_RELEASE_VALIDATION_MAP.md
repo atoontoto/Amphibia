@@ -34,7 +34,7 @@ The following compatibility identities remain frozen:
 | VST3 processor FUID | `7DBF8585-2FC5-4817-AE21-F7910D0330C1` |
 | VST3 controller FUID | `893C1354-A5D5-416D-B84C-CA8AE0C27034` |
 | Inno Setup `AppId` | `802D7F30-6B3A-44C3-B809-93DA217821CA` |
-| State writer magic/version | `###Amphibia###` / `1.0.0` |
+| State writer magic/version | `###Amphibia###` / `1.1.0` (the frozen `1.0.0` prefix plus optional managed references) |
 | Settings and managed-library root | `%LOCALAPPDATA%\Amphibia` |
 | Credential target | `org.amphibiaaudio.Amphibia.TONE3000/oauth-v1` |
 

@@ -15,7 +15,7 @@ Rule: these values are compatibility contracts. Change them only through an expl
 | Plug-in unique fourcc | `AmPh` | `NeuralAmpModeler/config.h` |
 | Manufacturer/AU fourcc | `AmBi` | `NeuralAmpModeler/config.h` |
 | State writer magic | `###Amphibia###` | `NeuralAmpModeler/NeuralAmpModeler.cpp` |
-| State layout version | `1.0.0` | `AMPHIBIA_STATE_VERSION` in `config.h` |
+| State layout version | `1.1.0` | `AMPHIBIA_STATE_VERSION` in `config.h`; preserves the complete `1.0.0` prefix |
 | Legacy reader magic | `###NeuralAmpModeler###` | compatibility reader only |
 
 ## VST3 and native project IDs
