@@ -12,7 +12,9 @@ Baseline: upstream `v0.7.15`, commit `96337e9ab6e3beb619459779bbb5c47e1b04d8c4`
   Reading accepts both Amphibia and the inherited NAM header.
 - Windows output names, project GUIDs, solution, version resources, and installer placeholder carry Amphibia identity.
 - Apple bundle IDs, product outputs, AU symbols/codes, plists, interface metadata, and schemes carry Amphibia identity under a temporary technical namespace.
-- The inherited Windows/macOS application icons are deselected. Remaining inherited UI art/fonts are development-only release blockers pending provenance or replacement.
+- The inherited Windows/macOS application icons are deselected. Milestone 8
+  clears exact Roboto/Michroma evidence; remaining inherited UI artwork is a
+  release blocker pending provenance or replacement.
 - Root repository policy, attribution, privacy/security, contribution/build guidance, issue forms, identity checks, and build-only CI replace upstream-facing repository metadata.
 - No DSP order, model/IR loading design, online provider behavior, OAuth, ZIP, signing, notarization, or release publication was implemented.
 
@@ -194,5 +196,5 @@ unimplemented.
 | --- | --- | --- |
 | `installer/Amphibia.iss` | Frozen AppId, fixed x64 destinations, component/task policy, first-run, downgrade refusal, safe default-preserve uninstall | Amphibia-owned; never regenerate from the inherited NAM/template installer. |
 | `scripts/package-windows.ps1` | Version-derived allowlisted stage, Release/PE/runtime checks, archives, provenance, checksums, optional signing | Amphibia-owned; review any new staged path and forbid broad wildcard input. |
-| `tests/milestone7`, package workflow | Installer/artifact contract and non-publishing CI evidence | Keep exact compiler pin and artifact name `unsigned-development`. |
+| `tests/milestone7`, `tests/milestone8`, package workflow | Installer/artifact/SBOM/security contract and non-publishing CI evidence | Keep immutable input/tool/action pins and the `unsigned-not-for-public-release` label. |
 | Windows deployment docs | User/admin ownership, retention, signing and release gates | Keep aligned with settings/library/provider ownership contracts. |

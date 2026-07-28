@@ -14,7 +14,8 @@ Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented 
 - [x] Rename selected targets/outputs and preserve legacy state reading.
 - [x] Quarantine inherited brand assets and add identity validation and non-publishing CI.
 - [x] Build Windows standalone and VST3 with the available v145 override.
-- [ ] Confirm the final reverse-DNS owner namespace and clear all packaged visual/font provenance.
+- [ ] Confirm the final reverse-DNS owner namespace and clear all packaged
+  visual-asset provenance; Milestone 8 cleared the two compiled fonts.
 - [ ] Validate macOS, host discovery, side-by-side installation, and complete binary metadata.
 
 ## Milestone 2 — DSP safety and A1/A2 validation
@@ -82,11 +83,36 @@ Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented 
 - [ ] Supply and validate an approved Authenticode identity.
 - [ ] Implement/validate the equivalent macOS package, signing, and notarization.
 
+## Milestone 8 — release-candidate validation and closure
+
+- [x] Create and commit the pre-test release-validation map and isolation rules.
+- [x] Add deterministic CycloneDX 1.5, exact compiled-asset evidence,
+  repository/archive validation, immutable release pins, and independent schema
+  validation.
+- [x] Add complementary source/history/artifact secret scanning, PE
+  import/export/hardening/signature evidence, and release CI gates.
+- [x] Rebuild/package from clean source and pass all available Milestones 0-8
+  static and Milestones 2-6 native suites.
+- [x] Reconcile exact VST3 SDK, font, Inno, MSVC/runtime, and notice treatment.
+- [x] Record RC notes, the exact PASS/BLOCKED matrix, artifact hashes, and an
+  honest blocked-from-public-release conclusion.
+- [ ] Complete a current policy-approved C++ dependency vulnerability scan.
+- [ ] Clear inherited UI-art provenance and legacy ASIO redistribution
+  authority.
+- [ ] Complete the isolated Windows install/lifecycle/DAW/audio/NAM coexistence
+  matrix.
+- [ ] Supply/verify the approved signing identity and protected publication
+  channel.
+- [ ] Complete live TONE3000 approval/evidence, macOS validation, and final
+  owner/support/security contacts.
+
 ## Later release gates
 
-- [ ] Complete macOS provider transport, broad host/plugin validation, real-device/reset stress, sanitizers, SBOM, and artifact integrity.
-- [ ] Resolve visual/font provenance, final owner/support identifiers, live provider registration/redirect approval, and all documented release blockers.
-- [ ] Sign/tag a reproducible release candidate only after Milestone 7 and the remaining gates pass.
+- [ ] Complete macOS provider transport, broad host/plugin validation,
+  real-device/reset stress, and sanitizers.
+- [ ] Close every BLOCKED item in `RELEASE_CHECKLIST.md`.
+- [ ] Sign/tag a reproducible release candidate only after Milestone 8 and all
+  remaining gates pass.
 
 ## Milestone 7 evidence record
 
@@ -95,6 +121,15 @@ documentation are recorded in `MILESTONE_7_REPORT.md`. Fresh Release x64 app and
 VST3 builds and all automated Milestone 1–7 tests passed. The evidence artifact
 is unsigned. No clean-VM install/upgrade/uninstall, DAW, NAM-coexistence,
 certificate-signing, real-hardware, or macOS-package pass is claimed.
+
+## Milestone 8 evidence record
+
+`MILESTONE_8_REPORT.md`, `RELEASE_CANDIDATE_NOTES.md`, and
+`RELEASE_CHECKLIST.md` record clean-source Windows build/package success,
+available automated passes, exact hashes, SBOM/secret/binary/license evidence,
+and every blocked environmental/authority gate. The candidate is unsigned and
+not publicly releasable. No primary-machine installation, public tag/push/
+upload, real signing, live provider, or macOS pass is claimed.
 
 ## Milestone 4 evidence record
 

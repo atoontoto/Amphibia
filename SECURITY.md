@@ -41,3 +41,13 @@ and reparse-safe; silent uninstall cannot request it. Public release still
 requires an approved signing identity, clean-VM install/upgrade/uninstall and
 NAM-coexistence evidence, asset/license closure, and protected publication.
 There is no updater or unattended credential-cleanup mechanism.
+
+Milestone 8 adds immutable release-input/action pins, deterministic CycloneDX
+and compiled-asset evidence, archive and import allowlists, CFG-enabled product
+binaries, private-path-resistant PDB records, and complementary source/history/
+artifact secret scans. These are defense-in-depth controls, not release
+authorization. The independent SBOM schema passed, but current C++ vulnerability
+review remains blocked by offline database coverage. Public release also
+remains blocked on inherited UI-art and legacy ASIO authority, the isolated
+Windows/manual matrices, signing, live provider approval, macOS, and a canonical
+private security contact.

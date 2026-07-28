@@ -2,7 +2,15 @@
 
 Amphibia 0.1.0 is an independent, free, open-source desktop application and audio plug-in derived from the official open-source [Neural Amp Modeler plug-in](https://github.com/sdatkinson/NeuralAmpModelerPlugin). It is not the official NAM application and is not affiliated with TONE3000.
 
-The repository has completed the implementation scope of Milestones 0 through 7. Product identity and side-by-side identifiers are established, model and impulse-response preparation runs outside the audio thread, Amphibia includes an optional local managed library, and the Windows standalone has a native first-run/audio/content setup wizard. The VST3 has an explicit configuration panel while leaving audio ownership to the DAW. TONE3000 hosted selection remains behind a fail-closed registration gate. Milestone 7 adds a reproducible Windows x64 installer/package candidate, not a stable public release.
+The repository has completed the implementation scope of Milestones 0 through
+8. Product identity and side-by-side identifiers are established, model and
+impulse-response preparation runs outside the audio thread, Amphibia includes
+an optional local managed library, and the Windows standalone has a native
+first-run/audio/content setup wizard. The VST3 has an explicit configuration
+panel while leaving audio ownership to the DAW. TONE3000 hosted selection
+remains behind a fail-closed registration gate. Milestone 8 validates a clean
+unsigned Windows x64 package and its release evidence, but concludes that
+public release is blocked.
 
 ## Current scope
 
@@ -22,7 +30,17 @@ The repository has completed the implementation scope of Milestones 0 through 7.
 - Windows x64 component installer, portable archives, provenance/dependency
   manifests, checksums, optional Authenticode hooks, and packaging CI.
 
-Windows standalone/VST3 compilation and the Milestone 2–7 automated suites pass. Setup audio-device tests are fake-based; no real audio hardware or DAW-host manual pass is claimed. Provider validation uses deterministic mocks and a loopback-only local test server; no live TONE3000 authorization or download is claimed. Installer source/compile and artifact-content checks exist, but clean-VM install/upgrade/uninstall, side-by-side NAM, signing, and physical-host validation remain release gates. Inherited visual/font assets need provenance or replacement, approved TONE3000 assets/registration are absent, and macOS setup/packaging/signing remain outstanding.
+Windows standalone/VST3 compilation and the Milestone 2–8 automated suites
+pass. The final 51-component CycloneDX SBOM independently validates, exact
+compiled-asset evidence is generated, and complementary source/artifact secret
+scans report no findings. Setup audio-device tests are fake-based; no real
+audio hardware or DAW-host manual pass is claimed. Provider validation uses
+deterministic mocks and a loopback-only local test server; no live TONE3000
+authorization or download is claimed. Clean-VM install/upgrade/uninstall,
+side-by-side NAM, signing, complete vulnerability review, inherited UI-art and
+ASIO authority, macOS, and physical-host validation remain release gates. The
+two embedded fonts are individually cleared; that does not clear the inherited
+UI artwork.
 
 ## Build from source
 
@@ -49,6 +67,9 @@ Windows builds use `NeuralAmpModeler/Amphibia.sln`; the retained source director
 - [Settings ownership](docs/SETTINGS_OWNERSHIP.md) and [settings schema](docs/SETTINGS_SCHEMA.md)
 - [Milestone 6 setup report](docs/MILESTONE_6_REPORT.md)
 - [Milestone 7 Windows deployment report](docs/MILESTONE_7_REPORT.md)
+- [Milestone 8 validation report](docs/MILESTONE_8_REPORT.md), [candidate
+  notes](docs/RELEASE_CANDIDATE_NOTES.md), and [release
+  checklist](docs/RELEASE_CHECKLIST.md)
 - [Windows installation](docs/INSTALL_WINDOWS.md), [packaging](docs/PACKAGING_WINDOWS.md),
   and [release gates](docs/RELEASING.md)
 - [TONE3000 integration boundary](docs/TONE3000_INTEGRATION.md)
@@ -59,4 +80,8 @@ Windows builds use `NeuralAmpModeler/Amphibia.sln`; the retained source director
 
 ## License
 
-The inherited code and Amphibia modifications are provided under the repository [MIT license](LICENSE), subject to the separate licenses and notices of included dependencies. Do not assume that every inherited font or visual asset is cleared for redistribution; see [ATTRIBUTION.md](ATTRIBUTION.md).
+The inherited code and Amphibia modifications are provided under the repository
+[MIT license](LICENSE), subject to the separate licenses and notices of
+included dependencies. Do not assume that every inherited visual asset or SDK
+interface is cleared for redistribution; see [ATTRIBUTION.md](ATTRIBUTION.md)
+and [the Windows license review](docs/LICENSE_REVIEW_WINDOWS.md).

@@ -2,6 +2,24 @@
 
 All notable Amphibia changes are recorded here. The project has no public release yet.
 
+## Unreleased - Milestone 8
+
+- Added deterministic CycloneDX 1.5 and exact compiled-asset evidence,
+  repository/archive validation, independent schema validation, immutable
+  dependency/tool/action pins, and complementary credential/path scans.
+- Hardened Windows Release binaries with Control Flow Guard and private-path
+  resistant PDB records; added PE import/export/version/hardening/signature
+  evidence and an explicit installer license allowlist.
+- Rebuilt the standalone/VST3 from clean source, passed Milestones 0-8 static
+  and Milestones 2-6 native suites, compiled the unsigned installer, and
+  verified the final archives/checksums without installing them.
+- Cleared exact Roboto Apache-2.0 and Michroma OFL-1.1 evidence and VST3 SDK
+  3.8.0 MIT treatment. Inherited UI artwork and legacy ASIO authority remain
+  blocked.
+- Recorded the complete PASS/BLOCKED matrix and RC notes. No public release,
+  tag, push, upload, signature, clean-VM/DAW/audio/coexistence pass, live
+  TONE3000 validation, complete vulnerability result, or macOS pass is claimed.
+
 ## Unreleased - Milestone 7
 
 - Replaced the Windows installer placeholder with a versioned x64 Inno Setup

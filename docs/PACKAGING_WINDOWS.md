@@ -17,10 +17,12 @@ submodules and installing the iPlug dependency payloads. Required tools are:
 
 The script reads `PLUG_VERSION_STR` from `NeuralAmpModeler/config.h`; it does not
 mutate tracked files. It rebuilds Release x64 standalone and VST3 targets with
-post-build copying disabled, runs the identity/characterization/Milestone 2–7
-tests, validates PE architecture/version/dependencies, reconstructs an
-allowlisted VST3 bundle, compiles the installer, creates portable ZIPs, rejects
-forbidden archive entries, and verifies generated SHA-256 checksums.
+post-build copying disabled, runs the identity/characterization/Milestone 2–8
+tests, validates PE architecture/version/imports/hardening/signature state,
+reconstructs an allowlisted VST3 bundle, generates deterministic CycloneDX and
+compiled-asset evidence, compiles the installer, creates portable ZIPs, scans
+source/artifacts, rejects forbidden archive entries, and verifies generated
+SHA-256 checksums.
 
 Outputs are isolated under `artifacts/release/<version>/`:
 
@@ -29,6 +31,10 @@ Outputs are isolated under `artifacts/release/<version>/`:
 - `SOURCE-COMMIT.txt`
 - `DEPENDENCY-VERSIONS.txt`
 - `THIRD_PARTY_NOTICES.txt`
+- `Amphibia-<version>-SBOM.cdx.json`
+- `ASSET-PROVENANCE.json`
+- `RELEASE-SECURITY-SCAN.json`
+- `BINARY-INSPECTION.txt`
 - `ARTIFACT-MANIFEST.txt`
 - `SHA256SUMS.txt`
 
@@ -41,6 +47,12 @@ dynamic MSVC runtime dependency before stating that no Visual C++ Redistributabl
 is bundled. The compiler itself is not redistributed. Inno Setup licensing and
 the generated artifact notices must be reviewed for the intended distribution.
 
-Asset provenance remains a public-release gate. The allowlist deliberately
+UI-art provenance and legacy ASIO authority remain public-release gates. The
+two compiled fonts have exact license/hash evidence. The allowlist deliberately
 excludes inherited `Desktop.ini`, `PlugIn.ico`, installer background art, models,
 IRs, settings, credentials, PDBs, caches, and logs.
+
+Successful local packaging does not run the installer and does not close the
+clean-VM, DAW, hardware, coexistence, signing, provider, vulnerability, or
+macOS gates. The official CycloneDX CLI validation and Gitleaks/OSV evidence
+are separate release-review steps; see `MILESTONE_8_REPORT.md`.

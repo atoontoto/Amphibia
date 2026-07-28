@@ -124,7 +124,9 @@ On any failure, the active DSP is unchanged. Temporary data is removed by a best
 - Production desktop redirect approval and a publishable client registration remain unavailable.
 - WinHTTP is implemented and tested on Windows; the macOS HTTP adapter remains a platform-validation gap.
 - The inherited DSP path outside the Milestone 2 loading bridge still needs allocator instrumentation across the supported host matrix before a product-wide real-time-safety claim.
-- Platform signing/notarization and CI provenance are not yet implemented.
+- Platform signing/notarization is not implemented. Milestone 8 adds baseline
+  CI provenance/SBOM/input-pin evidence, but protected publication and
+  environment-dependent release evidence remain open.
 # Milestone 3 local import additions
 
 Local files, recursive folders, archives, metadata, and the managed index are untrusted. Added controls include bounded traversal without symlink/junction following; ZIP path normalization and duplicate/case collision rejection; special/link/encryption/method rejection; entry/count/depth/type/total/ratio limits; streaming CRC/size checks; pre-extraction free-space checks; create-new no-follow staging writes; content-addressed final paths; reinspection and second hash; root/path containment checks; OS writer locks; atomic JSON replacement; and conservative verification/recovery.
@@ -196,3 +198,20 @@ No network, provider, OAuth, TLS, telemetry, scripting, executable loading, or t
 
 There is no updater. Public release remains blocked on signed clean-VM evidence,
 NAM coexistence, asset/license closure, and protected publication.
+
+## Milestone 8 release-evidence review
+
+| Threat | Boundary | Added control | Remaining risk/status |
+| --- | --- | --- | --- |
+| Mutable/compromised build input | CI and dependency fetch | Immutable action commits, exact VST3 commit/tag, downloaded-input/tool SHA-256 pins, read-only workflow permission | CI run was not executed locally; future pin updates require review |
+| Incomplete component inventory | source/build to package | Deterministic 51-component CycloneDX 1.5 SBOM, submodule/pin/license/archive checks, independent CycloneDX CLI validation | Complete vulnerability correlation is blocked by offline `GIT` database coverage |
+| Unlicensed embedded asset | compiled resource to public artifact | `main.rc`-derived exact 33-asset manifest, file/license hashes, font license staging, regression tests | 31 inherited images and legacy ASIO authority remain public-release blockers |
+| Secret/private-path leakage | source/history/build/package | Built-in source/archive/binary scanner, independent Gitleaks history scan, `/PDBALTPATH`, forbidden artifact entries | Pattern scanners are not proofs; Inno compressed internals are not decoded by the built-in scanner |
+| Weak or misreported PE | build to user | x64/version/import/runtime/export/ASLR/NX/CFG/Authenticode inspection; CFG enabled for product Release targets | Inno loader does not report CFG; every candidate executable is unsigned |
+| Prose-only release approval | evidence to publication | Exact PASS/BLOCKED matrix, source commit, artifact hashes, explicit unsigned/not-for-public-release labels | Owner/contact, protected signer/channel, VM/manual/provider/macOS gates remain blocked |
+
+The Milestone 8 run did not submit repository-derived dependency metadata to an
+external vulnerability service. It reports the resulting scan limitation as
+`BLOCKED`; it does not claim zero vulnerabilities. It also did not execute the
+installer, touch real Amphibia user data/credentials, or perform destructive
+cleanup on the primary host.

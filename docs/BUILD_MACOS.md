@@ -7,7 +7,8 @@ native setup-wizard integration.
 
 Do not present the inherited `makedist-mac.sh` output as an Amphibia release.
 Before macOS packaging, reconcile the frozen Amphibia bundle/AU identifiers,
-replace or prove every packaged visual/font asset, integrate the platform
+replace or prove every packaged visual asset (the two compiled fonts are
+cleared in Milestone 8), integrate the platform
 services documented in the modification map, implement hardened runtime signing
 and notarization, and run the equivalent package-content and uninstall-retention
 tests.

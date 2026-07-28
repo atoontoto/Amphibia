@@ -265,6 +265,10 @@ are release blockers:
 - quarantined inherited icons must remain excluded; and
 - an allowed file is not automatically an allowed public-release asset.
 
+This list records the pre-validation state. The final Milestone 8 review
+cleared exact Roboto and Michroma source/version/license evidence, while the
+compiled UI artwork remained blocked; see `RELEASE_CHECKLIST.md`.
+
 Milestone 8 must either establish exact origin, license, redistribution
 conditions, hashes, and packaged usage for every compiled/packaged asset or
 remove/replace the asset through a narrow, tested change. A regression test

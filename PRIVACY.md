@@ -63,3 +63,19 @@ confirmed, it removes only that fixed Amphibia tree and the exact
 `org.amphibiaaudio.Amphibia.TONE3000/oauth-v1` credential; it does not traverse
 reparse points or delete any referenced external NAM/IR folder or original ZIP.
 Silent uninstall always preserves user data.
+
+## Release-evidence handling
+
+Milestone 8 release evidence contains hashes, dependency/asset identifiers,
+tool versions, import lists, and redacted test results. It must not contain
+usernames, home/workspace paths, device serials, credentials, provider user
+records, private model/IR content, or complete signed URLs. The generated
+scanner checks tracked source, artifacts, and archive members for representative
+secret and private-path patterns, but its documented limitations remain:
+pattern scanning cannot prove every secret format absent and does not decode
+compressed installer internals.
+
+No repository-derived dependency metadata was submitted to an external
+vulnerability service during the local Milestone 8 run. The resulting
+vulnerability gate is reported as blocked rather than weakening this privacy
+boundary or claiming a successful scan.
