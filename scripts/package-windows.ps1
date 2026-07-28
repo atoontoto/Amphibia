@@ -25,7 +25,7 @@ $script:ExpectedInnoVersion = '6.7.3'
 function Invoke-Native {
     param(
         [Parameter(Mandatory)][string]$FilePath,
-        [Parameter(Mandatory)][string[]]$ArgumentList,
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$ArgumentList,
         [string]$WorkingDirectory = $script:RepositoryRoot
     )
 
