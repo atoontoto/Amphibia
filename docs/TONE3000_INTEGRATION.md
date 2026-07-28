@@ -160,6 +160,13 @@ completed, so token exchange, current user, metadata, download, promotion,
 audition, offline restore, and disconnect retention remain blocked/not
 attempted and are not counted as live passes.
 
+Follow-up input-dispatch coverage makes terminal hosted-selection UI states
+explicitly dismissible: after Cancel or failure, the panel's `Close` action
+hides the panel only and does not issue a second provider cancellation. The
+same regression also verifies that a ready selection remains interactive rather
+than presenting a terminal close action. This is local UI/state coverage; it
+does not add a live account or content-flow claim.
+
 ## Milestone 6 setup behavior
 
 The wizard's TONE3000 page is informational and optional. It reads no token and

@@ -2,6 +2,7 @@
 #include "../../NeuralAmpModeler/Providers/IRemoteToneProvider.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Tone3000Configuration.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Tone3000HostedSelectionCoordinator.h"
+#include "../../NeuralAmpModeler/UI/Tone3000SelectionPanelState.h"
 
 #include <algorithm>
 #include <chrono>
@@ -312,6 +313,26 @@ int main()
     Require(snapshot.stage == providers::HostedSelectionStage::Failed && snapshot.error &&
             snapshot.error->code == providers::ProviderErrorCode::RequestTimeout && provider.toneFetches == 0,
             "authorization cancellation replaced the callback failure");
+  });
+
+  Test("terminal hosted-selection panel state is explicitly closeable", [] {
+    providers::HostedSelectionSnapshot snapshot;
+    snapshot.stage = providers::HostedSelectionStage::WaitingForBrowser;
+    Require(!ui::IsTone3000SelectionPanelCloseState(snapshot),
+            "waiting selection incorrectly exposed a terminal close state");
+    snapshot.stage = providers::HostedSelectionStage::Cancelled;
+    Require(ui::IsTone3000SelectionPanelCloseState(snapshot),
+            "cancelled selection did not expose a terminal close state");
+    snapshot.stage = providers::HostedSelectionStage::Failed;
+    Require(ui::IsTone3000SelectionPanelCloseState(snapshot),
+            "failed selection did not expose a terminal close state");
+    snapshot.stage = providers::HostedSelectionStage::FetchingTone;
+    Require(!ui::IsTone3000SelectionPanelCloseState(snapshot),
+            "active no-tone selection incorrectly exposed a terminal close state");
+    snapshot.tone = Tone(providers::RemoteContentFormat::Nam);
+    snapshot.stage = providers::HostedSelectionStage::Ready;
+    Require(!ui::IsTone3000SelectionPanelCloseState(snapshot),
+            "ready selection incorrectly exposed a terminal close state");
   });
 
   Test("pack filter grouping and downloaded navigation are local", [] {

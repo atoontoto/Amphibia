@@ -4,7 +4,7 @@ Status: implemented and validated corrective-patch map
 
 Baseline: completed Amphibia Milestones 0 through 8 on `main`
 
-Evidence date: 2026-07-28
+Evidence date: 2026-07-29
 
 This document was created before corrective implementation and retained as the
 audit-to-implementation map. The work is a
@@ -382,3 +382,42 @@ an exclusive socket bound only to `127.0.0.1:43821`, confirms readiness before
 browser launch, accepts one bounded exact-path GET, and releases the socket on
 success, failure, cancellation, timeout, or shutdown. No alternate port,
 address, path, or callback strategy is selected.
+
+## Follow-up input-dispatch repair (2026-07-29)
+
+The post-patch regression had two connected causes:
+
+1. `Tone3000SelectionPanelControl::Draw()` rendered `Close` when a selection
+   was Cancelled or Failed, but `OnMouseDown()` handled the same
+   hit rectangle only in `WaitingForBrowser`. After cancel, the visible
+   full-window panel stayed attached, topmost, and hit-testable, so it consumed
+   every later main-editor or Settings click.
+2. iPlug2 `IButtonControlBase` sets a clicked button value to `1` and resets it
+   only when the default click animation ends. Direct Amphibia action lambdas
+   replaced `DefaultClickActionFunc`, so those controls performed their action
+   but remained in their dark/pressed visual state.
+
+`UI/Tone3000SelectionPanelState.h` now supplies one pure terminal-close
+predicate used by both drawing and mouse dispatch. The terminal Close action
+hides the panel and redraws the editor without invoking provider cancellation
+again. `MakeMomentaryButtonAction()` composes the affected direct IButton/ISVG
+actions with iPlug2's default animation, preserving the immediate application
+action while restoring the normal value-reset lifecycle. It covers the main
+TONE3000 actions, Settings/navigation/provider/library/local-folder actions,
+and application SVG URL/close/gear buttons.
+
+The direct regression files are:
+
+- `NeuralAmpModeler/UI/Tone3000SelectionPanelState.h`;
+- `NeuralAmpModeler/NeuralAmpModelerControls.h`;
+- `NeuralAmpModeler/NeuralAmpModeler.cpp`;
+- `tests/milestone5/SelectionTests.cpp` (10 passing groups, including
+  Cancelled/Failed/FetchingTone/Ready state coverage);
+- `tests/characterization/test_post_m8_contract.py`.
+
+The post-M8 static contract, Milestone 5 Debug suite, Debug standalone, and
+Release VST3 build passed. The standalone host and 600 x 400 iPlug child were
+identified and sent direct Windows input messages, but the automation compositor
+could not capture the GPU child reliably; this remains source/native coverage
+rather than a new visual-manual claim. No installer, ZIP, SBOM, scan, or hash
+artifact was regenerated for this source-only follow-up.

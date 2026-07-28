@@ -53,6 +53,13 @@ environment-dependent items are `BLOCKED`, not `PASS`.
 
 ## Post-Milestone-8 corrective evidence
 
+- Follow-up input-dispatch source repair: a shared terminal-panel predicate now
+  makes Cancelled/Failed Close actionable, and direct application buttons start
+  the iPlug2 momentary-reset animation. The post-M8 static contract and the
+  Milestone 5 Debug suite passed (10/10). Debug standalone and Release VST3
+  compiled successfully. No follow-up package, SBOM, scan, or checksum was
+  regenerated, so the prior package evidence is historical only and must be
+  rerun before a release candidate includes this source commit.
 - The real Release standalone main editor and all seven Settings sections were
   manually inspected at the machine's actual 125% Windows display scale.
   Central layout tests also exercised 100%, 125%, 150%, and 200% calculations.

@@ -52,6 +52,11 @@ Hosted NAM uses `prompt=select_tone`, `format=nam`, and documented `gears` value
 
 The callback is not trusted as tone metadata. After exact state/code handling, only its bounded tone ID advances the flow; exact tone and exact models are then fetched from the authenticated API. A provider cancellation is a normal Cancelled terminal state, not an invalid-state warning. Code, state, verifier, callback URI, token, and browser URL never enter the UI snapshot or DAW state.
 
+After a Cancelled or Failed hosted-selection snapshot, the full-window panel
+offers a UI-only `Close` action. It dismisses the panel without calling
+`Cancel()` again, allowing subsequent Settings and main-editor input to reach
+their controls while the already-terminal coordinator remains inert.
+
 The Windows products now inject `FixedLoopbackCallbackReceiver` behind
 `IHostedSelectionCallbackReceiver`. It starts before provider authorization,
 stops on every terminal path, and is neither a LAN listener nor a permanent

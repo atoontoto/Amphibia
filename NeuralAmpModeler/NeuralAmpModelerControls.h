@@ -5,11 +5,13 @@
 #include <sstream> // std::stringstream
 #include <tuple>
 #include <unordered_map> // std::unordered_map
+#include <utility>
 #include "IControls.h"
 #include "IPlugPaths.h"
 #include "Providers/ProviderTypes.h"
 #include "Providers/Tone3000/Tone3000HostedSelectionCoordinator.h"
 #include "UI/EditorLayout.h"
+#include "UI/Tone3000SelectionPanelState.h"
 
 #ifdef OS_WIN
   #include <Windows.h>
@@ -23,6 +25,17 @@
 using namespace iplug;
 using namespace igraphics;
 using NAMDropHandler = std::function<void(const std::vector<std::string>&)>;
+
+// IButtonControlBase leaves its value at 1 until its animation ends.  App
+// callbacks must therefore start the default momentary animation as well as
+// perform their immediate application action.
+inline IActionFunction MakeMomentaryButtonAction(IActionFunction action)
+{
+  return [action = std::move(action)](IControl* caller) {
+    DefaultClickActionFunc(caller);
+    if (action) action(caller);
+  };
+}
 
 struct Tone3000PanelActions
 {
@@ -122,10 +135,15 @@ public:
       return;
     }
 
-    if (!mSnapshot.tone || mSnapshot.stage == amphibia::providers::HostedSelectionStage::Failed ||
-        mSnapshot.stage == amphibia::providers::HostedSelectionStage::Cancelled)
+    if (amphibia::ui::IsTone3000SelectionPanelCloseState(mSnapshot))
     {
       DrawButton(g, WaitingCancel(content), "Close");
+      return;
+    }
+
+    if (!mSnapshot.tone)
+    {
+      DrawButton(g, WaitingCancel(content), "Cancel");
       return;
     }
 
@@ -177,6 +195,20 @@ public:
     {
       if (WaitingReopen(content).Contains(x, y) && mActions.reopenBrowser) mActions.reopenBrowser();
       else if (WaitingCancel(content).Contains(x, y) && mActions.cancel) mActions.cancel();
+      return;
+    }
+    if (amphibia::ui::IsTone3000SelectionPanelCloseState(mSnapshot))
+    {
+      if (WaitingCancel(content).Contains(x, y))
+      {
+        Hide(true);
+        if (GetUI()) GetUI()->SetAllControlsDirty();
+      }
+      return;
+    }
+    if (!mSnapshot.tone)
+    {
+      if (WaitingCancel(content).Contains(x, y) && mActions.cancel) mActions.cancel();
       return;
     }
     if (FilterRect(content).Contains(x, y))
@@ -498,10 +530,10 @@ public:
   NAMGetButtonControl(const IRECT& bounds, const char* label, const char* url, const ISVG& globeSVG)
   : NAMSquareButtonControl(
       bounds,
-      [url](IControl* pCaller) {
+      MakeMomentaryButtonAction([url](IControl* pCaller) {
         WDL_String fullURL(url);
         pCaller->GetUI()->OpenURL(fullURL.Get());
-      },
+      }),
       globeSVG)
   {
     SetTooltip(label);
@@ -1048,9 +1080,11 @@ public:
     AddChildControl(new IVLabelControl(IRECT(28.f, 68.f, PLUG_WIDTH - 28.f, 91.f), audioOwnership, labelStyle));
     mFolderInfo = new IVLabelControl(IRECT(28.f, 100.f, PLUG_WIDTH - 28.f, 140.f), "Local folders unavailable", labelStyle);
     AddChildControl(mFolderInfo);
-    AddChildControl(new IVButtonControl(IRECT(28.f, 143.f, 275.f, 172.f), mFolderActions.chooseNamFolder,
+    AddChildControl(new IVButtonControl(IRECT(28.f, 143.f, 275.f, 172.f),
+                                        MakeMomentaryButtonAction(mFolderActions.chooseNamFolder),
                                         "Choose NAM folder", buttonStyle));
-    AddChildControl(new IVButtonControl(IRECT(325.f, 143.f, 572.f, 172.f), mFolderActions.chooseIrFolder,
+    AddChildControl(new IVButtonControl(IRECT(325.f, 143.f, 572.f, 172.f),
+                                        MakeMomentaryButtonAction(mFolderActions.chooseIrFolder),
                                         "Choose IR folder", buttonStyle));
     mLibraryInfo = new IVLabelControl(IRECT(28.f, 184.f, PLUG_WIDTH - 28.f, 226.f), "Managed library unavailable", labelStyle);
     AddChildControl(mLibraryInfo);
@@ -1059,7 +1093,8 @@ public:
       {"Import folder", mLibraryActions.importFolder}, {"Import ZIP", mLibraryActions.importZip}}};
     for (std::size_t index = 0; index < libraryButtons.size(); ++index)
       AddChildControl(new IVButtonControl(IRECT(28.f + index * 137.f, 230.f, 159.f + index * 137.f, 259.f),
-                                          libraryButtons[index].second, libraryButtons[index].first, buttonStyle));
+                                          MakeMomentaryButtonAction(libraryButtons[index].second),
+                                          libraryButtons[index].first, buttonStyle));
     mProviderInfo = new IVLabelControl(IRECT(28.f, 274.f, PLUG_WIDTH - 28.f, 318.f),
                                        "TONE3000 is not configured", labelStyle);
     AddChildControl(mProviderInfo);
@@ -1072,12 +1107,13 @@ public:
       auto action = std::get<1>(providerButtons[index]);
       if (!action) action = [](IControl*) {};
       auto* button = AddChildControl(new IVButtonControl(IRECT(28.f + index * 183.f, 322.f, 205.f + index * 183.f, 352.f),
-                                                        std::move(action), std::get<0>(providerButtons[index]), buttonStyle));
+                                                        MakeMomentaryButtonAction(std::move(action)),
+                                                        std::get<0>(providerButtons[index]), buttonStyle));
       button->SetDisabled(!std::get<2>(providerButtons[index]));
     }
-    AddChildControl(new NAMSquareButtonControl(CornerButtonArea(bounds), [](IControl* caller) {
+    AddChildControl(new NAMSquareButtonControl(CornerButtonArea(bounds), MakeMomentaryButtonAction([](IControl* caller) {
       caller->GetParent()->Hide(true);
-    }, mCloseSVG));
+    }), mCloseSVG));
     Refresh();
   }
 
@@ -1227,7 +1263,9 @@ public:
     for (std::size_t index = 0; index < amphibia::ui::kSettingsSectionCaptions.size(); ++index)
     {
       AddChildControl(new IVButtonControl(rect(calculated.navigationButtons[index]),
-        [this, index](IControl*) { ShowSection(static_cast<amphibia::ui::SettingsSection>(index)); },
+        MakeMomentaryButtonAction([this, index](IControl*) {
+          ShowSection(static_cast<amphibia::ui::SettingsSection>(index));
+        }),
         amphibia::ui::kSettingsSectionCaptions[index].data(), buttonStyle));
     }
 
@@ -1264,9 +1302,9 @@ public:
     mFolderInfo = new IVLabelControl(IRECT(content.L, row(1).T, content.R, row(2).B),
                                     "Local folders unavailable", labelStyle);
     local->AddChildControl(mFolderInfo);
-    local->AddChildControl(new IVButtonControl(row(3), mFolderActions.chooseNamFolder,
+    local->AddChildControl(new IVButtonControl(row(3), MakeMomentaryButtonAction(mFolderActions.chooseNamFolder),
                                                "Choose NAM folder", buttonStyle));
-    local->AddChildControl(new IVButtonControl(row(4), mFolderActions.chooseIrFolder,
+    local->AddChildControl(new IVButtonControl(row(4), MakeMomentaryButtonAction(mFolderActions.chooseIrFolder),
                                                "Choose IR folder", buttonStyle));
 
     auto* library = addPage(amphibia::ui::SettingsSection::ManagedLibrary);
@@ -1283,7 +1321,7 @@ public:
     for (std::size_t index = 0; index < libraryActions.size(); ++index)
       library->AddChildControl(new IVButtonControl(
         rect(amphibia::ui::GridCell(libraryButtons, 3, 3, index)),
-        libraryActions[index].second, libraryActions[index].first, buttonStyle));
+        MakeMomentaryButtonAction(libraryActions[index].second), libraryActions[index].first, buttonStyle));
 
     auto* provider = addPage(amphibia::ui::SettingsSection::Tone3000);
     provider->AddChildControl(new IVLabelControl(row(0), "TONE3000", headingStyle));
@@ -1304,7 +1342,7 @@ public:
       if (!action) action = [](IControl*) {};
       auto* button = new IVButtonControl(
         rect(amphibia::ui::GridCell(providerButtons, 3, 2, index)),
-        std::move(action), std::get<0>(providerActions[index]).data(), buttonStyle);
+        MakeMomentaryButtonAction(std::move(action)), std::get<0>(providerActions[index]).data(), buttonStyle);
       provider->AddChildControl(button);
       button->SetDisabled(!std::get<2>(providerActions[index]));
     }
@@ -1340,9 +1378,9 @@ public:
     AddChildControl(new IVLabelControl(rect(calculated.footer),
       "Choose one section. Inactive sections are hidden and cannot receive input.",
       mStyle.WithDrawFrame(false).WithValueText(IText(10.f, EAlign::Near, PluginColors::HELP_TEXT))));
-    AddNamedChildControl(new NAMSquareButtonControl(rect(calculated.close), [this](IControl*) {
+    AddNamedChildControl(new NAMSquareButtonControl(rect(calculated.close), MakeMomentaryButtonAction([this](IControl*) {
       HideAnimated(true);
-    }, mCloseSVG), mControlNames.close);
+    }), mCloseSVG), mControlNames.close);
 
     RefreshFolderInfo();
     RefreshLibraryInfo();

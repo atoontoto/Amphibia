@@ -514,17 +514,17 @@ Amphibia::Amphibia(const InstanceInfo& info)
     const auto providerButtonStyle = style.WithShowLabel(true).WithDrawFrame(true)
       .WithLabelText(IText(9.f, PluginColors::NAM_THEMEFONTCOLOR, "Roboto-Regular"));
     auto* searchTone3000 = pGraphics->AttachControl(new IVButtonControl(
-      tone3000ModelArea, [](IControl* caller) {
+      tone3000ModelArea, MakeMomentaryButtonAction([](IControl* caller) {
         if (auto* panel = caller->GetUI()->GetControlWithTag(kCtrlTagTone3000Panel))
           panel->As<Tone3000SelectionPanelControl>()->ShowArchitectureChoice();
-      }, amphibia::ui::kSearchTone3000Caption.data(), providerButtonStyle), kCtrlTagTone3000Search);
+      }), amphibia::ui::kSearchTone3000Caption.data(), providerButtonStyle), kCtrlTagTone3000Search);
     searchTone3000->SetDisabled(!mTone3000Registration.providerUsable || !mTone3000Selection);
     searchTone3000->SetTooltip(mTone3000Registration.providerUsable ?
       "Open TONE3000 hosted selection" : "TONE3000 integration is not configured in this build.");
     auto* findTone3000Ir = pGraphics->AttachControl(new IVButtonControl(
-      tone3000IrArea, [startHostedSelection](IControl*) {
+      tone3000IrArea, MakeMomentaryButtonAction([startHostedSelection](IControl*) {
         startHostedSelection(amphibia::providers::HostedSelectionKind::ImpulseResponse);
-      }, amphibia::ui::kFindTone3000IrCaption.data(), providerButtonStyle), kCtrlTagTone3000FindIR);
+      }), amphibia::ui::kFindTone3000IrCaption.data(), providerButtonStyle), kCtrlTagTone3000FindIR);
     findTone3000Ir->SetDisabled(!mTone3000Registration.providerUsable || !mTone3000Selection);
     findTone3000Ir->SetTooltip(mTone3000Registration.providerUsable ?
       "Open TONE3000 hosted cabinet/IR selection" : "TONE3000 integration is not configured in this build.");
@@ -550,10 +550,10 @@ Amphibia::Amphibia(const InstanceInfo& info)
     // Settings/help/about box
     pGraphics->AttachControl(new NAMCircleButtonControl(
       settingsButtonArea,
-      [pGraphics](IControl* pCaller) {
+      MakeMomentaryButtonAction([pGraphics](IControl* pCaller) {
         auto* settings = pGraphics->GetControlWithTag(kCtrlTagSettingsBox)->As<NAMSettingsPageControl>();
         settings->ShowSection(amphibia::ui::SettingsSection::General);
-      },
+      }),
       gearSVG));
 
     pGraphics

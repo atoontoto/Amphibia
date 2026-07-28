@@ -156,3 +156,9 @@ The message thread owns Settings section selection. The overlay's animation
 completion reapplies visibility and enablement for every descendant so an
 inactive page cannot paint or receive input. Section switches do not attach
 new controls; repeated open/close reuses the original control tree.
+
+The message thread also owns hosted-selection panel dismissal. A terminal
+Cancelled/Failed snapshot draws and dispatches the same Close state; active
+loading states without tone retain Cancel. Close only hides the UI panel and
+dirties the editor for repaint. It does not re-enter provider cancellation or
+mutate worker/audio state.

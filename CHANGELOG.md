@@ -4,6 +4,10 @@ All notable Amphibia changes are recorded here. The project has no public releas
 
 ## Unreleased - Post-Milestone-8 corrective patch
 
+- Fixed the hosted-selection terminal Close path: after Cancel or failure the
+  full-window overlay now dismisses instead of intercepting every later UI
+  click. Direct application button actions also use iPlug2's normal
+  momentary-reset lifecycle, so their pressed/dark state clears.
 - Replaced overlapping Settings/configuration canvases with one centralized,
   bounded seven-section layout and explicit descendant visibility/enablement.
 - Restored readable captions for main and Settings buttons, wired the existing

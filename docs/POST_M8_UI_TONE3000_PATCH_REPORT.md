@@ -11,6 +11,16 @@ Amphibia now uses the owner's centralized public TONE3000 desktop client
 configuration, exact fixed IPv4 loopback callback, and the existing hosted
 selection/provider/library/activation architecture.
 
+Follow-up input-dispatch repair (2026-07-29): cancelling a hosted selection
+correctly moved the coordinator to `Cancelled`, but the full-window panel drew
+its terminal `Close` button without dispatching its hit area. It therefore
+remained topmost and swallowed later clicks. In parallel, direct application
+callbacks bypassed iPlug2's default momentary-button animation, leaving their
+pressed/dark value latched at `1`. The terminal Close state now shares its
+predicate between drawing and input dispatch, hides only the panel without
+re-cancelling provider work, and direct application button actions schedule
+the normal momentary reset before performing their immediate action.
+
 No audio contract, identity, version, state, parameter, DSP, local-file,
 managed-library, archive, installer-family, or artifact-name contract changed.
 
@@ -35,6 +45,13 @@ The defect was structural rather than normal appearance:
    and bottom edges.
 6. The main hosted IR action was a no-op, the NAM action did not begin the live
    coordinator, and provider actions were not completely wired.
+7. The hosted selector rendered `Close` for terminal Cancelled/Failed states,
+   but its mouse handler recognized that rectangle only during the
+   browser-waiting state. The visible modal consequently remained a topmost
+   input surface after cancellation.
+8. `IButtonControlBase` sets a button value to `1` on mouse down and relies on
+   `DefaultClickActionFunc` to schedule the animation that returns it to `0`.
+   Direct application callbacks did not invoke that default action.
 
 ## Main editor
 
@@ -209,6 +226,8 @@ signed-URL, private-path, and credential patterns.
 - Milestone 3 Release library suite;
 - Milestone 4 Release foundation/layout/loopback suite (26/26);
 - Milestone 5 Release hosted-selection suite (9/9);
+- follow-up Milestone 5 Debug hosted-selection suite (10/10), including the
+  shared terminal-panel Close-state regression;
 - Milestone 6 Release setup suite (7/7);
 - CycloneDX/asset/pin validation (51 components, 33 assets);
 - release credential/path scan (623 files, zero findings).
@@ -222,6 +241,13 @@ The real Windows Release standalone main surface and all seven Settings pages
 were inspected at 125%. The real port-conflict dialog and no-browser behavior
 were inspected. The waiting/listener boundary and cancellation release were
 inspected without completing the provider account flow.
+
+For this follow-up, the real Debug standalone host and its 600 x 400 iPlug
+editor child were located and direct Windows input messages were sent to that
+target. The automation session's compositor could not produce a trustworthy
+capture of the GPU child surface, so the Cancel -> Close -> Settings visual
+sequence is not counted as an additional visual manual pass; the native
+terminal-state regression covers the dispatch contract deterministically.
 
 ### Failed
 
@@ -245,6 +271,15 @@ Mock-only provider results are separated in the live-validation section.
 Debug standalone, Release standalone, Debug VST3, and Release VST3 all built
 successfully with the v145 x64 toolchain. Existing inherited conversion
 warnings remain; there were no build errors. AAX was not enabled.
+
+The input-dispatch follow-up rebuilt the Debug standalone and Release VST3
+targets successfully with the same v145 x64 toolchain. It intentionally did
+not regenerate installers, portable ZIPs, SBOMs, scans, or checksum manifests.
+Accordingly, the package hashes below remain historical evidence for the prior
+package-source commit and must not be used to represent this follow-up source
+commit; a release candidate must rerun the package and security evidence.
+
+### Prior package-evidence run (historical)
 
 The Windows packaging pipeline rebuilt Release standalone/VST3 and regenerated:
 
@@ -316,6 +351,9 @@ Corrective local commits through the final package source:
 - `cf10b1f` — `test: cover UI layout loopback callback and port conflicts`;
 - `0238af6` — `fix: complete DPI and settings visibility repair`.
 - `b69dd56` — `docs: close post-M8 UI and TONE3000 patch report`.
+
+The prior final hash-record commit is `289ac58` (`build: record final unsigned
+candidate hashes`).
 
 The final hash-record commit changes only this report after package generation
 and is necessarily identified by the final `git log` after it is committed.

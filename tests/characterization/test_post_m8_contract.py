@@ -23,6 +23,7 @@ def main() -> None:
     receiver = read(
         "NeuralAmpModeler/Platform/FixedLoopbackCallbackReceiver.cpp"
     )
+    panel_state = read("NeuralAmpModeler/UI/Tone3000SelectionPanelState.h")
     provider_types = read("NeuralAmpModeler/Providers/ProviderTypes.h")
     layout = read("NeuralAmpModeler/UI/EditorLayout.h")
     app_project = read("NeuralAmpModeler/projects/NeuralAmpModeler-app.vcxproj")
@@ -166,6 +167,46 @@ def main() -> None:
         and "Tone3000HostedSelectionCoordinator" in product,
         "main hosted NAM/IR actions are not live-wired",
     )
+    require(
+        "IsTone3000SelectionPanelCloseState" in panel_state
+        and "HostedSelectionStage::Cancelled" in panel_state
+        and "HostedSelectionStage::Failed" in panel_state,
+        "terminal hosted-selection close-state predicate is missing",
+    )
+    require(
+        "if (amphibia::ui::IsTone3000SelectionPanelCloseState(mSnapshot))" in controls
+        and "Hide(true);" in controls
+        and "SetAllControlsDirty" in controls,
+        "the terminal hosted-selection Close button cannot dismiss its modal panel",
+    )
+    panel_controls = controls[
+        controls.index("class Tone3000SelectionPanelControl") : controls.index(
+            "enum class NAMBrowserState"
+        )
+    ]
+    require(
+        panel_controls.count("if (!mSnapshot.tone)") >= 2
+        and 'DrawButton(g, WaitingCancel(content), "Cancel");' in panel_controls
+        and "if (WaitingCancel(content).Contains(x, y) && mActions.cancel) mActions.cancel();"
+        in panel_controls,
+        "active no-tone hosted-selection states lost their Cancel action",
+    )
+    require(
+        "MakeMomentaryButtonAction" in controls
+        and "DefaultClickActionFunc(caller);" in controls
+        and product.count("MakeMomentaryButtonAction(") >= 3,
+        "application buttons do not schedule their momentary reset animation",
+    )
+    for action in (
+        "mFolderActions.chooseNamFolder",
+        "mFolderActions.chooseIrFolder",
+        "libraryActions[index].second",
+        "std::move(action)",
+    ):
+        require(
+            f"MakeMomentaryButtonAction({action})" in controls,
+            f"Settings action bypasses the momentary button wrapper: {action}",
+        )
     require(
         "ProcessBlock" not in receiver,
         "callback receiver entered the audio callback",
