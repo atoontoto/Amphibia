@@ -321,7 +321,7 @@ int main()
           Require(!settings.navigationButtons[index - 1].Overlaps(settings.navigationButtons[index]),
                   "Settings navigation buttons overlap");
       }
-      std::array<ui::Rect, 6> contentRows{};
+      std::array<ui::Rect, 7> contentRows{};
       for (std::size_t index = 0; index < contentRows.size(); ++index)
       {
         contentRows[index] = ui::Row(settings.content, index);
@@ -341,10 +341,12 @@ int main()
           Require(!libraryActions[earlier].Overlaps(libraryActions[index]), "library actions overlap");
       }
       std::array<ui::Rect, 5> providerActions{};
+      const ui::Rect providerActionArea{settings.content.left, contentRows[4].top,
+                                        settings.content.right, contentRows[6].bottom};
       for (std::size_t index = 0; index < providerActions.size(); ++index)
       {
-        providerActions[index] = ui::GridCell(actionArea, 3, 2, index);
-        Require(actionArea.Contains(providerActions[index]), "provider action escaped content");
+        providerActions[index] = ui::GridCell(providerActionArea, 3, 2, index);
+        Require(providerActionArea.Contains(providerActions[index]), "provider action escaped content");
         for (std::size_t earlier = 0; earlier < index; ++earlier)
           Require(!providerActions[earlier].Overlaps(providerActions[index]), "provider actions overlap");
       }

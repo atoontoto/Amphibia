@@ -288,21 +288,13 @@ Amphibia::Amphibia(const InstanceInfo& info)
 
     RemoteProviderUIActions providerActions;
     providerActions.information = [this] {
-      const auto registration =
-        mTone3000Registration.state ==
-          amphibia::providers::tone3000::Tone3000RegistrationState::ProductionConfigured ?
-        "Production" :
-        mTone3000Registration.state ==
-          amphibia::providers::tone3000::Tone3000RegistrationState::DevelopmentConfigured ?
-        "Development" : "Not configured";
       std::string connection = "Disconnected";
       amphibia::credentials::SecureCredential credential;
       const amphibia::credentials::CredentialKey key{
         mTone3000Configuration.credentialServiceNamespace, mTone3000Configuration.credentialAccount};
       if (mTone3000Credentials.Load(key, credential) && credential.username && !credential.username->empty())
         connection = "Connected as @" + *credential.username;
-      return std::string("Application registration: ") + registration +
-        "\nCallback: Fixed local callback\nStatus: " + connection;
+      return std::string("Status: ") + connection;
     };
     providerActions.connect = [this](IControl* caller) {
       if (!mTone3000Provider) return;
@@ -364,7 +356,11 @@ Amphibia::Amphibia(const InstanceInfo& info)
     };
 
     LibraryUIActions libraryActions;
-    libraryActions.information = [this] { return ManagedLibraryConfiguration().information; };
+    libraryActions.information = [this] {
+      const auto status = ManagedLibraryConfiguration();
+      if (!status.available) return status.information;
+      return std::string("Managed library ready. Verification, cleanup, and imports are always explicit.");
+    };
     libraryActions.openFolder = [this](IControl* caller) {
       if (!mLibrary) return;
       WDL_String path(amphibia::library::PathToUtf8(mLibrary->Root()).c_str());
@@ -412,9 +408,9 @@ Amphibia::Amphibia(const InstanceInfo& info)
     LocalFolderUIActions folderActions;
     folderActions.information = [] {
       const auto loaded = amphibia::preferences::LoadSharedSettings();
-      const auto nam = loaded.settings.namFolder ? *loaded.settings.namFolder : "Not configured";
-      const auto ir = loaded.settings.irFolder ? *loaded.settings.irFolder : "Not configured";
-      return std::string("Referenced local folders (shared by standalone and plug-in) | NAM: ") + nam + "\nIR: " + ir;
+      const auto nam = loaded.settings.namFolder ? "Configured" : "Not configured";
+      const auto ir = loaded.settings.irFolder ? "Configured" : "Not configured";
+      return std::string("Shared local folders | NAM: ") + nam + " | IR: " + ir;
     };
     const auto chooseSharedFolder = [](bool nam, IControl* caller) {
       WDL_String directory;

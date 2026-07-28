@@ -567,6 +567,13 @@ static void ClientResize(HWND hWnd, int nWidth, int nHeight)
   SetWindowPos(hWnd, 0, x, y, nWidth + ptDiff.x, nHeight + ptDiff.y, 0);
 }
 
+static void EditorChildResize(HWND hWnd, int nWidth, int nHeight)
+{
+  if (const HWND editor = FindWindowExA(hWnd, nullptr, "IPlugWndClass", nullptr))
+    SetWindowPos(editor, nullptr, 0, 0, nWidth, nHeight,
+                 SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER);
+}
+
 #ifdef OS_WIN
 extern float GetScaleForHWND(HWND hWnd);
 #endif
@@ -592,7 +599,11 @@ WDL_DLGRET IPlugAPPHost::MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPA
       width = pPlug->GetEditorWidth();
       height = pPlug->GetEditorHeight();
 
-      ClientResize(hwndDlg, width, height);
+      const float scale = GetScaleForHWND(hwndDlg);
+      const int physicalWidth = static_cast<int>(static_cast<float>(width) * scale);
+      const int physicalHeight = static_cast<int>(static_cast<float>(height) * scale);
+      ClientResize(hwndDlg, physicalWidth, physicalHeight);
+      EditorChildResize(hwndDlg, physicalWidth, physicalHeight);
 
       ShowWindow(hwndDlg, SW_SHOW);
       if (gAmphibiaSafeMode) SetWindowText(hwndDlg, "Amphibia - Safe Mode");
@@ -843,7 +854,11 @@ WDL_DLGRET IPlugAPPHost::MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPA
       int w = pPlug->GetEditorWidth();
       int h = pPlug->GetEditorHeight();
 
-      SetWindowPos(hwndDlg, 0, rect->left, rect->top, w + ptDiff.x, h + ptDiff.y, 0);
+      SetWindowPos(hwndDlg, 0, rect->left, rect->top,
+                   static_cast<int>(static_cast<float>(w) * scale) + ptDiff.x,
+                   static_cast<int>(static_cast<float>(h) * scale) + ptDiff.y, 0);
+      EditorChildResize(hwndDlg, static_cast<int>(static_cast<float>(w) * scale),
+                       static_cast<int>(static_cast<float>(h) * scale));
 
       return 0;
     }
@@ -859,6 +874,7 @@ WDL_DLGRET IPlugAPPHost::MainDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPA
       {
         RECT r;
         GetClientRect(hwndDlg, &r);
+        EditorChildResize(hwndDlg, r.right, r.bottom);
         float scale = 1.f;
         #ifdef OS_WIN
         scale = GetScaleForHWND(hwndDlg);

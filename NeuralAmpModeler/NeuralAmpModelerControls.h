@@ -1194,6 +1194,7 @@ public:
         {
           pCaller->OnEndAnimation();
           IContainerBase::Hide(mWillHide);
+          if (!mWillHide) ApplySectionVisibility();
           GetUI()->SetAllControlsDirty();
           return;
         }
@@ -1248,10 +1249,10 @@ public:
     general->AddChildControl(new IVLabelControl(row(0), "GENERAL", headingStyle));
 #ifdef APP_API
     constexpr const char* audioOwnership =
-      "Standalone audio devices, channels, sample rate, and buffer size are configured in Audio Settings.";
+      "Standalone audio settings are configured from File > Audio Settings.";
 #else
     constexpr const char* audioOwnership =
-      "Audio devices, channel routing, sample rate, and buffer size are controlled by your DAW.";
+      "Audio devices, sample rate, and buffer size are controlled by your DAW.";
 #endif
     general->AddChildControl(new IVLabelControl(IRECT(content.L, row(1).T, content.R, row(1).B + 18.f),
                                                 audioOwnership, labelStyle));
@@ -1286,8 +1287,9 @@ public:
 
     auto* provider = addPage(amphibia::ui::SettingsSection::Tone3000);
     provider->AddChildControl(new IVLabelControl(row(0), "TONE3000", headingStyle));
-    mProviderInfo = new IVLabelControl(IRECT(content.L, row(1).T, content.R, row(2).B + 18.f),
-      "Application registration: Development\nCallback: Fixed local callback\nStatus: Disconnected", labelStyle);
+    provider->AddChildControl(new IVLabelControl(row(1), "Application registration: Development", labelStyle));
+    provider->AddChildControl(new IVLabelControl(row(2), "Callback: Fixed local callback", labelStyle));
+    mProviderInfo = new IVLabelControl(row(3), "Status: Disconnected", labelStyle);
     provider->AddChildControl(mProviderInfo);
     const std::array<std::tuple<std::string_view, IActionFunction, bool>, 5> providerActions{{
       {amphibia::ui::kTone3000SettingsActionCaptions[0], mProviderActions.connect, mProviderActions.connectEnabled},
@@ -1295,7 +1297,7 @@ public:
       {amphibia::ui::kTone3000SettingsActionCaptions[2], mProviderActions.testConnection, mProviderActions.testEnabled},
       {amphibia::ui::kTone3000SettingsActionCaptions[3], mProviderActions.cancel, mProviderActions.cancelEnabled},
       {amphibia::ui::kTone3000SettingsActionCaptions[4], mProviderActions.open, mProviderActions.openEnabled}}};
-    const amphibia::ui::Rect providerButtons{content.L, row(3).T, content.R, row(5).B};
+    const amphibia::ui::Rect providerButtons{content.L, row(4).T, content.R, row(6).B};
     for (std::size_t index = 0; index < providerActions.size(); ++index)
     {
       auto action = std::get<1>(providerActions[index]);
@@ -1364,6 +1366,10 @@ private:
       const bool inactive = !visible[index];
       mPages[index]->SetDisabled(inactive);
       mPages[index]->Hide(inactive);
+      mPages[index]->ForAllChildrenFunc([inactive](int, IControl* child) {
+        child->SetDisabled(inactive);
+        child->Hide(inactive);
+      });
     }
     if (GetUI()) GetUI()->SetAllControlsDirty();
   }

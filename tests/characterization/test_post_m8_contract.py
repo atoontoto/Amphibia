@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +27,9 @@ def main() -> None:
     layout = read("NeuralAmpModeler/UI/EditorLayout.h")
     app_project = read("NeuralAmpModeler/projects/NeuralAmpModeler-app.vcxproj")
     vst3_project = read("NeuralAmpModeler/projects/NeuralAmpModeler-vst3.vcxproj")
+    standalone_dialog = read(
+        "NeuralAmpModeler/Standalone/Windows/AmphibiaAPPDialog.cpp"
+    )
 
     for caption in (
         "Search TONE3000",
@@ -37,6 +41,12 @@ def main() -> None:
         "Open TONE3000",
     ):
         require(caption in product + controls + layout, f"missing visible caption: {caption}")
+    for provider_line in (
+        "Application registration: Development",
+        "Callback: Fixed local callback",
+        "Status: Disconnected",
+    ):
+        require(provider_line in controls, f"missing bounded provider status line: {provider_line}")
     require(
         "WithShowLabel(false)" not in product + controls,
         "a relevant vector control still suppresses its label",
@@ -59,29 +69,58 @@ def main() -> None:
         "inactive Settings sections are not hidden and disabled",
     )
     require(
+        "mPages[index]->ForAllChildrenFunc([inactive]" in controls
+        and "child->SetDisabled(inactive)" in controls
+        and "child->Hide(inactive)" in controls,
+        "inactive Settings page descendants remain visible or interactive",
+    )
+    require(
+        "IContainerBase::Hide(mWillHide);" in controls
+        and "if (!mWillHide) ApplySectionVisibility();" in controls,
+        "Settings animation completion can unhide inactive pages",
+    )
+    require(
         "CalculateMainEditorLayout" in product
         and "CalculateSettingsLayout" in controls
         and "struct LayoutMetrics" in layout,
         "central layout model is not exercised by both surfaces",
     )
     require(
-        "Audio devices, channel routing, sample rate, and buffer size are controlled by your DAW."
+        "Audio devices, sample rate, and buffer size are controlled by your DAW."
         in controls,
         "VST3 DAW audio-ownership text is missing",
     )
     require(
-        "Standalone audio devices, channels, sample rate, and buffer size are configured in Audio Settings."
+        "Standalone audio settings are configured from File > Audio Settings."
         in controls,
         "standalone audio-ownership text is missing",
     )
+    require(
+        "GetScaleForHWND(hwndDlg)" in standalone_dialog
+        and "static_cast<float>(width) * scale" in standalone_dialog
+        and "static_cast<float>(w) * scale" in standalone_dialog,
+        "standalone client size is not DPI-scaled at creation and DPI changes",
+    )
+    require(
+        "FindWindowExA(hWnd, nullptr, \"IPlugWndClass\", nullptr)"
+        in standalone_dialog
+        and standalone_dialog.count("EditorChildResize(") >= 4,
+        "standalone iPlug child does not track its DPI-scaled client",
+    )
 
-    public_id = "t3k_pub_kQRhztgEo6BAZeTI1o0iJmOurV7PdeUV"
     source_text = "\n".join(
         path.read_text(encoding="utf-8", errors="ignore")
         for path in (ROOT / "NeuralAmpModeler").rglob("*")
         if path.is_file() and path.suffix.lower() in {".h", ".cpp", ".vcxproj", ".props"}
     )
-    require(source_text.count(public_id) == 1, "publishable client ID is duplicated")
+    public_client_assignments = re.findall(
+        r'configuration\.clientId\s*=\s*"(t3k_pub_[A-Za-z0-9]+)"',
+        source_text,
+    )
+    require(
+        len(public_client_assignments) == 1,
+        "publishable client configuration is missing or duplicated",
+    )
     require(
         'clientId = "t3k_cs' not in configuration,
         "secret-key value entered configuration",
