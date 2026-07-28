@@ -1,0 +1,51 @@
+name: Package Windows
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: microsoft/setup-msbuild@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Fetch pinned iPlug SDKs and libraries
+        shell: bash
+        run: |
+          cd iPlug2/Dependencies/IPlug
+          ./download-iplug-sdks.sh
+          cd ..
+          ./download-prebuilt-libs.sh
+      - name: Install pinned Inno Setup compiler
+        shell: pwsh
+        run: |
+          winget install --id JRSoftware.InnoSetup --exact --version 6.7.3 --silent `
+            --accept-package-agreements --accept-source-agreements
+      - name: Build, test, and package unsigned development artifacts
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+      - name: Upload unsigned development artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Amphibia-0.1.0-windows-unsigned-development
+          path: |
+            artifacts/release/0.1.0/Amphibia-0.1.0-Windows-Setup.exe
+            artifacts/release/0.1.0/Amphibia-0.1.0-Windows-Portable.zip
+            artifacts/release/0.1.0/Amphibia-0.1.0-Windows-VST3.zip
+            artifacts/release/0.1.0/Amphibia-0.1.0-Windows-Standalone.zip
+            artifacts/release/0.1.0/SOURCE-COMMIT.txt
+            artifacts/release/0.1.0/DEPENDENCY-VERSIONS.txt
+            artifacts/release/0.1.0/THIRD_PARTY_NOTICES.txt
+            artifacts/release/0.1.0/ARTIFACT-MANIFEST.txt
+            artifacts/release/0.1.0/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
