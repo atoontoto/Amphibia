@@ -6,12 +6,14 @@
 #include "../../NeuralAmpModeler/Loading/FileInspection.h"
 #include "../../NeuralAmpModeler/Library/ContentHash.h"
 #include "../../NeuralAmpModeler/Platform/SystemBrowser.h"
+#include "../../NeuralAmpModeler/Platform/FixedLoopbackCallbackReceiver.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/OAuthController.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Pkce.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Tone3000ApiClient.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Tone3000DownloadCoordinator.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Tone3000Provider.h"
 #include "../../NeuralAmpModeler/Providers/Tone3000/Tone3000Parsing.h"
+#include "../../NeuralAmpModeler/UI/EditorLayout.h"
 
 #include <algorithm>
 #include <array>
@@ -205,12 +207,166 @@ private:
   std::atomic<bool> mStop{};
   std::thread mThread;
 };
+
+class FixedPortOwner
+{
+public:
+  FixedPortOwner()
+  {
+    WSADATA data{};
+    Require(WSAStartup(MAKEWORD(2, 2), &data) == 0, "fixed-port WSAStartup");
+    mSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    Require(mSocket != INVALID_SOCKET, "fixed-port socket");
+    BOOL exclusive = TRUE;
+    Require(setsockopt(mSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
+      reinterpret_cast<const char*>(&exclusive), sizeof(exclusive)) == 0, "fixed-port exclusive");
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = htons(43821);
+    Require(bind(mSocket, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0, "fixed-port bind");
+    Require(listen(mSocket, 1) == 0, "fixed-port listen");
+  }
+  ~FixedPortOwner()
+  {
+    if (mSocket != INVALID_SOCKET) closesocket(mSocket);
+    WSACleanup();
+  }
+
+private:
+  SOCKET mSocket{INVALID_SOCKET};
+};
+
+std::string SendCallbackRequest(const std::string& request)
+{
+  WSADATA data{};
+  Require(WSAStartup(MAKEWORD(2, 2), &data) == 0, "callback-client WSAStartup");
+  SOCKET socketHandle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  Require(socketHandle != INVALID_SOCKET, "callback-client socket");
+  sockaddr_in address{};
+  address.sin_family = AF_INET;
+  address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  address.sin_port = htons(43821);
+  Require(connect(socketHandle, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0,
+          "callback-client connect");
+  std::size_t sent = 0;
+  while (sent < request.size())
+  {
+    const int count = send(socketHandle, request.data() + sent,
+                           static_cast<int>((std::min)(request.size() - sent, std::size_t{4096})), 0);
+    Require(count > 0, "callback-client send");
+    sent += static_cast<std::size_t>(count);
+  }
+  shutdown(socketHandle, SD_SEND);
+  std::string response;
+  std::array<char, 1024> buffer{};
+  for (;;)
+  {
+    const int count = recv(socketHandle, buffer.data(), static_cast<int>(buffer.size()), 0);
+    if (count <= 0) break;
+    response.append(buffer.data(), static_cast<std::size_t>(count));
+  }
+  closesocket(socketHandle);
+  WSACleanup();
+  return response;
+}
 #endif
 
 } // namespace
 
 int main()
 {
+  Test("official public desktop configuration", [] {
+    const auto configuration = providers::tone3000::ConfiguredTone3000();
+    const auto validation = providers::tone3000::ValidateTone3000Configuration(configuration);
+    Require(validation.valid && validation.providerUsable, "official public configuration is unusable");
+    Require(validation.state == providers::tone3000::Tone3000RegistrationState::DevelopmentConfigured,
+            "official configuration was mislabelled");
+    Require(configuration.kind == providers::tone3000::Tone3000ConfigurationKind::Development,
+            "official configuration is not development");
+    Require(configuration.callbackStrategy == providers::tone3000::Tone3000CallbackStrategy::FixedLoopback,
+            "official callback is not fixed loopback");
+    Require(configuration.redirectUri == "http://127.0.0.1:43821/oauth/callback",
+            "official redirect changed");
+    Require(configuration.clientId.starts_with("t3k_pub_") &&
+            configuration.clientId.find("t3k_cs") == std::string::npos,
+            "official client is not publishable-only");
+  });
+  Test("central editor and Settings layout is bounded", [] {
+    constexpr std::array<float, 4> scales{1.f, 1.25f, 1.5f, 2.f};
+    for (const float scale : scales)
+    {
+      const auto main = ui::CalculateMainEditorLayout(600.f, 400.f, scale);
+      for (const auto& knob : main.knobs)
+        Require(knob.Positive() && main.editor.Contains(knob), "knob escaped editor");
+      for (const auto& control : {main.model, main.impulseResponse, main.searchTone3000,
+                                 main.findTone3000Ir, main.settings})
+        Require(control.Positive() && main.editor.Contains(control), "main control escaped editor");
+      Require(!main.model.Overlaps(main.searchTone3000), "model display overlaps TONE3000 action");
+      Require(!main.impulseResponse.Overlaps(main.findTone3000Ir), "IR display overlaps TONE3000 action");
+
+      const auto settings = ui::CalculateSettingsLayout(600.f, 400.f, scale);
+      Require(settings.editor.Contains(settings.header) && settings.editor.Contains(settings.navigation) &&
+              settings.editor.Contains(settings.content) && settings.editor.Contains(settings.footer) &&
+              settings.editor.Contains(settings.close), "Settings shell escaped editor");
+      Require(!settings.navigation.Overlaps(settings.content), "Settings navigation overlaps content");
+      Require(!settings.header.Overlaps(settings.content) && !settings.footer.Overlaps(settings.content),
+              "Settings header/footer overlaps content");
+      for (std::size_t index = 0; index < settings.navigationButtons.size(); ++index)
+      {
+        Require(settings.navigationButtons[index].Positive() &&
+                settings.navigation.Contains(settings.navigationButtons[index]),
+                "Settings navigation button escaped");
+        if (index)
+          Require(!settings.navigationButtons[index - 1].Overlaps(settings.navigationButtons[index]),
+                  "Settings navigation buttons overlap");
+      }
+      std::array<ui::Rect, 6> contentRows{};
+      for (std::size_t index = 0; index < contentRows.size(); ++index)
+      {
+        contentRows[index] = ui::Row(settings.content, index);
+        Require(contentRows[index].Positive() && settings.content.Contains(contentRows[index]),
+                "Settings content row escaped");
+        if (index)
+          Require(!contentRows[index - 1].Overlaps(contentRows[index]), "Settings content rows overlap");
+      }
+      const ui::Rect actionArea{settings.content.left, contentRows[3].top,
+                                settings.content.right, contentRows[5].bottom};
+      std::array<ui::Rect, 7> libraryActions{};
+      for (std::size_t index = 0; index < libraryActions.size(); ++index)
+      {
+        libraryActions[index] = ui::GridCell(actionArea, 3, 3, index);
+        Require(actionArea.Contains(libraryActions[index]), "library action escaped content");
+        for (std::size_t earlier = 0; earlier < index; ++earlier)
+          Require(!libraryActions[earlier].Overlaps(libraryActions[index]), "library actions overlap");
+      }
+      std::array<ui::Rect, 5> providerActions{};
+      for (std::size_t index = 0; index < providerActions.size(); ++index)
+      {
+        providerActions[index] = ui::GridCell(actionArea, 3, 2, index);
+        Require(actionArea.Contains(providerActions[index]), "provider action escaped content");
+        for (std::size_t earlier = 0; earlier < index; ++earlier)
+          Require(!providerActions[earlier].Overlaps(providerActions[index]), "provider actions overlap");
+      }
+      const ui::Rect physicalEditor{0.f, 0.f, settings.editor.right * scale, settings.editor.bottom * scale};
+      const ui::Rect physicalContent{settings.content.left * scale, settings.content.top * scale,
+                                     settings.content.right * scale, settings.content.bottom * scale};
+      Require(physicalEditor.Contains(physicalContent), "scaled Settings content escaped");
+      for (std::size_t active = 0; active < settings.navigationButtons.size(); ++active)
+      {
+        const auto visible = ui::CalculateSettingsPageVisibility(
+          static_cast<ui::SettingsSection>(active));
+        Require(std::count(visible.begin(), visible.end(), true) == 1 && visible[active],
+                "Settings visibility exposed an inactive page");
+      }
+    }
+    Require(!ui::kSearchTone3000Caption.empty() && !ui::kFindTone3000IrCaption.empty(),
+            "main provider caption is empty");
+    Require(std::all_of(ui::kTone3000SettingsActionCaptions.begin(),
+                        ui::kTone3000SettingsActionCaptions.end(),
+                        [](std::string_view caption) { return !caption.empty(); }),
+            "Settings provider caption is empty");
+  });
   Test("PKCE RFC vector", [] {
     const auto pair = providers::tone3000::CreatePkceFromVerifier(
       "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk");
@@ -547,6 +703,123 @@ int main()
     Require(!waiter.get(), "contending refresh lock was not bounded");
   });
 #if defined(_WIN32)
+  Test("fixed callback reports deterministic port conflict", [] {
+    FixedPortOwner owner;
+    platform::FixedLoopbackCallbackReceiver receiver;
+    bool completed = false;
+    const auto error = receiver.Start("http://127.0.0.1:43821/oauth/callback",
+      std::chrono::steady_clock::now() + std::chrono::seconds(2),
+      [&](auto) { completed = true; });
+    Require(error.code == providers::ProviderErrorCode::LocalPortInUse,
+            "fixed callback did not report port conflict");
+    Require(error.userMessage.find("port 43821") != std::string::npos &&
+            error.userMessage.find("already in use") != std::string::npos,
+            "port-conflict message is not actionable");
+    Require(!receiver.IsActive() && !completed, "port conflict started callback work");
+  });
+  Test("fixed callback binds receives once and releases", [] {
+    platform::FixedLoopbackCallbackReceiver receiver;
+    std::promise<providers::ProviderResult<std::string>> promise;
+    auto future = promise.get_future();
+    Require(!receiver.Start("http://127.0.0.1:43821/oauth/callback",
+      std::chrono::steady_clock::now() + std::chrono::seconds(2),
+      [&](auto result) { promise.set_value(std::move(result)); }), "fixed callback start failed");
+    Require(receiver.IsActive(), "fixed callback was not ready when Start returned");
+    const auto duplicate = receiver.Start("http://127.0.0.1:43821/oauth/callback",
+      std::chrono::steady_clock::now() + std::chrono::seconds(2), [](auto) {});
+    Require(duplicate.code == providers::ProviderErrorCode::Superseded, "repeated listener start was accepted");
+    const auto response = SendCallbackRequest(
+      "GET /oauth/callback?code=one-time&state=expected HTTP/1.1\r\n"
+      "Host: 127.0.0.1:43821\r\nConnection: close\r\n\r\n");
+    Require(future.wait_for(std::chrono::seconds(2)) == std::future_status::ready, "fixed callback timeout");
+    const auto result = future.get();
+    Require(static_cast<bool>(result) &&
+            *result.value == "http://127.0.0.1:43821/oauth/callback?code=one-time&state=expected",
+            "fixed callback URI changed");
+    Require(response.find("200 OK") != std::string::npos &&
+            response.find("Cache-Control: no-store") != std::string::npos &&
+            response.find("Authorization received. You may return to Amphibia.") != std::string::npos,
+            "minimal callback response headers/body missing");
+    Require(response.find("one-time") == std::string::npos &&
+            response.find("expected") == std::string::npos,
+            "browser response exposed callback security values");
+    receiver.Cancel();
+    FixedPortOwner released;
+  });
+  Test("fixed callback rejects wrong path and oversized input", [] {
+    {
+      platform::FixedLoopbackCallbackReceiver receiver;
+      std::promise<providers::ProviderResult<std::string>> promise;
+      auto future = promise.get_future();
+      Require(!receiver.Start("http://127.0.0.1:43821/oauth/callback",
+        std::chrono::steady_clock::now() + std::chrono::seconds(2),
+        [&](auto result) { promise.set_value(std::move(result)); }), "wrong-path listener start");
+      const auto response = SendCallbackRequest(
+        "GET /wrong?code=x&state=y HTTP/1.1\r\nHost: 127.0.0.1:43821\r\n\r\n");
+      Require(future.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+              future.get().error.code == providers::ProviderErrorCode::InvalidRedirect,
+              "wrong callback path accepted");
+      Require(response.find("404 Not Found") != std::string::npos, "wrong path response missing");
+      receiver.Cancel();
+    }
+    {
+      platform::FixedLoopbackCallbackReceiver receiver;
+      std::promise<providers::ProviderResult<std::string>> promise;
+      auto future = promise.get_future();
+      Require(!receiver.Start("http://127.0.0.1:43821/oauth/callback",
+        std::chrono::steady_clock::now() + std::chrono::seconds(2),
+        [&](auto result) { promise.set_value(std::move(result)); }), "wrong-host listener start");
+      const auto response = SendCallbackRequest(
+        "GET /oauth/callback?code=x&state=y HTTP/1.1\r\nHost: localhost:43821\r\n\r\n");
+      Require(future.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+              future.get().error.code == providers::ProviderErrorCode::InvalidRedirect,
+              "wrong callback Host accepted");
+      Require(response.find("400 Bad Request") != std::string::npos, "wrong Host response missing");
+      receiver.Cancel();
+    }
+    {
+      platform::FixedLoopbackCallbackReceiver receiver;
+      std::promise<providers::ProviderResult<std::string>> promise;
+      auto future = promise.get_future();
+      Require(!receiver.Start("http://127.0.0.1:43821/oauth/callback",
+        std::chrono::steady_clock::now() + std::chrono::seconds(2),
+        [&](auto result) { promise.set_value(std::move(result)); }), "oversized listener start");
+      const auto response = SendCallbackRequest(
+        "GET /oauth/callback?code=x&state=y HTTP/1.1\r\nX-Fill: " + std::string(9000, 'a') + "\r\n\r\n");
+      Require(future.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+              future.get().error.code == providers::ProviderErrorCode::InvalidResponse,
+              "oversized callback accepted");
+      Require(response.find("431 Request Header Fields Too Large") != std::string::npos,
+              "oversized callback response missing");
+      receiver.Cancel();
+    }
+  });
+  Test("fixed callback cancellation timeout and shutdown release port", [] {
+    {
+      platform::FixedLoopbackCallbackReceiver receiver;
+      std::atomic<bool> completed{false};
+      Require(!receiver.Start("http://127.0.0.1:43821/oauth/callback",
+        std::chrono::steady_clock::now() + std::chrono::seconds(2),
+        [&](auto) { completed.store(true); }), "cancel listener start");
+      receiver.Cancel();
+      Require(!receiver.IsActive() && !completed.load(), "cancel delivered a late callback");
+      FixedPortOwner released;
+    }
+    {
+      platform::FixedLoopbackCallbackReceiver receiver;
+      std::promise<providers::ProviderResult<std::string>> promise;
+      auto future = promise.get_future();
+      Require(!receiver.Start("http://127.0.0.1:43821/oauth/callback",
+        std::chrono::steady_clock::now() + std::chrono::milliseconds(120),
+        [&](auto result) { promise.set_value(std::move(result)); }), "timeout listener start");
+      Require(future.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+              future.get().error.code == providers::ProviderErrorCode::RequestTimeout,
+              "listener timeout missing");
+      receiver.Shutdown();
+      Require(!receiver.IsActive(), "shutdown retained listener");
+      FixedPortOwner released;
+    }
+  });
   Test("WinHTTP mock GET redirect and limits", [] {
     LoopbackServer server; network::PlatformHttpTransport transport;
     auto execute = [&](const char* path, std::size_t maximum, int redirects) {

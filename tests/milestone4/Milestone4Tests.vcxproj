@@ -40,6 +40,7 @@
     <ClCompile Include="..\..\NeuralAmpModeler\Providers\Tone3000\Tone3000DownloadCoordinator.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Providers\Tone3000\Tone3000Provider.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Platform\SystemBrowser.cpp" />
+    <ClCompile Include="..\..\NeuralAmpModeler\Platform\FixedLoopbackCallbackReceiver.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Library\ContentHash.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Library\PathSafety.cpp" />
     <ClCompile Include="..\..\NeuralAmpModeler\Library\FolderScanner.cpp" />
