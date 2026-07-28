@@ -48,6 +48,7 @@ Windows builds use `NeuralAmpModeler/Amphibia.sln`; the retained source director
 - [First-run setup](docs/FIRST_RUN_SETUP.md) and [audio configuration](docs/AUDIO_CONFIGURATION.md)
 - [Settings ownership](docs/SETTINGS_OWNERSHIP.md) and [settings schema](docs/SETTINGS_SCHEMA.md)
 - [Milestone 6 setup report](docs/MILESTONE_6_REPORT.md)
+- [Milestone 7 Windows deployment report](docs/MILESTONE_7_REPORT.md)
 - [Windows installation](docs/INSTALL_WINDOWS.md), [packaging](docs/PACKAGING_WINDOWS.md),
   and [release gates](docs/RELEASING.md)
 - [TONE3000 integration boundary](docs/TONE3000_INTEGRATION.md)

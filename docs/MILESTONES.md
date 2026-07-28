@@ -88,6 +88,14 @@ Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented 
 - [ ] Resolve visual/font provenance, final owner/support identifiers, live provider registration/redirect approval, and all documented release blockers.
 - [ ] Sign/tag a reproducible release candidate only after Milestone 7 and the remaining gates pass.
 
+## Milestone 7 evidence record
+
+The Windows installer, packaging pipeline, tests, CI, manifests, checksums, and
+documentation are recorded in `MILESTONE_7_REPORT.md`. Fresh Release x64 app and
+VST3 builds and all automated Milestone 1–7 tests passed. The evidence artifact
+is unsigned. No clean-VM install/upgrade/uninstall, DAW, NAM-coexistence,
+certificate-signing, real-hardware, or macOS-package pass is claimed.
+
 ## Milestone 4 evidence record
 
 Milestone 4 implements the provider foundation only: external-browser PKCE/state handling, secure credential storage, bounded WinHTTP transport, typed exact API calls, refresh/session behavior, streamed explicit individual downloads, and schema-2 creator/license provenance. It adds no final catalog/search UI, automatic download/activation, whole-tone ZIP, upload, telemetry, proxy, installer, or DSP behavior.
