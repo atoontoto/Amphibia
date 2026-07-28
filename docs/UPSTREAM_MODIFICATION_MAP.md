@@ -105,9 +105,9 @@ Only `upstream` is configured. Milestone 1 will add `origin` only when an actual
 | `NeuralAmpModeler/projects/*.vcxproj` | NAM filenames, targets, output paths; Windows project GUIDs include VST3 `{079FC65A-F0E5-4E97-B318-A16D1D0B89DF}` and app `{41785AE4-5B70-4A75-880B-4B418B4E13C6}`. | Rename projects/targets and generate new IDE GUIDs. These are not installer identity. |
 | `NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj/project.pbxproj` | NAM targets/products and `com.StevenAtkinson.*` bundle identifiers. | Rename targets/schemes/products and assign new reverse-DNS IDs. |
 | `NeuralAmpModeler/resources/*.plist`, `*.xib`, `*.storyboard`, `*.entitlements` | NAM executable, bundle, factory, class, and resource names. | Rename or remove unused target resources; verify no inherited identity remains. |
-| `NeuralAmpModeler/installer/Amphibia.iss` | Stable Amphibia `AppId`, product/output paths, and placeholder metadata. | Installer implementation, signing, VM install/uninstall, and side-by-side checks remain Milestone 8. |
-| `NeuralAmpModeler/scripts/*` | Scripts infer `BUNDLE_NAME` but also contain NAM filenames and package prefixes. | Rename and make release inputs reproducible; remove unavailable formats from distributions. |
-| `.github/workflows/build-windows.yml`, `build-macos.yml`, `test.yml` | Least-privilege development build and static identity checks; no release job. | Validate hosted runs, then add plugin validation/security/artifact gates in Milestone 9. |
+| `NeuralAmpModeler/installer/Amphibia.iss` | Stable Amphibia `AppId`, fixed x64 app/VST3 paths, components/tasks, version policy, first-run, and safe retention cleanup. | Amphibia-owned release boundary; retain the AppId and compile only from the allowlisted stage. VM/signing evidence remains a release gate. |
+| `scripts/package-windows.ps1` | Clean-tree Release build/test/PE validation, explicit stage/archive construction, manifests/checksums, pinned Inno compiler, and optional signing. | Amphibia-owned; never replace with inherited broad build-tree copy scripts. |
+| `.github/workflows/package-windows.yml` | Least-privilege unsigned development packaging and short-retention artifact upload; no publication permission. | Keep non-publishing until protected signing/release policy is complete. |
 | Removed upstream release workflow | Public/draft release mutation is intentionally absent. | Add a protected release workflow only after signing and validation policy exists. |
 
 ## NAM architecture map
@@ -133,7 +133,7 @@ See `NAM_ARCHITECTURES.md` for exact labeling and validation policy.
 
 - Complete inherited signal-path allocation instrumentation is still required before a product-wide real-time-safety claim; the Milestone 2 loading/activation/retirement bridge itself is bounded and lock-free at the callback boundary.
 - Standalone plugin state is not persisted.
-- Windows installer identity is implicit.
+- Windows installer identity and paths are explicit; clean-VM coexistence is pending.
 - Current CI does not execute pluginval and lacks security/release integrity gates.
 - ASIO SDK redistribution obligations need legal review.
 - Inherited fonts/artwork lack adequate provenance records in the repository.
@@ -180,6 +180,17 @@ handoff, not an upstream omission to paper over.
 | `tests/milestone6`, characterization contract | Fake audio/settings/controller tests and source-level VST3/RT ownership checks | Amphibia-owned; do not describe fake devices/static checks as hardware/host validation. |
 
 The macOS APP project still uses the pinned generic sources and has no Milestone
-6 wizard integration. This is an explicit platform limitation. Installer,
-packaging, signing, component selection, and uninstall retention remain
-Milestone 7 and were not started here.
+6 wizard integration. This is an explicit platform limitation. Windows
+installer, packaging, component selection, manifests/checksums, and uninstall
+retention are implemented in Milestone 7. Signing hooks are present, but no
+signing identity or clean-VM evidence exists. macOS packaging remains
+unimplemented.
+
+# Milestone 7 overlay
+
+| Area | Amphibia change | Upstream-sync treatment |
+| --- | --- | --- |
+| `installer/Amphibia.iss` | Frozen AppId, fixed x64 destinations, component/task policy, first-run, downgrade refusal, safe default-preserve uninstall | Amphibia-owned; never regenerate from the inherited NAM/template installer. |
+| `scripts/package-windows.ps1` | Version-derived allowlisted stage, Release/PE/runtime checks, archives, provenance, checksums, optional signing | Amphibia-owned; review any new staged path and forbid broad wildcard input. |
+| `tests/milestone7`, package workflow | Installer/artifact contract and non-publishing CI evidence | Keep exact compiler pin and artifact name `unsigned-development`. |
+| Windows deployment docs | User/admin ownership, retention, signing and release gates | Keep aligned with settings/library/provider ownership contracts. |

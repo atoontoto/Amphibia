@@ -9,3 +9,9 @@ Milestone 1 retains upstream source/project/resource filenames where changing th
 The inherited `.ico`/`.icns` application icons, UI raster/SVG artwork, Roboto font file, and Michroma font file lack a complete asset provenance manifest in this checkout. The inherited Windows icon has been removed from compiled resources and the macOS plist no longer selects the inherited `.icns`. All inherited visual/font files are development-only, must not be treated as Amphibia brand assets, and block public binary distribution until replaced or individually cleared with source/version/license evidence.
 
 No TONE3000 logo or brand asset is included. Any future provider presentation must follow then-current provider terms and must accurately disclose the independent integration.
+
+Milestone 7 reconstructs the Windows VST3 package and excludes inherited shell
+icons, installer background art, and other loose build-tree resources from its
+allowlist. That containment does not clear UI art/fonts already compiled into
+the application or plug-in; the public-binary blocker remains until each embedded
+asset is replaced or proven redistributable.

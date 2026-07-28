@@ -69,9 +69,18 @@ Status legend: `[x]` evidenced in the current repository; `[ ]` not implemented 
 
 ## Milestone 7 — installer, packaging, and end-user deployment
 
-- [ ] Build Windows/macOS packages with explicit standalone and VST3 component selection and post-install `--first-run` support.
-- [ ] Test clean install, upgrade, repair, uninstall, managed-content/user-folder preservation, and NeuralAmpModeler coexistence in clean systems.
-- [ ] Finalize release artifact naming, notices, signing/notarization, checksums, and protected publication policy.
+- [x] Implement a Windows x64 installer with explicit standalone/VST3
+  components and fresh-install `--first-run` support.
+- [x] Add deterministic Windows artifact naming, allowlisted staging/archives,
+  dependency/source manifests, notices, checksums, and signing hooks.
+- [x] Add installer/package static tests, generated-artifact validation, and an
+  unsigned development packaging workflow.
+- [x] Document install, upgrade, repair, uninstall, cleanup retention, signing,
+  packaging, and release operations.
+- [ ] Validate clean install, upgrade, repair, uninstall, managed-content
+  preservation, and NeuralAmpModeler coexistence in clean Windows VMs/DAWs.
+- [ ] Supply and validate an approved Authenticode identity.
+- [ ] Implement/validate the equivalent macOS package, signing, and notarization.
 
 ## Later release gates
 

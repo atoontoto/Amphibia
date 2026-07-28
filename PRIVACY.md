@@ -52,3 +52,14 @@ staging cleanup remain local. Copied diagnostics are generated locally and
 must remain bounded/redacted; users should review device names and local paths
 before sharing them. No token, authorization code, PKCE value, credential
 payload, or signed URL is permitted in setup settings or diagnostics.
+
+## Install and uninstall
+
+The Windows installer contains no model, IR, account, credential, settings, or
+telemetry payload and installs no background service. Upgrade and normal
+uninstall preserve `%LOCALAPPDATA%\Amphibia` and the isolated Credential Manager
+entry. Interactive uninstall offers a separate default-No cleanup choice. If
+confirmed, it removes only that fixed Amphibia tree and the exact
+`org.amphibiaaudio.Amphibia.TONE3000/oauth-v1` credential; it does not traverse
+reparse points or delete any referenced external NAM/IR folder or original ZIP.
+Silent uninstall always preserves user data.

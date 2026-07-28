@@ -22,3 +22,12 @@ Preferred folders seed same-directory navigation only when no model/IR restored
 from project state is active. They are application preferences, not DAW state.
 Tokens, authorization codes, PKCE values, signed URLs, client secrets, and test
 state are not settings.
+
+## Windows deployment ownership
+
+The installer owns binaries, installed documentation, shortcuts, and its
+uninstall record. It neither seeds nor rewrites `settings.ini`,
+`settings-v1.json`, or its backup. Upgrade and default uninstall preserve the
+entire fixed `%LOCALAPPDATA%\Amphibia` settings root. Silent uninstall always
+preserves it. A separate default-No interactive cleanup may remove that fixed
+root after path/reparse validation; it is not a settings migration.

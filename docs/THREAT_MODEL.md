@@ -182,5 +182,17 @@ No network, provider, OAuth, TLS, telemetry, scripting, executable loading, or t
 | Diagnostics leakage | paths, device identity, secrets | copied status exposes private/local/provider material | bounded local formatting; sensitive fields never stored; no tokens/signed URLs; user review guidance | canary and static serialization checks | current audio diagnostics include local device display names |
 | Wizard callback after destruction | process stability | async validation/library completion touches dead window | future ownership checked by message timer, joined worker, no worker UI callback; timer killed on destroy | deterministic worker shutdown from prior suites; manual rapid-close pending | native file dialog/driver calls return on OS timing |
 
-No installer/elevation/update threat surface was added. That review belongs to
-Milestone 7 before any package or uninstall behavior exists.
+## Milestone 7 installer and artifact review
+
+| Threat | Boundary | Control | Remaining validation |
+| --- | --- | --- | --- |
+| Elevated arbitrary-path write | installer to machine | fixed Program Files and Common Files VST3 roots; no directory page, service, driver, association, or environment change | clean-VM ACL inspection |
+| Package contamination | build tree to artifact | clean source gate, exact binary paths, reconstructed VST3 allowlist, forbidden archive entries, manifest/checksum tests | independent release review/SBOM |
+| Downgrade or component residue | installed version/components | stable AppId, version comparison, downgrade refusal, explicit deselected-component deletion | multi-version VM matrix |
+| User/external data loss | uninstaller to per-user filesystem | preserve default; silent preserve; separate default-No warning; exact LocalAppData root; reparse refusal; external sources excluded | same-user and credentialed-elevation VM cases |
+| Credential overreach | uninstaller to Credential Manager | exact generic target only after explicit cleanup confirmation | multi-account elevation case |
+| Unsigned package substitution | publication to user | optional binary/installer Authenticode verification and SHA-256 inventory | approved certificate/protected release channel |
+| Pending host file replacement | DAW-loaded VST3 | close-app request, restart replacement semantics, no forced reboot | supported-host/reboot matrix |
+
+There is no updater. Public release remains blocked on signed clean-VM evidence,
+NAM coexistence, asset/license closure, and protected publication.

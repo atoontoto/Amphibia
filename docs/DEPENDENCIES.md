@@ -95,3 +95,18 @@ The dependency evaluation considered minizip-ng maintenance/release cadence, zli
 - Include root license, third-party notices, source offer/link obligations, and creator/asset license metadata where applicable.
 - Review ASIO and platform SDK redistribution with a qualified maintainer/legal reviewer.
 - Diff installer/package contents against the manifest; fail CI on an unclassified file.
+
+## Milestone 7 packaging toolchain
+
+Windows packages pin Inno Setup 6.7.3 and record its product version without
+redistributing the compiler. Generated installers are subject to the Inno Setup
+license; commercial distribution must complete the maintainer/legal review
+described in the release checklist. MSBuild, MSVC, Windows SDK, `dumpbin`, and
+optional `signtool` versions are recorded in `SOURCE-COMMIT.txt`. Release
+binaries use `/MT`; dependency inspection rejects a dynamic MSVC runtime, so no
+Visual C++ Redistributable is included.
+
+The staged dependency manifest covers the pinned submodules, vendored archive
+reader, platform APIs, and installer tool. It is not yet a machine-readable SBOM.
+Inherited UI font/art provenance, ASIO review, TONE3000 registration/branding,
+and the final support/owner namespace remain public-release blockers.

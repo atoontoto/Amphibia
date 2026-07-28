@@ -32,5 +32,12 @@ reject redirected selections and never authorize automatic recursive import.
 
 Do not work around a settings error by inserting provider secrets, changing the
 managed-library root, or granting broad permissions. Preserve corrupt settings
-for private review and redact local paths/device names. Installer, elevation,
-system-wide modification, signing, and update security remain Milestone 7.
+for private review and redact local paths/device names.
+
+Milestone 7 constrains Windows package inputs, fixed elevated destinations,
+component removal, version downgrade, archive contents, provenance, checksums,
+and optional signing. User-data cleanup is default-off, fixed-root validated,
+and reparse-safe; silent uninstall cannot request it. Public release still
+requires an approved signing identity, clean-VM install/upgrade/uninstall and
+NAM-coexistence evidence, asset/license closure, and protected publication.
+There is no updater or unattended credential-cleanup mechanism.

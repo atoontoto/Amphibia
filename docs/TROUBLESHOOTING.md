@@ -49,3 +49,18 @@ Never place tokens or signed URLs in the JSON settings file.
 `settings-v1.json.bak` is automatic recovery evidence. Preserve corrupt files
 when reporting a bug, but redact local paths/device names and never attach
 credentials, signed URLs, private models, or hardware serial numbers.
+
+## Windows install or upgrade fails
+
+Close Amphibia and all DAWs, verify free disk space and the installer SHA-256,
+then rerun as an administrator. An older installer intentionally refuses when a
+newer Amphibia version is registered. Do not delete settings/library data to fix
+a binary-install problem; rerun the same/newer installer as described in
+`REPAIR_WINDOWS.md`.
+
+If the VST3 is installed but missing in a DAW, restart the DAW and perform a full
+VST3 rescan. Confirm the host is 64-bit and inspect the standard all-users VST3
+path. The installer does not modify host scan settings.
+
+Normal and silent uninstall preserve user data. The interactive cleanup is
+default-No and never removes external NAM/IR folders or original ZIP archives.

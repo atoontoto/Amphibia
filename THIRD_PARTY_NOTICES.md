@@ -8,6 +8,19 @@ Milestone 3 vendors the reader subset of **minizip-ng 4.2.2** (zlib license) fro
 
 Milestone 4 adds no vendored networking, TLS, OAuth, or credential library. Windows builds use the operating-system WinHTTP, Schannel trust store, Windows CNG, Credential Manager, Winsock, and ShellExecute APIs under the applicable Microsoft SDK/runtime terms. The macOS credential implementation uses Security.framework Keychain APIs and the system browser uses AppKit/Foundation APIs; the planned `NSURLSession` HTTP adapter is not yet implemented or validated. These operating-system components are not redistributed as Amphibia source. TONE3000 remains an external service governed by its own API terms and content licenses; no provider model, user data, signed URL, or brand asset is included in this repository.
 
-This file is a repository-level summary, not a release artifact manifest. The detailed version, license, and redistribution review is maintained in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). `NeuralAmpModeler/installer/ThirdPartyNotices.txt` is the inherited packaging notice under active revision.
+Windows installer generation uses Inno Setup 6.7.3 under the Inno Setup license.
+The compiler is a build tool and is not redistributed, while the generated
+installer includes Inno Setup runtime code. Commercial distribution must
+complete the applicable Inno Setup licensing review. MSVC/Windows SDK tools are
+also build-time inputs; Amphibia Release binaries use the static MSVC runtime.
 
-No Amphibia binary should be publicly distributed until the exact packaged file inventory has been matched to licenses and notices, including the ASIO/VST3 SDK review and the asset blockers described in [ATTRIBUTION.md](ATTRIBUTION.md).
+This file is the human-readable notice copied into Milestone 7 Windows
+artifacts. The generated `DEPENDENCY-VERSIONS.txt` records exact checkout and
+toolchain versions; the detailed license/redistribution review is maintained in
+[docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). The older
+`NeuralAmpModeler/installer/ThirdPartyNotices.txt` is inherited and is not a
+Milestone 7 release input.
+
+No Amphibia binary should be publicly distributed until the exact packaged file
+inventory has been matched to licenses and notices, including the ASIO/VST3 SDK
+review and the asset blockers described in [ATTRIBUTION.md](ATTRIBUTION.md).

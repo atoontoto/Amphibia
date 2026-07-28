@@ -2,6 +2,25 @@
 
 All notable Amphibia changes are recorded here. The project has no public release yet.
 
+## Unreleased - Milestone 7
+
+- Replaced the Windows installer placeholder with a versioned x64 Inno Setup
+  component installer for standalone and VST3, fixed destinations, optional
+  shortcuts, fresh-install setup launch, downgrade refusal, and deterministic
+  upgrade behavior.
+- Added default-preserve uninstall behavior plus a separately confirmed,
+  fixed-root/reparse-safe removal of Amphibia user data and its exact TONE3000
+  credential; external NAM/IR/ZIP sources are never deleted.
+- Added a clean-worktree packaging entry point with pinned Inno Setup 6.7.3,
+  Release/x64/metadata/runtime checks, explicit VST3 reconstruction, provenance
+  and dependency manifests, portable archives, checksums, and optional verified
+  Authenticode signing.
+- Added Milestone 7 installer/package tests, an unsigned short-retention
+  development-artifact CI workflow, and install/upgrade/repair/uninstall,
+  packaging/signing/releasing/build documentation.
+- No stable release, signing certificate, macOS package, clean-VM/DAW/hardware
+  pass, or clearance of inherited visual/font assets is claimed.
+
 ## Unreleased - Milestone 6
 
 - Added a native Windows nine-page first-run wizard with bounded command-line overrides, completion/cancel/rerun/repair policy, safe mode, and an honest optional-provider page.

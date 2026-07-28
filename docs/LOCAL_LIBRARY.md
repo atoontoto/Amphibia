@@ -62,3 +62,12 @@ confirmed and confined to staging. An unavailable, read-only, corrupt, or
 future-schema library does not disable referenced-file mode. Verification state
 is invalidated when a new scan/import begins so the setup summary cannot report
 a stale healthy result.
+
+## Installer ownership
+
+The Windows package never includes, migrates, scans, or deletes managed-library
+objects. Upgrade and normal uninstall preserve `%LOCALAPPDATA%\Amphibia\Library`.
+Only separately confirmed uninstall cleanup removes the fixed Amphibia
+application-data root. Its deletion routine refuses an unexpected root and does
+not follow reparse points. Referenced NAM/IR directories and original ZIP
+archives remain outside installer ownership in every case.

@@ -1,6 +1,7 @@
 # Building Amphibia
 
-These are developer builds, not signed end-user packages.
+These commands create developer builds. The separate Windows packaging path
+still produces an unsigned development candidate unless signing is configured.
 
 ## Common setup
 
@@ -41,9 +42,21 @@ xcodebuild -project NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj -
 
 These commands are represented in CI but must be confirmed on a macOS runner before Milestone 1's cross-platform build checkbox can close.
 
+## Windows packaging
+
+See [docs/PACKAGING_WINDOWS.md](docs/PACKAGING_WINDOWS.md) for the pinned Inno
+Setup 6.7.3 toolchain and the single supported packaging command. Do not feed a
+whole build directory to an installer: the release script reconstructs an
+allowlisted bundle, validates Release/x64 binaries and dependencies, runs the
+test suites, and generates manifests/checksums.
+
 ## Not supported here
 
-AAX requires separately licensed Avid SDK material. Installer generation, signing, notarization, and release publishing are not supported here. The repository TONE3000 build is intentionally unconfigured; do not invent registration values merely to make the controls clickable.
+AAX requires separately licensed Avid SDK material. macOS package generation,
+notarization, and release publishing are not supported here. Windows signing
+hooks require an external approved certificate and do not make the current
+artifact a release. The repository TONE3000 build is intentionally unconfigured;
+do not invent registration values merely to make the controls clickable.
 
 ## Native provider tests
 

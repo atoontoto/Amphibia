@@ -10,3 +10,8 @@ This directory is inherited from NeuralAmpModelerPlugin `0.7.15` (`96337e9`). It
 | plist/XIB/storyboard/RC files | Build metadata, renamed internally to Amphibia while filenames are retained for upstream mergeability. |
 
 When adding a replacement, record creator/source, exact version/hash, license or written permission, modifications, and the packages in which it ships. Update `ATTRIBUTION.md`, `THIRD_PARTY_NOTICES.md`, and `docs/DEPENDENCIES.md` in the same change.
+
+Milestone 7's Windows packaging allowlist excludes loose inherited icons,
+installer background art, and build-tree resource debris. Release binaries still
+embed selected UI art/fonts from developer builds, so successful package
+generation is not provenance clearance and does not authorize public release.

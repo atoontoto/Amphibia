@@ -167,3 +167,14 @@ registration/connection/secure-store status and explicit provider actions.
 Setup JSON stores only the boolean `tone3000_configured` readiness projection;
 tokens, codes, PKCE values, client secrets, callback material, signed URLs, and
 provider payloads are forbidden. See `TONE3000_BRANDING_COMPLIANCE.md`.
+
+## Install and uninstall boundary
+
+No installer artifact contains a provider client ID, secret, token, signed URL,
+account payload, model, or brand asset. Normal upgrade/uninstall preserves the
+isolated Windows Credential Manager target. Explicit interactive user-data
+cleanup calls `CredDelete` only for
+`org.amphibiaaudio.Amphibia.TONE3000/oauth-v1`; silent uninstall preserves it.
+With credentialed elevation, cleanup may run in the administrator's credential
+context, so users should disconnect in Amphibia before uninstall when exact
+per-user removal matters.

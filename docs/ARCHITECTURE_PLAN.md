@@ -320,8 +320,23 @@ compile-time message distinguishes standalone audio settings from DAW-owned
 VST3 audio. The VST3 project compiles settings/shared-preference support but no
 wizard, APP host, device enumerator, or command-line main.
 
-The stable boundary handed to Milestone 7 is: `--first-run`/`--setup`/repair
+The stable boundary handed to Milestone 7 was: `--first-run`/`--setup`/repair
 entry points; `%LOCALAPPDATA%\Amphibia` settings/library ownership; explicit
 standalone/VST3 component targets; schema/future-version preservation; and
-user-content retention rules. Milestone 7 may package these interfaces but must
+user-content retention rules. Milestone 7 packages these interfaces but does
 not move device/content work into DSP or delete settings/library/folder data.
+
+## Milestone 7 Windows deployment boundary
+
+The Windows installer is a per-machine x64 deployment with two executable
+components: `%ProgramFiles%\Amphibia\Amphibia.exe` and
+`%CommonProgramFiles%\VST3\Amphibia.vst3`. It installs no service, driver,
+association, environment entry, model, IR, or account. The stable AppId provides
+one upgrade/uninstall family; older installers refuse to overwrite newer ones.
+
+Release packaging reconstructs a VST3 bundle from an explicit allowlist rather
+than trusting inherited build-tree resources. Package generation is clean-tree,
+version-derived, Release/x64 validated, manifest/checksum producing, and
+optionally Authenticode signed. Normal upgrade/uninstall does not cross into the
+per-user settings/library/credential trust boundary. Explicit cleanup is
+fixed-root and reparse-safe and never follows external content references.
